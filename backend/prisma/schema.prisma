@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ==================== USER MANAGEMENT ====================
@@ -42,6 +41,7 @@ model User {
   sessions        Session[]
   devices         Device[]
   roles           UserRole[]
+  media           Media[]
 
   @@index([email])
   @@index([createdAt])
