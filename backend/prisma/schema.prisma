@@ -1,0 +1,443 @@
+// Prisma schema for AI-Powered Social Media Management Platform
+// Production-ready schema following OWASP standards
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USER MANAGEMENT ====================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String?   // Optional for OAuth users
+  name          String?
+  avatar        String?
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+
+  // Relations
+  businessProfile BusinessProfile?
+  products        Product[]
+  posts           Post[]
+  scheduledPosts  ScheduledPost[]
+  analytics       Analytics[]
+  notifications   Notification[]
+  telegramSettings TelegramSetting?
+  socialAccounts  SocialAccount[]
+  aiHistory       AIHistory[]
+  exports         Export[]
+  activityLogs    ActivityLog[]
+  auditLogs       AuditLog[]
+  sessions        Session[]
+  devices         Device[]
+  roles           UserRole[]
+
+  @@index([email])
+  @@index([createdAt])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  refreshToken String @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model Device {
+  id        String   @id @default(cuid())
+  userId    String
+  deviceId  String   @unique
+  name      String?
+  type      String?  // mobile, desktop, tablet
+  browser   String?
+  os        String?
+  ip        String?
+  lastUsed  DateTime @default(now())
+  isActive  Boolean  @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  permissions Permission[]
+  users       UserRole[]
+  createdAt   DateTime @default(now())
+}
+
+model Permission {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String?
+  roles       Role[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  assignedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+// ==================== BUSINESS PROFILE ====================
+
+model BusinessProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  businessName      String
+  companyName       String?
+  description       String?
+  industry          String?
+  website           String?
+  email             String?
+  phone             String?
+  address           String?
+  city              String?
+  country           String?
+  language          String   @default("en")
+  timezone          String   @default("UTC")
+  brandVoice        String?
+  targetAudience    String?
+  marketingGoals    String?
+  logoUrl           String?
+  brandColors       Json?    // { primary: "#...", secondary: "#..." }
+  brandFonts        Json?
+  primaryKeywords   String[]
+  competitors       String[]
+  preferredHashtags String[]
+  socialLinks       Json?
+  businessHours     Json?
+  mission           String?
+  vision            String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ==================== PRODUCTS ====================
+
+model Product {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  features    String[]
+  benefits    String[]
+  specifications Json?
+  sku         String?
+  category    String?
+  tags        String[]
+  price       Decimal? @db.Decimal(10,2)
+  discount    Decimal? @db.Decimal(5,2)
+  images      String[] // URLs
+  videos      String[]
+  documents   String[]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts       Post[]
+
+  @@index([userId])
+  @@index([category])
+}
+
+// ==================== MEDIA LIBRARY ====================
+
+model Media {
+  id        String   @id @default(cuid())
+  userId    String
+  filename  String
+  originalName String
+  mimeType  String
+  size      Int
+  url       String
+  folder    String?
+  tags      String[]
+  metadata  Json?
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([folder])
+}
+
+// ==================== POSTS & CONTENT ====================
+
+model Post {
+  id              String   @id @default(cuid())
+  userId          String
+  productId       String?
+  title           String?
+  caption         String
+  hashtags        String[]
+  platformContent Json?    // Platform-specific content
+  imageUrl        String?
+  videoUrl        String?
+  status          PostStatus @default(DRAFT)
+  platforms       String[] // instagram, facebook, linkedin, etc.
+  scheduledFor    DateTime?
+  publishedAt     DateTime?
+  publishedData   Json?
+  analytics       Analytics?
+  aiPrompt        String?
+  aiModel         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product         Product? @relation(fields: [productId], references: [id])
+  history         PostHistory[]
+  scheduledPosts  ScheduledPost[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([scheduledFor])
+}
+
+model ScheduledPost {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String?
+  platforms String[]
+  scheduledFor DateTime
+  status    String   @default("pending") // pending, processing, completed, failed
+  attempts  Int      @default(0)
+  lastError String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post? @relation(fields: [postId], references: [id])
+
+  @@index([userId])
+  @@index([scheduledFor])
+}
+
+model PostHistory {
+  id        String   @id @default(cuid())
+  postId    String
+  action    String   // created, scheduled, published, failed, etc.
+  details   Json?
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+// ==================== ANALYTICS ====================
+
+model Analytics {
+  id            String   @id @default(cuid())
+  userId        String
+  postId        String?  @unique
+  platform      String
+  reach         Int      @default(0)
+  impressions   Int      @default(0)
+  likes         Int      @default(0)
+  comments      Int      @default(0)
+  shares        Int      @default(0)
+  clicks        Int      @default(0)
+  engagementRate Float    @default(0)
+  date          DateTime
+  rawData       Json?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post? @relation(fields: [postId], references: [id])
+
+  @@index([userId])
+  @@index([date])
+  @@index([platform])
+}
+
+// ==================== SOCIAL ACCOUNTS ====================
+
+model SocialAccount {
+  id            String   @id @default(cuid())
+  userId        String
+  platform      String   // instagram, facebook, linkedin, x, etc.
+  accountId     String
+  username      String?
+  accessToken   String?  @db.Text
+  refreshToken  String?  @db.Text
+  tokenExpires  DateTime?
+  isConnected   Boolean  @default(true)
+  metadata      Json?
+  lastSyncAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform, accountId])
+  @@index([userId])
+}
+
+// ==================== TELEGRAM ====================
+
+model TelegramSetting {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  botToken  String?
+  chatId    String?
+  channelId String?
+  groupId   String?
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ==================== AI & GENERATION ====================
+
+model AIHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // caption, image, video, hashtag
+  prompt      String
+  model       String
+  output      Json?
+  tokensUsed  Int?
+  durationMs  Int?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+}
+
+// ==================== NOTIFICATIONS ====================
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+// ==================== EXPORTS ====================
+
+model Export {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // report, analytics, products, content
+  format    String   // csv, excel, pdf, json, docx
+  url       String?
+  status    String   @default("pending")
+  filters   Json?
+  createdAt DateTime @default(now())
+  completedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ==================== LOGS & AUDIT ====================
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  entity    String?
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ==================== SYSTEM ====================
+
+model Settings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  category  String?
+  updatedAt DateTime @updatedAt
+}
+
+model SystemHealth {
+  id           String   @id @default(cuid())
+  service      String
+  status       String
+  metrics      Json?
+  checkedAt    DateTime @default(now())
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PENDING_APPROVAL
+  APPROVED
+  PUBLISHED
+  FAILED
+  ARCHIVED
+}
