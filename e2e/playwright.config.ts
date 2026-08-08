@@ -6,6 +6,9 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   use: {
     baseURL: process.env.FRONTEND_URL || 'http://localhost:3000',
+    extraHTTPHeaders: {
+      'x-backend-url': process.env.BACKEND_URL || 'http://localhost:8000',
+    },
     screenshot: 'only-on-failure',
     trace: 'on-first-retry',
   },

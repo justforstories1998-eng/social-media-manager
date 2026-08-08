@@ -1,5 +1,8 @@
 {
+  "name": "social-media-manager",
+  "private": true,
   "devDependencies": {
-    "@playwright/test": "^1.62.1"
+    "@playwright/test": "^1.62.1",
+    "typescript": "^5"
   }
 }
