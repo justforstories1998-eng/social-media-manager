@@ -34,7 +34,7 @@ test.describe('Complete User Journey', () => {
 
     // 5. View analytics
     await analyticsPage.goto();
-    await analyticsPage.waitForCharts();
+    await analyticsPage.waitForLoad();
     const chartCount = await analyticsPage.getChartCount();
     expect(chartCount).toBeGreaterThan(0);
   });
