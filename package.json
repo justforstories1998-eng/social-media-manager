@@ -1,8 +1,14 @@
 {
   "name": "social-media-manager",
   "private": true,
+  "scripts": {
+    "test:e2e": "cd e2e && npx playwright test",
+    "test:e2e:ui": "cd e2e && npx playwright test --ui",
+    "test:e2e:report": "cd e2e && npx playwright show-report"
+  },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
+    "@types/node": "^26.2.0",
     "typescript": "^5"
   }
 }

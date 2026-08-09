@@ -5,6 +5,7 @@ import { PostsPage } from '../page-objects/PostsPage';
 import { ProductsPage } from '../page-objects/ProductsPage';
 import { AIPage } from '../page-objects/AIPage';
 import { AnalyticsPage } from '../page-objects/AnalyticsPage';
+import { createTestUser, loginTestUser } from '../utils/test-helpers';
 
 export const test = base.extend<{
   authPage: AuthPage;
@@ -13,6 +14,7 @@ export const test = base.extend<{
   productsPage: ProductsPage;
   aiPage: AIPage;
   analyticsPage: AnalyticsPage;
+  authenticatedPage: { page: import('@playwright/test').Page; user: any; token: string };
 }>({
   authPage: async ({ page }, use) => {
     await use(new AuthPage(page));
@@ -31,6 +33,18 @@ export const test = base.extend<{
   },
   analyticsPage: async ({ page }, use) => {
     await use(new AnalyticsPage(page));
+  },
+  authenticatedPage: async ({ browser, request }, use) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const user = await createTestUser(request);
+    const loginResult = await loginTestUser(request, user.email, user.password);
+    await page.goto('/');
+    await page.evaluate((token) => {
+      localStorage.setItem('access_token', token);
+    }, loginResult.access_token);
+    await use({ page, user, token: loginResult.access_token });
+    await context.close();
   },
 });
 

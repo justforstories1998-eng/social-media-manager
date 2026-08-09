@@ -24,7 +24,6 @@ export default function WonderMediaLanding() {
           {[
             { label: 'Features', href: '#features' },
             { label: 'How it Works', href: '#how-it-works' },
-            { label: 'Pricing', href: '#pricing' },
             { label: 'Docs', href: '#docs' },
           ].map((item) => (
             <a key={item.href} href={item.href}
@@ -241,67 +240,6 @@ export default function WonderMediaLanding() {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="pricing" className="py-16 sm:py-20 px-6 lg:px-12">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="text-center mb-16">
-            <div className="font-mono text-xs tracking-[3px] text-white/40 mb-2">PRICING</div>
-            <div className="text-4xl sm:text-5xl font-semibold tracking-[-0.04em]">Free forever.<br />No hidden costs.</div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Free Tier */}
-            <div className="glass p-8 rounded-[2rem] border border-white/10">
-              <div className="font-mono text-xs tracking-[2px] text-white/50 mb-4">PERSONAL</div>
-              <div className="text-4xl font-bold mb-2">$0</div>
-              <div className="text-white/50 text-sm mb-6">Free forever</div>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Unlimited posts</div>
-                <div className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> 6 platforms</div>
-                <div className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> AI content generation</div>
-                <div className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Telegram approvals</div>
-              </div>
-              <Link href="/auth/register" className="block mt-8 w-full py-3 rounded-full border border-white/20 hover:bg-white/5 transition-colors text-sm font-medium text-center">
-                Get Started
-              </Link>
-            </div>
-
-            {/* Pro Tier */}
-            <div className="glass p-8 rounded-[2rem] border-2 border-[#7c3aed] relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-[#7c3aed] to-[#ec4899] rounded-full text-xs font-bold">POPULAR</div>
-              <div className="font-mono text-xs tracking-[2px] text-white/50 mb-4">STARTUP</div>
-              <div className="text-4xl font-bold mb-2">$29</div>
-              <div className="text-white/50 text-sm mb-6">per month</div>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-[#7c3aed]" /> Everything in Personal</div>
-                <div className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-[#7c3aed]" /> Team collaboration</div>
-                <div className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-[#7c3aed]" /> Priority support</div>
-                <div className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-[#7c3aed]" /> Advanced analytics</div>
-              </div>
-              <Link href="/auth/register" className="block mt-8 neon-button w-full text-center">
-                Start Free Trial
-              </Link>
-            </div>
-
-            {/* Enterprise Tier */}
-            <div className="glass p-8 rounded-[2rem] border border-white/10">
-              <div className="font-mono text-xs tracking-[2px] text-white/50 mb-4">ENTERPRISE</div>
-              <div className="text-4xl font-bold mb-2">Custom</div>
-              <div className="text-white/50 text-sm mb-6">tailored for you</div>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-white/60" /> Everything in Startup</div>
-                <div className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-white/60" /> Custom AI models</div>
-                <div className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-white/60" /> Dedicated support</div>
-                <div className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-white/60" /> SLA guarantee</div>
-              </div>
-              <Link href="/auth/register" className="block mt-8 w-full py-3 rounded-full border border-white/20 hover:bg-white/5 transition-colors text-sm font-medium text-center">
-                Contact Sales
-              </Link>
-            </div>
           </div>
         </div>
       </section>

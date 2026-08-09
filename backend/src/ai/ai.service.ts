@@ -209,7 +209,7 @@ Respond with only the final image prompt.`;
 
     const postIdeas = await this.generatePostIdeas(businessProfile, products);
 
-    const generatedPosts = [];
+    const generatedPosts: { idea: any; caption: any; model: string }[] = [];
     for (let i = 0; i < Math.min(2, postIdeas.length); i++) {
       const idea = postIdeas[i];
       const caption = await this.generateContent(idea.prompt, 'caption', userId);
@@ -227,7 +227,7 @@ Respond with only the final image prompt.`;
   async generatePostIdeas(business: any, products: any[]) {
     // Intelligent daily planner
     const occasions = this.getRelevantOccasions();
-    const ideas = [];
+    const ideas: { type: string; prompt: string; occasion: string }[] = [];
 
     // Generate 2 ideas max
     if (products.length > 0) {

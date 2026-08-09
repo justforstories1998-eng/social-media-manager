@@ -2,6 +2,7 @@
 
 ## Tasks
 - Task 1: complete (commits 13a6e6e..e89fcf1, review clean)
+- Tasks 2-14: complete (all backend modules created and committed)
 - Task 2: complete (fixed AppModule imports)
 - Task 3: complete (created UsersModule)
 - Task 4: complete (created BusinessModule)

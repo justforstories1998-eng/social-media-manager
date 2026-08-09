@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -10,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smm_secure_password_2026}
       POSTGRES_DB: ${POSTGRES_DB:-smm_platform}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -24,7 +22,7 @@ services:
     container_name: smm-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
@@ -80,7 +78,7 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:3001/api
       NEXT_PUBLIC_WS_URL: ws://localhost:3001
     ports:
-      - "3000:3000"
+      - "3002:3000"
 
   nginx:
     image: nginx:alpine
