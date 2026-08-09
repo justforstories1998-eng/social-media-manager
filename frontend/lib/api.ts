@@ -87,10 +87,13 @@ export interface Product {
 export interface BusinessProfile {
   id: string;
   name: string;
+  businessName: string;
   industry: string;
   website: string | null;
   voice: string | null;
+  brandVoice: string | null;
   audience: string | null;
+  targetAudience: string | null;
   primaryColor: string;
   secondaryColor: string;
   userId: string;
