@@ -11,9 +11,7 @@ export default function WonderMediaLanding() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 lg:px-12 h-16 sm:h-20 bg-black/80 backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center">
-            <span className="font-bold text-xl sm:text-2xl text-white">W</span>
-          </div>
+          <img src="/logo.jpg" alt="WonderMedia" className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl object-cover" />
           <div>
             <div className="font-semibold text-xl sm:text-2xl tracking-[-0.04em]">WonderMedia</div>
             <div className="text-[10px] text-white/40 -mt-1 hidden sm:block">AI SOCIAL OS</div>

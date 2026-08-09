@@ -72,9 +72,7 @@ export default function WonderMediaRegister() {
 
         <div className="flex justify-center mb-8 sm:mb-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center">
-              <span className="font-bold text-2xl sm:text-3xl text-white">W</span>
-            </div>
+            <img src="/logo.jpg" alt="WonderMedia" className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl object-cover" />
             <div className="font-semibold text-3xl sm:text-4xl tracking-[-1.5px]">WonderMedia</div>
           </div>
         </div>
