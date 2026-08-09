@@ -73,7 +73,7 @@ export default function ProductsPage() {
               <div className="font-semibold text-xl tracking-tight">{product.name}</div>
               <div className="text-white/50 text-sm mt-1">{product.category}</div>
               <div className="flex justify-between items-end mt-6">
-                <div className="font-mono text-xl font-semibold">${product.price.toFixed(2)}</div>
+                <div className="font-mono text-xl font-semibold">${Number(product.price || 0).toFixed(2)}</div>
                 <div className={`status-badge ${product.status === 'Active' ? 'status-published' : 'status-draft'}`}>
                   {product.status}
                 </div>
