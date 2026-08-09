@@ -19,4 +19,6 @@ services:
         generateValue: true
       - key: FRONTEND_URL
         sync: false
+      - key: PORT
+        value: 10000
     autoDeploy: true
