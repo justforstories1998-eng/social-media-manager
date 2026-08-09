@@ -19,9 +19,6 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "WonderMedia | AI Social Media Platform",
   description: "Enterprise-grade, completely free, self-hosted AI Social Media Management Platform",
-  icons: {
-    icon: "/logo.jpg",
-  },
 };
 
 export default function RootLayout({

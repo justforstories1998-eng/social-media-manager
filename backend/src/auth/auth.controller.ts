@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -12,11 +12,17 @@ export class AuthController {
   @Post('register')
   @ApiOperation({ summary: 'Register new user' })
   async register(@Body() body: { email: string; password: string; name?: string }) {
-    return this.authService.register(body.email, body.password, body.name);
+    try {
+      return await this.authService.register(body.email, body.password, body.name);
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
   }
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email/password' })
   async login(@Request() req) {
     return this.authService.login(req.user);
