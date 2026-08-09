@@ -43,7 +43,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       return;
     }
     try {
-      const res = await api.get<User>('/users/me');
+      const res = await api.get<User>('/auth/me');
       set({ user: res.data, isAuthenticated: true, isLoading: false });
     } catch {
       localStorage.removeItem('access_token');

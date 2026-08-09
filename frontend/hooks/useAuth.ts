@@ -22,7 +22,7 @@ export function useMe() {
   return useQuery({
     queryKey: ['auth', 'me'],
     queryFn: async () => {
-      const res = await api.get<User>('/users/me');
+      const res = await api.get<User>('/auth/me');
       return res.data;
     },
     retry: false,
