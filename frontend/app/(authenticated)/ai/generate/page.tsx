@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import api, { type GeneratePostResponse } from '@/lib/api';
 import { toast } from 'sonner';
+import CustomDropdown from '@/components/CustomDropdown';
 
 interface AIModel {
   id: string;
@@ -11,6 +12,20 @@ interface AIModel {
   description?: string;
   size?: string;
 }
+
+const platformOptions = [
+  { value: 'Instagram', label: 'Instagram' },
+  { value: 'LinkedIn', label: 'LinkedIn' },
+  { value: 'Facebook', label: 'Facebook' },
+  { value: 'X', label: 'X (Twitter)' },
+  { value: 'TikTok', label: 'TikTok' },
+];
+
+const typeOptions = [
+  { value: 'Product Promotion', label: 'Product Promotion' },
+  { value: 'Educational', label: 'Educational' },
+  { value: 'Festival', label: 'Festival' },
+];
 
 export default function AIGeneratePage() {
   const [prompt, setPrompt] = useState("Earth Day campaign for sustainable water bottles");
@@ -64,6 +79,12 @@ export default function AIGeneratePage() {
 
   const currentModel = models.find(m => m.id === selectedModel);
 
+  const modelOptions = models.map(m => ({
+    value: m.id,
+    label: m.name,
+    description: m.context ? `${m.context}${m.description ? ' — ' + m.description : ''}` : m.description || m.size,
+  }));
+
   return (
     <div className="floating-shell mx-auto ring-1 ring-white/10">
       <div className="px-4 sm:px-8 pt-9 pb-6">
@@ -81,34 +102,30 @@ export default function AIGeneratePage() {
 
             <div>
               <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">AI MODEL</label>
-              <select
+              <CustomDropdown
+                options={modelOptions}
                 value={selectedModel}
-                onChange={e => setSelectedModel(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-3xl px-6 py-4 text-sm"
-              >
-                {models.map(model => (
-                  <option key={model.id} value={model.id}>
-                    {model.name} {model.context ? `(${model.context})` : model.size ? `(${model.size})` : ''}
-                  </option>
-                ))}
-              </select>
-              {currentModel?.description && (
-                <div className="mt-2 text-xs text-white/40">{currentModel.description}</div>
-              )}
+                onChange={setSelectedModel}
+                placeholder="Select a model..."
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">PLATFORM</label>
-                <select value={platform} onChange={e => setPlatform(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-3xl px-6 py-4 text-sm">
-                  <option>Instagram</option><option>LinkedIn</option><option>Facebook</option><option>X</option><option>TikTok</option>
-                </select>
+                <CustomDropdown
+                  options={platformOptions}
+                  value={platform}
+                  onChange={setPlatform}
+                />
               </div>
               <div>
                 <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">TYPE</label>
-                <select value={type} onChange={e => setType(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-3xl px-6 py-4 text-sm">
-                  <option>Product Promotion</option><option>Educational</option><option>Festival</option>
-                </select>
+                <CustomDropdown
+                  options={typeOptions}
+                  value={type}
+                  onChange={setType}
+                />
               </div>
             </div>
 
