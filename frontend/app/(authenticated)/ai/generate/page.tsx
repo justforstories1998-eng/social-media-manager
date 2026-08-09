@@ -118,12 +118,12 @@ export default function AIGeneratePage() {
           </div>
         </div>
 
-        <div className="glass p-6 sm:p-9 rounded-[2.5rem]">
+        <div className="glass p-6 sm:p-9 rounded-[2.5rem] overflow-hidden">
           {!result ? (
-            <div className="h-full flex items-center justify-center text-center">
-              <div>
-                <div className="text-3xl font-semibold tracking-tight">Ready to create</div>
-                <div className="text-white/50 mt-2">
+            <div className="h-full flex items-center justify-center text-center px-4">
+              <div className="max-w-full">
+                <div className="text-2xl sm:text-3xl font-semibold tracking-tight break-words">Ready to create</div>
+                <div className="text-white/50 mt-2 text-sm sm:text-base break-words">
                   Using {currentModel?.name || 'AI'} {currentModel?.context ? `• ${currentModel.context}` : ''}
                 </div>
               </div>
@@ -141,11 +141,11 @@ export default function AIGeneratePage() {
               <div className="space-y-5 text-sm">
                 <div>
                   <div className="font-mono text-xs text-white/50 mb-1">CAPTION</div>
-                  <div>{result.caption}</div>
+                  <div className="break-words">{result.caption}</div>
                 </div>
                 <div>
                   <div className="font-mono text-xs text-white/50 mb-1">HASHTAGS</div>
-                  <div className="text-[#ec4899]">{result.hashtags}</div>
+                  <div className="text-[#ec4899] break-words">{result.hashtags}</div>
                 </div>
               </div>
 

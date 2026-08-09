@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api, { type TelegramSettings } from '@/lib/api';
 import { toast } from 'sonner';
 import { ExternalLink, CheckCircle } from 'lucide-react';
@@ -54,6 +54,26 @@ export default function TelegramSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [showGuide, setShowGuide] = useState(true);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const res = await api.get<TelegramSettings>('/telegram/settings');
+        if (res.data) {
+          setForm({
+            botToken: res.data.botToken || '',
+            chatId: res.data.chatId || '',
+            channelId: res.data.channelId || '',
+            groupId: res.data.groupId || '',
+            enabled: res.data.enabled ?? true,
+          });
+        }
+      } catch {
+        // Settings don't exist yet, use defaults
+      }
+    };
+    loadSettings();
+  }, []);
 
   const handleSave = async () => {
     setIsSaving(true);

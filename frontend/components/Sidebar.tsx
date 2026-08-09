@@ -15,6 +15,7 @@ import {
   Settings,
   LogOut,
   Shield,
+  MessageCircle,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -27,6 +28,7 @@ const navItems = [
   { href: '/ai/generate', label: 'AI Generate', icon: Sparkles },
   { href: '/notifications', label: 'Notifications', icon: Bell },
   { href: '/exports', label: 'Exports', icon: Download },
+  { href: '/settings/telegram', label: 'Telegram', icon: MessageCircle },
   { href: '/settings/business', label: 'Settings', icon: Settings },
 ];
 

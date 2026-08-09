@@ -211,6 +211,21 @@ select {
   width: 100%;
 }
 
+select option {
+  background: #1a1a1a;
+  color: #f5f5f5;
+  padding: 10px;
+}
+
+select option:hover {
+  background: #2a2a2a;
+}
+
+select option:checked {
+  background: #7c3aed;
+  color: white;
+}
+
 input:not([type="color"]):not([type="range"]):not([type="checkbox"]):not([type="radio"])::placeholder,
 textarea::placeholder {
   color: rgba(255, 255, 255, 0.3);

@@ -8,11 +8,11 @@ export default function BusinessSettings() {
   const { data: profile, isLoading } = useBusinessProfile();
   const updateProfile = useUpdateBusinessProfile();
   const [form, setForm] = useState({
-    name: '',
+    businessName: '',
     industry: '',
     website: '',
-    voice: '',
-    audience: '',
+    brandVoice: '',
+    targetAudience: '',
     primaryColor: '#7c3aed',
     secondaryColor: '#ec4899',
   });
@@ -20,11 +20,11 @@ export default function BusinessSettings() {
   useEffect(() => {
     if (profile) {
       setForm({
-        name: profile.name || '',
+        businessName: profile.businessName || profile.name || '',
         industry: profile.industry || '',
         website: profile.website || '',
-        voice: profile.voice || '',
-        audience: profile.audience || '',
+        brandVoice: profile.brandVoice || profile.voice || '',
+        targetAudience: profile.targetAudience || profile.audience || '',
         primaryColor: profile.primaryColor || '#7c3aed',
         secondaryColor: profile.secondaryColor || '#ec4899',
       });
@@ -62,7 +62,7 @@ export default function BusinessSettings() {
             <div className="space-y-6">
               <div>
                 <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">BUSINESS NAME</label>
-                <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full" />
+                <input type="text" value={form.businessName} onChange={e => setForm({...form, businessName: e.target.value})} className="w-full" />
               </div>
 
               <div>
@@ -77,12 +77,12 @@ export default function BusinessSettings() {
 
               <div>
                 <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">BRAND VOICE</label>
-                <textarea value={form.voice} onChange={e => setForm({...form, voice: e.target.value})} className="w-full h-24" />
+                <textarea value={form.brandVoice} onChange={e => setForm({...form, brandVoice: e.target.value})} className="w-full h-24" />
               </div>
 
               <div>
                 <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">TARGET AUDIENCE</label>
-                <input type="text" value={form.audience} onChange={e => setForm({...form, audience: e.target.value})} className="w-full" />
+                <input type="text" value={form.targetAudience} onChange={e => setForm({...form, targetAudience: e.target.value})} className="w-full" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
