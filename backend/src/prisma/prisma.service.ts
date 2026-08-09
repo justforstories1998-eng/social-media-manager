@@ -24,19 +24,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       return;
     }
 
-    // Run migrations on startup
+    // Sync database schema on startup
     try {
-      this.logger.log('Running database migrations...');
-      execSync('npx prisma migrate deploy', { stdio: 'inherit' });
-      this.logger.log('Migrations completed');
-    } catch {
-      this.logger.warn('Migration deploy failed, trying db push (no reset)...');
-      try {
-        execSync('npx prisma db push', { stdio: 'inherit' });
-        this.logger.log('DB push completed');
-      } catch (error) {
-        this.logger.error('DB push also failed', (error as Error).message);
-      }
+      this.logger.log('Syncing database schema...');
+      execSync('npx prisma db push', { stdio: 'inherit' });
+      this.logger.log('Database schema synced');
+    } catch (error) {
+      this.logger.error('DB push failed', (error as Error).message);
     }
 
     try {
