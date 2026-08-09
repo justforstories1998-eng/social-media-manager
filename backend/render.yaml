@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: social-media-manager-backend
+    runtime: node
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: node dist/main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: social-media-db
+          property: connectionString
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false
+      - key: PORT
+        value: 10000
+    healthCheckPath: /api/docs
+    autoDeploy: true
+
+  - type: postgresql
+    name: social-media-db
+    region: oregon
+    plan: free
+    databaseName: social_media
+    ipAllowList:
+      - name: Allow all
+        value: 0.0.0.0/0
