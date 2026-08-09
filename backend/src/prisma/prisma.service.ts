@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { execSync } from 'child_process';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -10,7 +11,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const dbUrl = process.env.DATABASE_URL;
     if (!dbUrl) {
       super({ log: ['error'] });
-      this.logger.error('DATABASE_URL is not set! Database operations will fail.');
+      this.logger.error('DATABASE_URL is not set!');
       return;
     }
     const adapter = new PrismaPg({ connectionString: dbUrl });
@@ -19,9 +20,19 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   async onModuleInit() {
     if (!process.env.DATABASE_URL) {
-      this.logger.error('Skipping database connection - DATABASE_URL not configured');
+      this.logger.error('Skipping - DATABASE_URL not configured');
       return;
     }
+
+    // Run migrations on startup
+    try {
+      this.logger.log('Running database migrations...');
+      execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+      this.logger.log('Migrations completed');
+    } catch (error) {
+      this.logger.error('Migration failed', (error as Error).message);
+    }
+
     try {
       await this.$connect();
       this.logger.log('Connected to PostgreSQL database');
@@ -31,8 +42,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleDestroy() {
-    try {
-      await this.$disconnect();
-    } catch {}
+    try { await this.$disconnect(); } catch {}
   }
 }
