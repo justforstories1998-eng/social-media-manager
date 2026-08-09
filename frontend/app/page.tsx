@@ -22,7 +22,6 @@ export default function WonderMediaLanding() {
           {[
             { label: 'Features', href: '#features' },
             { label: 'How it Works', href: '#how-it-works' },
-            { label: 'Docs', href: '#docs' },
           ].map((item) => (
             <a key={item.href} href={item.href}
                className="px-5 py-2 text-sm text-white/70 hover:text-white transition-colors rounded-full hover:bg-white/5">
@@ -242,22 +241,21 @@ export default function WonderMediaLanding() {
         </div>
       </section>
 
-      {/* Docs / CTA Section */}
-      <section id="docs" className="py-16 sm:py-20 px-6 lg:px-12 border-t border-white/10">
+      {/* CTA Section */}
+      <section className="py-16 sm:py-20 px-6 lg:px-12 border-t border-white/10">
         <div className="max-w-[800px] mx-auto text-center">
-          <div className="font-mono text-xs tracking-[3px] text-white/40 mb-2">DOCUMENTATION</div>
+          <div className="font-mono text-xs tracking-[3px] text-white/40 mb-2">GET STARTED</div>
           <div className="text-3xl sm:text-4xl font-semibold tracking-[-0.04em] mb-6">Ready to get started?</div>
           <p className="text-white/60 mb-8 max-w-lg mx-auto">
-            Follow our comprehensive documentation to set up WonderMedia in minutes. 
-            From installation to advanced AI configuration — we&apos;ve got you covered.
+            Join WonderMedia and start creating amazing social media content with AI — completely free.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href="https://github.com/wondermedia/wondermedia" target="_blank" rel="noopener noreferrer" className="neon-button flex items-center gap-3">
-              View Documentation <ArrowRight className="w-4 h-4" />
-            </a>
-            <Link href="/dashboard" className="flex items-center gap-3 px-7 py-4 rounded-full border border-white/20 hover:bg-white/5 text-sm font-medium transition-all">
-              Try the Demo
+            <Link href="/auth/register" className="neon-button flex items-center gap-3">
+              Get Started Free <ArrowRight className="w-4 h-4" />
             </Link>
+            <a href="https://github.com/wondermedia/wondermedia" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-7 py-4 rounded-full border border-white/20 hover:bg-white/5 text-sm font-medium transition-all">
+              View on GitHub
+            </a>
           </div>
         </div>
       </section>
@@ -278,7 +276,6 @@ export default function WonderMediaLanding() {
               <a href="#" className="hover:text-white transition-colors">Privacy</a>
               <a href="#" className="hover:text-white transition-colors">Terms</a>
               <a href="https://github.com/wondermedia/wondermedia" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
-              <a href="#docs" className="hover:text-white transition-colors">Docs</a>
             </div>
 
             <div className="font-mono text-xs text-white/40">© 2026 WonderMedia • MIT Licensed</div>

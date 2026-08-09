@@ -55,12 +55,10 @@ export default function Sidebar() {
       <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-60 flex-col bg-[#0c0c0c] border-r border-white/10 z-40">
         <div className="p-5 border-b border-white/10">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center">
-              <span className="font-bold text-lg text-white">W</span>
-            </div>
+            <img src="/logo.jpg" alt="WonderMedia" className="w-9 h-9 rounded-2xl object-cover" />
             <div>
               <div className="font-semibold text-lg tracking-tight">WonderMedia</div>
-              <div className="text-[10px] font-mono text-white/40 -mt-0.5">v1.0.0</div>
+              <div className="text-[10px] font-mono text-white/40 -mt-0.5">AI Social Media</div>
             </div>
           </Link>
         </div>

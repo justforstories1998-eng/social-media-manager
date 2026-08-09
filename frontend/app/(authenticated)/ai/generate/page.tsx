@@ -1,15 +1,41 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api, { type GeneratePostResponse } from '@/lib/api';
 import { toast } from 'sonner';
+
+interface AIModel {
+  id: string;
+  name: string;
+  context?: string;
+  description?: string;
+  size?: string;
+}
 
 export default function AIGeneratePage() {
   const [prompt, setPrompt] = useState("Earth Day campaign for sustainable water bottles");
   const [platform, setPlatform] = useState("Instagram");
   const [type, setType] = useState("Product Promotion");
+  const [selectedModel, setSelectedModel] = useState("");
+  const [models, setModels] = useState<AIModel[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<GeneratePostResponse | null>(null);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const res = await api.get<AIModel[]>('/ai/models');
+        setModels(res.data);
+        if (res.data.length > 0 && !selectedModel) {
+          setSelectedModel(res.data[0].id);
+        }
+      } catch {
+        setModels([{ id: 'local', name: 'Local AI', description: 'Ollama local model' }]);
+        setSelectedModel('local');
+      }
+    };
+    fetchModels();
+  }, []);
 
   const generateContent = async () => {
     setIsGenerating(true);
@@ -18,6 +44,7 @@ export default function AIGeneratePage() {
         prompt,
         platform,
         type,
+        model: selectedModel,
       });
       setResult(res.data);
       toast.success('Content generated!');
@@ -27,13 +54,15 @@ export default function AIGeneratePage() {
         caption: "🌍 This Earth Day, choose reusable. Our new eco stainless bottle keeps your drinks cold for 24h and your conscience clean. Small choices. Big impact. ♻️",
         hashtags: "#EarthDay #SustainableLiving #EcoBottle #ZeroWaste",
         imagePrompt: "Premium product photography of a sleek stainless steel water bottle on moss, soft natural lighting, cinematic",
-        model: "Qwen2.5-7B",
+        model: selectedModel || "Qwen2.5-7B",
         confidence: "96%"
       });
     } finally {
       setIsGenerating(false);
     }
   };
+
+  const currentModel = models.find(m => m.id === selectedModel);
 
   return (
     <div className="floating-shell mx-auto ring-1 ring-white/10">
@@ -48,6 +77,24 @@ export default function AIGeneratePage() {
             <div>
               <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">PROMPT</label>
               <textarea value={prompt} onChange={e => setPrompt(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-3xl px-6 py-5 text-sm h-28" />
+            </div>
+
+            <div>
+              <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">AI MODEL</label>
+              <select
+                value={selectedModel}
+                onChange={e => setSelectedModel(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-3xl px-6 py-4 text-sm"
+              >
+                {models.map(model => (
+                  <option key={model.id} value={model.id}>
+                    {model.name} {model.context ? `(${model.context})` : model.size ? `(${model.size})` : ''}
+                  </option>
+                ))}
+              </select>
+              {currentModel?.description && (
+                <div className="mt-2 text-xs text-white/40">{currentModel.description}</div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -76,7 +123,9 @@ export default function AIGeneratePage() {
             <div className="h-full flex items-center justify-center text-center">
               <div>
                 <div className="text-3xl font-semibold tracking-tight">Ready to create</div>
-                <div className="text-white/50 mt-2">Using Qwen2.5-7B • Local AI</div>
+                <div className="text-white/50 mt-2">
+                  Using {currentModel?.name || 'AI'} {currentModel?.context ? `• ${currentModel.context}` : ''}
+                </div>
               </div>
             </div>
           ) : (

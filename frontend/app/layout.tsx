@@ -20,9 +20,8 @@ export const metadata: Metadata = {
   title: "WonderMedia | AI Social Media Platform",
   description: "Enterprise-grade, completely free, self-hosted AI Social Media Management Platform",
   icons: {
-    icon: [
-      { url: "/logo.jpg", sizes: "any", type: "image/jpeg" },
-    ],
+    icon: "/logo.jpg",
+    apple: "/logo.jpg",
   },
 };
 
