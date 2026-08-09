@@ -9,6 +9,9 @@ import rateLimit from 'express-rate-limit';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Global API prefix
+  app.setGlobalPrefix('api');
+
   // Security middleware (OWASP Top 10 compliant)
   app.use(helmet({
     contentSecurityPolicy: {
