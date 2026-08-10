@@ -30,6 +30,16 @@ export class AIController {
     return this.aiService.generateDailyContent(req.user.id, {}, []);
   }
 
+  @Post('generate-ad-concepts')
+  async generateAdConcepts(@Body() body: { productName: string; category?: string; description?: string; imageUrl?: string }) {
+    return this.aiService.generateAdConcepts(body.productName, body.category || '', body.description || '', body.imageUrl);
+  }
+
+  @Post('generate-ad-image')
+  async generateAdImage(@Body() body: { prompt: string; width?: number; height?: number }) {
+    return this.aiService.generateAdImage(body.prompt, body.width, body.height);
+  }
+
   @Get('models')
   async getAvailableModels() {
     return this.aiService.getAvailableModels();

@@ -76,8 +76,10 @@ export interface Product {
   description: string | null;
   category: string;
   price: number;
+  currency: string;
   status: string;
   imageUrl: string | null;
+  images: string[];
   emoji: string | null;
   userId: string;
   createdAt: string;
@@ -180,4 +182,17 @@ export interface GeneratePostResponse {
   imagePrompt: string;
   model: string;
   confidence: string;
+}
+
+export interface AdConcept {
+  name: string;
+  description: string;
+  prompt: string;
+}
+
+export interface AdImageResponse {
+  imageUrl: string;
+  prompt: string;
+  model: string;
+  provider: string;
 }

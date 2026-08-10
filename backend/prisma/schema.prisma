@@ -159,6 +159,7 @@ model Product {
   category    String?
   tags        String[]
   price       Decimal? @db.Decimal(10,2)
+  currency    String   @default("USD")
   discount    Decimal? @db.Decimal(5,2)
   images      String[] // URLs
   videos      String[]

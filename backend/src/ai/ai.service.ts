@@ -322,4 +322,69 @@ Respond with only the final image prompt.`;
 
     return occasions.length > 0 ? occasions : ['General Marketing Day'];
   }
+
+  async generateAdConcepts(productName: string, category: string, description: string, imageUrl?: string) {
+    const prompt = `You are a creative advertising director. Analyze this product and suggest 6 advertising concepts.
+
+Product Name: ${productName}
+Category: ${category || 'General'}
+Description: ${description || 'No description provided'}
+${imageUrl ? `Product Image: ${imageUrl}` : ''}
+
+For each concept, provide:
+- name: Short catchy name (e.g., "Lifestyle Morning Ad")
+- description: 1-2 sentence description of the concept
+- prompt: A detailed image generation prompt for Stable Diffusion / FLUX that describes the scene, lighting, composition, and mood. The prompt should be cinematic, high-quality, and professional.
+
+Respond in this exact JSON format:
+{
+  "concepts": [
+    {
+      "name": "Concept Name",
+      "description": "Brief description",
+      "prompt": "Detailed image generation prompt..."
+    }
+  ]
+}
+
+Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, social media, and editorial styles.`;
+
+    try {
+      let rawResponse: string;
+      if (this.isUsingOpenRouter) {
+        rawResponse = await this.callOpenRouter(prompt, 'openrouter/free');
+      } else {
+        rawResponse = await this.callOllama(prompt, 'llama3.2:1b', true);
+      }
+
+      const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
+      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(rawResponse);
+      return parsed.concepts || [];
+    } catch (error) {
+      this.logger.error(`Ad concept generation failed: ${error.message}`);
+      return [
+        { name: 'Lifestyle Ad', description: 'Product in a natural lifestyle setting', prompt: `${productName}, professional product photography, lifestyle setting, warm natural lighting, cinematic, 4k, high detail` },
+        { name: 'Minimal Showcase', description: 'Clean minimal product display', prompt: `${productName}, minimal product photography, clean white background, soft shadows, studio lighting, premium feel` },
+        { name: 'Social Media Creative', description: 'Engaging social media style', prompt: `${productName}, social media product photo, vibrant colors, modern aesthetic, Instagram style, high quality` },
+      ];
+    }
+  }
+
+  async generateAdImage(prompt: string, width = 1024, height = 1024) {
+    const encodedPrompt = encodeURIComponent(prompt);
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=flux&nologo=true`;
+
+    try {
+      // Verify the image is accessible
+      const response = await axios.head(imageUrl, { timeout: 10000 });
+      if (response.status === 200) {
+        return { imageUrl, prompt, model: 'flux', provider: 'pollinations' };
+      }
+    } catch (error) {
+      this.logger.warn(`Pollinations image verification failed: ${error.message}`);
+    }
+
+    // Return the URL anyway - Pollinations may still generate it on first access
+    return { imageUrl, prompt, model: 'flux', provider: 'pollinations' };
+  }
 }

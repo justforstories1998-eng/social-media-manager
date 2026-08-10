@@ -45,6 +45,11 @@ export class CreateProductDto {
   price?: number;
 
   @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  currency?: string;
+
+  @ApiPropertyOptional()
   @IsNumber()
   @IsOptional()
   discount?: number;

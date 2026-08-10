@@ -14,8 +14,21 @@ export function useProducts() {
 export function useCreateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { name: string; category: string; price: number; description?: string; emoji?: string }) => {
+    mutationFn: async (data: { name: string; category: string; price: number; currency?: string; description?: string; emoji?: string; images?: string[] }) => {
       const res = await api.post<Product>('/products', data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+}
+
+export function useUpdateProduct() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Product> }) => {
+      const res = await api.put<Product>(`/products/${id}`, data);
       return res.data;
     },
     onSuccess: () => {
