@@ -76,4 +76,9 @@ export class CreateProductDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  emoji?: string;
 }
