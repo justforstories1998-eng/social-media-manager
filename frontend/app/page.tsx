@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Play, Zap, Shield, Globe } from 'lucide-react';
+import { ArrowRight, Zap, Shield, Globe } from 'lucide-react';
 
 export default function WonderMediaLanding() {
   return (
@@ -71,9 +71,6 @@ export default function WonderMediaLanding() {
                 Start for free
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition" />
               </Link>
-              <button className="flex items-center gap-3 px-6 sm:px-7 py-3 sm:py-4 rounded-full border border-white/20 hover:bg-white/5 text-sm font-medium transition-all">
-                <Play className="w-4 h-4" /> Watch 47s demo
-              </button>
             </div>
 
             <div className="mt-8 text-xs text-white/40 flex items-center gap-3">
@@ -225,7 +222,7 @@ export default function WonderMediaLanding() {
 
           <div className="mt-16 space-y-8 text-lg text-black/80">
             {[
-              { num: "01", title: "Local AI First", desc: "No external APIs. All models run on your hardware." },
+              { num: "01", title: "Free AI Powered", desc: "Uses free AI providers for content generation, image creation, and daily social media tasks." },
               { num: "02", title: "Glassmorphism UI", desc: "A modern interface that feels premium and futuristic." },
               { num: "03", title: "Enterprise Security", desc: "OWASP compliant with Argon2, JWT, and full audit trails." },
             ].map((item, index) => (
