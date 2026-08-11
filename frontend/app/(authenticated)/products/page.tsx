@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Plus, Upload, Trash2, Sparkles, Download, X, Loader2 } from 'lucide-react';
 import { useProducts, useCreateProduct, useDeleteProduct } from '@/hooks/useProducts';
-import { api as axiosApi, type AdConcept, type AdImageResponse } from '@/lib/api';
+import api, { type AdConcept, type AdImageResponse } from '@/lib/api';
 import { toast } from 'sonner';
 import CustomDropdown from '@/components/CustomDropdown';
 
@@ -71,7 +71,7 @@ export default function ProductsPage() {
     setGeneratedImage(null);
     setSelectedConcept(null);
     try {
-      const res = await axiosApi.post<AdConcept[]>('/ai/generate-ad-concepts', {
+      const res = await api.post<AdConcept[]>('/ai/generate-ad-concepts', {
         productName: product.name,
         category: product.category,
         description: product.description || '',
@@ -90,7 +90,7 @@ export default function ProductsPage() {
     setIsGeneratingImage(true);
     setGeneratedImage(null);
     try {
-      const res = await axiosApi.post<AdImageResponse>('/ai/generate-ad-image', {
+      const res = await api.post<AdImageResponse>('/ai/generate-ad-image', {
         prompt: concept.prompt,
         width: 1024,
         height: 1024,
