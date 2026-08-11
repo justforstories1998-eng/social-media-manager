@@ -250,7 +250,7 @@ export default function WonderMediaLanding() {
             <Link href="/auth/register" className="neon-button flex items-center gap-3">
               Get Started Free <ArrowRight className="w-4 h-4" />
             </Link>
-            <a href="https://github.com/wondermedia/wondermedia" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-7 py-4 rounded-full border border-white/20 hover:bg-white/5 text-sm font-medium transition-all">
+            <a href="https://github.com/justforstories1998-eng/social-media-manager" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-7 py-4 rounded-full border border-white/20 hover:bg-white/5 text-sm font-medium transition-all">
               View on GitHub
             </a>
           </div>
@@ -272,7 +272,7 @@ export default function WonderMediaLanding() {
             <div className="flex gap-6 sm:gap-8 text-sm text-white/60">
               <a href="#" className="hover:text-white transition-colors">Privacy</a>
               <a href="#" className="hover:text-white transition-colors">Terms</a>
-              <a href="https://github.com/wondermedia/wondermedia" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
+              <a href="https://github.com/justforstories1998-eng/social-media-manager" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
             </div>
 
             <div className="font-mono text-xs text-white/40">© 2026 WonderMedia • MIT Licensed</div>
