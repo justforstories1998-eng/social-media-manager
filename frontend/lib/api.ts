@@ -196,3 +196,21 @@ export interface AdImageResponse {
   model: string;
   provider: string;
 }
+
+export interface GenerateImageResponse {
+  imageUrl: string;
+  prompt: string;
+  model: string;
+  width: number;
+  height: number;
+  seed: number;
+  provider: string;
+}
+
+export interface GenerateVideoResponse {
+  videoUrl: string;
+  prompt: string;
+  model: string;
+  duration: number;
+  provider: string;
+}

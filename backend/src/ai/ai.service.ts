@@ -387,4 +387,33 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
     // Return the URL anyway - Pollinations may still generate it on first access
     return { imageUrl, prompt, model: 'flux', provider: 'pollinations' };
   }
+
+  async generateImage(prompt: string, model = 'flux', width = 1024, height = 1024, seed?: number) {
+    const encodedPrompt = encodeURIComponent(prompt);
+    const seedParam = seed ? `&seed=${seed}` : '';
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${model}&width=${width}&height=${height}${seedParam}&nologo=true`;
+
+    return {
+      imageUrl,
+      prompt,
+      model,
+      width,
+      height,
+      seed: seed || Math.floor(Math.random() * 1000000),
+      provider: 'pollinations',
+    };
+  }
+
+  async generateVideo(prompt: string, model = 'stable-video', duration = 5) {
+    const encodedPrompt = encodeURIComponent(prompt);
+    const videoUrl = `https://video.pollinations.ai/prompt/${encodedPrompt}?model=${model}&duration=${duration}`;
+
+    return {
+      videoUrl,
+      prompt,
+      model,
+      duration,
+      provider: 'pollinations',
+    };
+  }
 }

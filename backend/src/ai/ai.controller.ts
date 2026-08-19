@@ -20,8 +20,8 @@ export class AIController {
     return this.aiService.generateFullPost(body.prompt, body.platform, body.type, req.user.id, body.model);
   }
 
-  @Post('generate-image')
-  async generateImage(@Request() req, @Body() body: { prompt: string; brandColors?: string[]; model?: string }) {
+  @Post('generate-image-prompt')
+  async generateImagePrompt(@Request() req, @Body() body: { prompt: string; brandColors?: string[]; model?: string }) {
     return this.aiService.generateImagePrompt(body.prompt, req.user.id, body.brandColors, body.model);
   }
 
@@ -38,6 +38,16 @@ export class AIController {
   @Post('generate-ad-image')
   async generateAdImage(@Body() body: { prompt: string; width?: number; height?: number }) {
     return this.aiService.generateAdImage(body.prompt, body.width, body.height);
+  }
+
+  @Post('generate-image')
+  async generateImage(@Body() body: { prompt: string; model?: string; width?: number; height?: number; seed?: number }) {
+    return this.aiService.generateImage(body.prompt, body.model, body.width, body.height, body.seed);
+  }
+
+  @Post('generate-video')
+  async generateVideo(@Body() body: { prompt: string; model?: string; duration?: number }) {
+    return this.aiService.generateVideo(body.prompt, body.model, body.duration);
   }
 
   @Get('models')

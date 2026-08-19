@@ -16,6 +16,8 @@ import {
   LogOut,
   Shield,
   MessageCircle,
+  Image,
+  Film,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -26,6 +28,8 @@ const navItems = [
   { href: '/calendar', label: 'Calendar', icon: Calendar },
   { href: '/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/ai/generate', label: 'AI Generate', icon: Sparkles },
+  { href: '/ai/image', label: 'AI Image', icon: Image },
+  { href: '/ai/video', label: 'AI Video', icon: Film },
   { href: '/notifications', label: 'Notifications', icon: Bell },
   { href: '/exports', label: 'Exports', icon: Download },
   { href: '/settings/telegram', label: 'Telegram', icon: MessageCircle },
