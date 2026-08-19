@@ -331,7 +331,7 @@ td {
 @media (max-width: 768px) {
   .floating-shell {
     border-radius: 1.5rem;
-    margin: 0.75rem;
+    margin: 0.5rem;
   }
 
   .glass {
@@ -346,11 +346,27 @@ td {
   .bento-card {
     border-radius: 1.5rem;
   }
+
+  .hero-title {
+    font-size: 2rem;
+    line-height: 0.95;
+  }
+
+  input:not([type="color"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+
+  td {
+    white-space: normal;
+  }
 }
 
 @media (max-width: 640px) {
   .hero-title {
-    font-size: 2.25rem;
+    font-size: 1.75rem;
     line-height: 0.95;
   }
 
@@ -359,6 +375,20 @@ td {
   }
 
   .watermark {
-    font-size: 2.5rem;
+    font-size: 2rem;
   }
+}
+
+/* Hide scrollbar for mobile nav */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area for mobile bottom nav */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }

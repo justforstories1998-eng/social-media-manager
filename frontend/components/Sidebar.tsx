@@ -98,19 +98,19 @@ export default function Sidebar() {
 
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0c0c0c]/95 backdrop-blur-xl border-t border-white/10 z-40 safe-bottom">
-        <div className="flex items-center justify-around px-2 py-2">
-          {navItems.slice(0, 5).map((item) => {
+        <div className="flex items-center overflow-x-auto px-2 py-2 gap-1 scrollbar-hide">
+          {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-medium transition-colors ${
+                className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-medium transition-colors whitespace-nowrap flex-shrink-0 min-w-[56px] ${
                   isActive ? 'text-[#7c3aed]' : 'text-white/40'
                 }`}
               >
                 <item.icon className="w-5 h-5" />
-                {item.label.slice(0, 6)}
+                <span className="truncate max-w-[50px]">{item.label}</span>
               </Link>
             );
           })}

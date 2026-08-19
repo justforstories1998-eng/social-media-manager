@@ -9,7 +9,7 @@ export default function WonderMediaLanding() {
     <div className="min-h-screen bg-[#000000] text-[#f5f5f5] font-sans overflow-x-hidden">
       
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 lg:px-12 h-16 sm:h-20 bg-black/80 backdrop-blur-xl border-b border-white/10">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 lg:px-12 h-14 sm:h-20 bg-black/80 backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3">
           <img src="/logo.jpg" alt="WonderMedia" className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl object-cover" />
           <div>
@@ -47,7 +47,7 @@ export default function WonderMediaLanding() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-28 sm:pt-32 pb-16 sm:pb-20 px-6 lg:px-12">
+      <section className="pt-24 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6 lg:px-12">
         <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-10 items-center">
           <div className="lg:col-span-7">
             <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-white/5 text-xs tracking-[2px] mb-6 sm:mb-8 border border-white/10">
@@ -123,7 +123,7 @@ export default function WonderMediaLanding() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-16 sm:py-20 px-6 lg:px-12">
+      <section id="features" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-12">
         <div className="max-w-[1400px] mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
             <div>
@@ -196,11 +196,11 @@ export default function WonderMediaLanding() {
       </section>
 
       {/* How it Works Section */}
-      <section id="how-it-works" className="contrast-section px-6 lg:px-12 py-16 sm:py-20">
+      <section id="how-it-works" className="contrast-section px-4 sm:px-6 lg:px-12 py-12 sm:py-20">
         <div className="max-w-[1200px] mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-10 sm:mb-16">
             <div className="font-mono text-xs tracking-[3px] mb-3 text-black/60">HOW IT WORKS</div>
-            <div className="text-4xl sm:text-5xl font-semibold tracking-[-0.04em] leading-none text-black">Up and running in minutes.</div>
+            <div className="text-3xl sm:text-5xl font-semibold tracking-[-0.04em] leading-none text-black">Up and running in minutes.</div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -239,7 +239,7 @@ export default function WonderMediaLanding() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 sm:py-20 px-6 lg:px-12 border-t border-white/10">
+      <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-12 border-t border-white/10">
         <div className="max-w-[800px] mx-auto text-center">
           <div className="font-mono text-xs tracking-[3px] text-white/40 mb-2">GET STARTED</div>
           <div className="text-3xl sm:text-4xl font-semibold tracking-[-0.04em] mb-6">Ready to get started?</div>
@@ -258,7 +258,7 @@ export default function WonderMediaLanding() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#000000] px-6 lg:px-12 py-12 sm:py-16 border-t border-white/10 relative overflow-hidden">
+      <footer className="bg-[#000000] px-4 sm:px-6 lg:px-12 py-10 sm:py-16 border-t border-white/10 relative overflow-hidden">
         <div className="max-w-[1400px] mx-auto relative z-10">
           <div className="absolute top-9 left-1/2 -translate-x-1/2 watermark font-black tracking-[-8px]">WONDERMEDIA</div>
 

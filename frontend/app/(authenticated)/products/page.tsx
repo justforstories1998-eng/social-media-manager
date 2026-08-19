@@ -187,9 +187,9 @@ export default function ProductsPage() {
 
       {/* Add Product Modal */}
       {showAdd && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6" onClick={() => setShowAdd(false)}>
-          <div className="glass p-8 rounded-[2.5rem] max-w-md w-full" onClick={e => e.stopPropagation()}>
-            <div className="text-3xl font-semibold tracking-tight mb-7">Add Product</div>
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowAdd(false)}>
+          <div className="glass p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <div className="text-2xl sm:text-3xl font-semibold tracking-tight mb-6 sm:mb-7">Add Product</div>
             <div className="space-y-4">
               <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Product name" className="w-full" />
               <input value={form.category} onChange={e => setForm({...form, category: e.target.value})} placeholder="Category" className="w-full" />
@@ -216,9 +216,9 @@ export default function ProductsPage() {
 
       {/* Bulk Upload Modal */}
       {showUpload && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6" onClick={() => setShowUpload(false)}>
-          <div className="glass p-8 sm:p-10 rounded-[2.5rem] max-w-md w-full" onClick={e => e.stopPropagation()}>
-            <div className="text-3xl font-semibold tracking-tight mb-7">Bulk Upload</div>
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowUpload(false)}>
+          <div className="glass p-6 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <div className="text-2xl sm:text-3xl font-semibold tracking-tight mb-6 sm:mb-7">Bulk Upload</div>
             <div className="border border-dashed border-white/20 p-8 sm:p-12 text-center rounded-3xl">
               <Upload className="w-9 h-9 mx-auto mb-4 text-white/40" />
               <div>Drop CSV, Excel or ZIP here</div>
@@ -233,8 +233,8 @@ export default function ProductsPage() {
 
       {/* AI Ad Generator Modal */}
       {showAdModal && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6" onClick={() => setShowAdModal(false)}>
-          <div className="glass p-6 sm:p-8 rounded-[2.5rem] max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowAdModal(false)}>
+          <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <div>
                 <div className="font-mono text-xs tracking-[3px] text-white/50">AI AD GENERATOR</div>

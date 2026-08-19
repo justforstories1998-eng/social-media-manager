@@ -65,7 +65,7 @@ export default function PostsPage() {
                 <tr className="border-b border-white/10 text-xs font-mono tracking-[2px] text-white/40">
                   <th className="px-4 sm:px-8 py-5 text-left">POST</th>
                   <th className="px-4 sm:px-8 py-5 text-left hidden sm:table-cell">PLATFORM</th>
-                  <th className="px-4 sm:px-8 py-5 text-left">STATUS</th>
+                  <th className="px-4 sm:px-8 py-5 text-left hidden sm:table-cell">STATUS</th>
                   <th className="px-4 sm:px-8 py-5 text-left hidden md:table-cell">SCHEDULED</th>
                   <th className="px-4 sm:px-8 py-5 text-right hidden lg:table-cell">REACH</th>
                   <th className="px-4 sm:px-8"></th>
@@ -79,12 +79,17 @@ export default function PostsPage() {
                 ) : posts && posts.length > 0 ? (
                   posts.map((post) => (
                     <tr key={post.id} className="border-b border-white/10 hover:bg-white/5 last:border-none">
-                      <td className="px-4 sm:px-8 py-6 font-medium text-lg tracking-tight">
+                      <td className="px-4 sm:px-8 py-4 sm:py-6 font-medium text-base sm:text-lg tracking-tight">
                         {post.title}
-                        <div className="sm:hidden text-xs text-white/50 font-mono mt-1">{post.platform}</div>
+                        <div className="flex items-center gap-2 mt-1 sm:hidden">
+                          <span className="text-xs text-white/50 font-mono">{post.platform}</span>
+                          <span className={`status-badge text-[10px] px-2 py-0.5 ${post.status === 'Published' ? 'status-published' : post.status === 'Scheduled' ? 'status-scheduled' : post.status === 'Approved' ? 'status-approved' : 'status-draft'}`}>
+                            {post.status}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-4 sm:px-8 py-6 text-white/70 hidden sm:table-cell">{post.platform}</td>
-                      <td className="px-4 sm:px-8 py-6">
+                      <td className="px-4 sm:px-8 py-4 sm:py-6 text-white/70 hidden sm:table-cell">{post.platform}</td>
+                      <td className="px-4 sm:px-8 py-4 sm:py-6 hidden sm:table-cell">
                         <span className={`status-badge ${post.status === 'Published' ? 'status-published' : post.status === 'Scheduled' ? 'status-scheduled' : post.status === 'Approved' ? 'status-approved' : 'status-draft'}`}>
                           {post.status}
                         </span>
@@ -95,7 +100,7 @@ export default function PostsPage() {
                       <td className="px-4 sm:px-8 py-6 text-right font-mono text-sm hidden lg:table-cell">
                         {post.reach ? `${post.reach}k` : '—'}
                       </td>
-                      <td className="px-4 sm:px-8 py-6 text-right">
+                      <td className="px-4 sm:px-8 py-4 sm:py-6 text-right hidden md:table-cell">
                         <Link href={`/posts/${post.id}`} className="text-xs px-4 py-2 border border-white/10 rounded-full hover:bg-white/10 transition-colors inline-block">
                           View
                         </Link>
@@ -115,10 +120,10 @@ export default function PostsPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6" onClick={() => setShowModal(false)} role="dialog" aria-modal="true" aria-labelledby="modal-title">
-          <div ref={modalRef} tabIndex={-1} className="glass max-w-md w-full p-8 rounded-[2.5rem] outline-none" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowModal(false)} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+          <div ref={modalRef} tabIndex={-1} className="glass max-w-md w-full p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] outline-none" onClick={e => e.stopPropagation()}>
             <div className="font-mono text-xs tracking-[3px] mb-2 text-white/50">AI GENERATOR</div>
-            <div id="modal-title" className="text-3xl font-semibold tracking-tight mb-8">Generate new content</div>
+            <div id="modal-title" className="text-2xl sm:text-3xl font-semibold tracking-tight mb-6 sm:mb-8">Generate new content</div>
 
             <div className="space-y-6">
               <div>
