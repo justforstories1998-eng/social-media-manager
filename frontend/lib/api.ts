@@ -55,17 +55,22 @@ export interface AuthResponse {
 
 export interface Post {
   id: string;
-  title: string;
+  title: string | null;
+  caption: string;
   content: string;
   platform: string;
+  platformContent: string | null;
+  platforms: string[];
   status: string;
-  scheduledAt: string | null;
+  scheduledFor: string | null;
   publishedAt: string | null;
   reach: number | null;
   engagement: number | null;
   imageUrl: string | null;
-  hashtags: string | null;
+  videoUrl: string | null;
+  hashtags: string[];
   userId: string;
+  product: Product | null;
   createdAt: string;
   updatedAt: string;
 }

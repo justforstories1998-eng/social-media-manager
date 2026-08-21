@@ -98,7 +98,7 @@ export default function DashboardPage() {
                 <div key={post.id} className="glass flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-white/10 gap-3">
                   <div>
                     <div className="font-medium tracking-tight text-lg">{post.title}</div>
-                    <div className="text-xs font-mono text-white/50 mt-px">{post.platform} • {post.scheduledAt || '—'}</div>
+                    <div className="text-xs font-mono text-white/50 mt-px">{post.platform} • {post.scheduledAt || post.scheduledFor || '—'}</div>
                   </div>
                   <div className="flex items-center gap-3 w-full sm:w-auto">
                     <div className={`status-badge ${post.status === 'Approved' || post.status === 'Published' ? 'status-approved' : 'status-ready'}`}>
