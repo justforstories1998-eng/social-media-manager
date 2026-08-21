@@ -12,7 +12,7 @@ export class BusinessService {
     });
 
     if (!profile) {
-      throw new NotFoundException('Business profile not found');
+      return null;
     }
 
     return profile;
