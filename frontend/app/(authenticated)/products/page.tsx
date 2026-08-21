@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
-import React, { useState } from 'react';
-import { Plus, Upload, Trash2, Sparkles, Download, X, Loader2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Plus, Trash2, Sparkles, Download, X, Loader2, Brain } from 'lucide-react';
 import { useProducts, useCreateProduct, useDeleteProduct } from '@/hooks/useProducts';
 import api, { type AdConcept, type AdImageResponse } from '@/lib/api';
 import { toast } from 'sonner';
@@ -21,20 +21,52 @@ const currencySymbols: Record<string, string> = {
   USD: '$', EUR: '€', GBP: '£', INR: '₹', JPY: '¥', AUD: 'A$', CAD: 'C$',
 };
 
+interface ProductSuggestion {
+  caption: string;
+  hashtags: string;
+  imagePrompt: string;
+  platform: string;
+}
+
 export default function ProductsPage() {
   const { data: products, isLoading } = useProducts();
   const createProduct = useCreateProduct();
   const deleteProduct = useDeleteProduct();
-  const [showUpload, setShowUpload] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showAdModal, setShowAdModal] = useState(false);
+  const [showAnalyzeModal, setShowAnalyzeModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [adConcepts, setAdConcepts] = useState<AdConcept[]>([]);
   const [generatedImage, setGeneratedImage] = useState<AdImageResponse | null>(null);
   const [selectedConcept, setSelectedConcept] = useState<number | null>(null);
   const [isGeneratingConcepts, setIsGeneratingConcepts] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ name: '', category: '', price: '', currency: 'USD', description: '', emoji: '' });
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'products');
+      const res = await api.post('/media/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setUploadedImageUrl(res.data.url);
+      toast.success('Image uploaded!');
+    } catch {
+      toast.error('Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleAdd = async () => {
     try {
@@ -45,10 +77,12 @@ export default function ProductsPage() {
         currency: form.currency,
         description: form.description || undefined,
         emoji: form.emoji || undefined,
+        images: uploadedImageUrl ? [uploadedImageUrl] : undefined,
       });
       toast.success('Product added!');
       setShowAdd(false);
       setForm({ name: '', category: '', price: '', currency: 'USD', description: '', emoji: '' });
+      setUploadedImageUrl(null);
     } catch {
       toast.error('Failed to add product');
     }
@@ -104,6 +138,33 @@ export default function ProductsPage() {
     }
   };
 
+  const handleAnalyzeProduct = async (product: any) => {
+    setSelectedProduct(product);
+    setShowAnalyzeModal(true);
+    setIsAnalyzing(true);
+    setSuggestions([]);
+    try {
+      const res = await api.post('/ai/generate-post', {
+        prompt: `Analyze this product and create a social media post. Product: ${product.name}, Category: ${product.category}, Description: ${product.description || 'No description'}`,
+        platform: 'Instagram',
+        type: 'Product Promotion',
+      });
+      const data = res.data;
+      if (data.caption) {
+        setSuggestions([{
+          caption: data.caption,
+          hashtags: data.hashtags || '',
+          imagePrompt: data.imagePrompt || '',
+          platform: 'Instagram',
+        }]);
+      }
+    } catch {
+      toast.error('Failed to analyze product');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const handleDownloadImage = (imageUrl: string, name: string) => {
     const link = document.createElement('a');
     link.href = imageUrl;
@@ -118,14 +179,10 @@ export default function ProductsPage() {
     <div className="floating-shell mx-auto ring-1 ring-white/10">
       <div className="px-4 sm:px-8 h-20 flex items-center justify-between border-b border-white/10">
         <div className="font-mono text-xs tracking-[3px] text-white/50">PRODUCT LIBRARY</div>
-        <div className="flex gap-3">
-          <button onClick={() => setShowUpload(true)} className="flex items-center gap-2 px-4 sm:px-6 py-2 rounded-full border border-white/10 text-sm hover:bg-white/5 transition-colors">
-            <Upload className="w-4 h-4" /> <span className="hidden sm:inline">Bulk Upload</span>
-          </button>
-          <button onClick={() => setShowAdd(true)} className="neon-button flex items-center gap-2 text-sm">
-            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Add Product</span>
-          </button>
-        </div>
+        <button onClick={() => setShowAdd(true)} className="neon-button flex items-center gap-2 text-sm">
+          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Add Product</span>
+          <span className="sm:hidden">Add</span>
+        </button>
       </div>
 
       <div className="px-4 sm:px-8 pt-9 pb-6">
@@ -144,7 +201,6 @@ export default function ProductsPage() {
         ) : products && products.length > 0 ? (
           products.map((product) => (
             <div key={product.id} className="glass p-6 sm:p-7 rounded-[2.5rem] border border-white/10 hover:border-[#7c3aed]/40 transition-colors relative group">
-              {/* Product Image */}
               <div className="w-full h-40 rounded-2xl mb-6 overflow-hidden bg-white/5 flex items-center justify-center">
                 {product.images?.[0] || product.imageUrl ? (
                   <img src={product.images?.[0] || product.imageUrl || ''} alt={product.name} className="w-full h-full object-cover" />
@@ -152,45 +208,57 @@ export default function ProductsPage() {
                   <div className="text-5xl sm:text-6xl opacity-80">{product.emoji || '📦'}</div>
                 )}
               </div>
-
               <div className="font-semibold text-xl tracking-tight">{product.name}</div>
               <div className="text-white/50 text-sm mt-1">{product.category}</div>
-
               <div className="flex justify-between items-end mt-6">
                 <div className="font-mono text-xl font-semibold">
                   {currencySymbols[product.currency] || '$'}{Number(product.price || 0).toFixed(2)}
                   <span className="text-xs text-white/40 ml-1">{product.currency}</span>
                 </div>
               </div>
-
-              {/* Action Buttons */}
               <div className="flex gap-2 mt-4">
-                <button
-                  onClick={() => handleGenerateAdConcepts(product)}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#7c3aed]/15 text-[#7c3aed] text-xs font-medium hover:bg-[#7c3aed]/25 transition-colors"
-                >
-                  <Sparkles className="w-3.5 h-3.5" /> Generate AI Ad
+                <button onClick={() => handleGenerateAdConcepts(product)} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#7c3aed]/15 text-[#7c3aed] text-xs font-medium hover:bg-[#7c3aed]/25 transition-colors">
+                  <Sparkles className="w-3.5 h-3.5" /> AI Ad
                 </button>
-                <button
-                  onClick={() => handleDelete(product.id)}
-                  className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
-                >
+                <button onClick={() => handleAnalyzeProduct(product)} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#ec4899]/15 text-[#ec4899] text-xs font-medium hover:bg-[#ec4899]/25 transition-colors">
+                  <Brain className="w-3.5 h-3.5" /> Analyze
+                </button>
+                <button onClick={() => handleDelete(product.id)} className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
           ))
         ) : (
-          <div className="col-span-full text-center py-12 text-white/50">No products yet. Add your first one!</div>
+          <div className="col-span-full text-center py-12 text-white/50">
+            <div className="text-4xl mb-3">📦</div>
+            No products yet. Add your first one!
+          </div>
         )}
       </div>
 
-      {/* Add Product Modal */}
       {showAdd && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowAdd(false)}>
-          <div className="glass p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-md w-full" onClick={e => e.stopPropagation()}>
-            <div className="text-2xl sm:text-3xl font-semibold tracking-tight mb-6 sm:mb-7">Add Product</div>
+          <div className="glass p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <div className="text-2xl sm:text-3xl font-semibold tracking-tight">Add Product</div>
+              <button onClick={() => setShowAdd(false)} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
+            </div>
             <div className="space-y-4">
+              <div>
+                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">PRODUCT IMAGE</label>
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                {uploadedImageUrl ? (
+                  <div className="relative">
+                    <img src={uploadedImageUrl} alt="Preview" className="w-full h-40 object-cover rounded-2xl" />
+                    <button onClick={() => setUploadedImageUrl(null)} className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 hover:bg-black/80"><X className="w-4 h-4" /></button>
+                  </div>
+                ) : (
+                  <button onClick={() => fileInputRef.current?.click()} className="w-full h-32 border-2 border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-[#7c3aed]/40 transition-colors">
+                    {uploadingImage ? <Loader2 className="w-6 h-6 animate-spin text-[#7c3aed]" /> : <><Sparkles className="w-6 h-6 text-white/40" /><span className="text-sm text-white/50">Click to upload image</span></>}
+                  </button>
+                )}
+              </div>
               <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Product name" className="w-full" />
               <input value={form.category} onChange={e => setForm({...form, category: e.target.value})} placeholder="Category" className="w-full" />
               <div className="grid grid-cols-3 gap-3">
@@ -206,7 +274,7 @@ export default function ProductsPage() {
             </div>
             <div className="flex gap-3 mt-8">
               <button onClick={() => setShowAdd(false)} className="flex-1 py-4 rounded-full border border-white/10 hover:bg-white/5 transition-colors">Cancel</button>
-              <button onClick={handleAdd} disabled={createProduct.isPending} className="neon-button flex-1">
+              <button onClick={handleAdd} disabled={createProduct.isPending || !form.name} className="neon-button flex-1">
                 {createProduct.isPending ? 'Adding...' : 'Add Product'}
               </button>
             </div>
@@ -214,24 +282,6 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Bulk Upload Modal */}
-      {showUpload && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowUpload(false)}>
-          <div className="glass p-6 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] max-w-md w-full" onClick={e => e.stopPropagation()}>
-            <div className="text-2xl sm:text-3xl font-semibold tracking-tight mb-6 sm:mb-7">Bulk Upload</div>
-            <div className="border border-dashed border-white/20 p-8 sm:p-12 text-center rounded-3xl">
-              <Upload className="w-9 h-9 mx-auto mb-4 text-white/40" />
-              <div>Drop CSV, Excel or ZIP here</div>
-            </div>
-            <div className="flex gap-3 mt-8">
-              <button onClick={() => setShowUpload(false)} className="flex-1 py-4 rounded-full border border-white/10 hover:bg-white/5 transition-colors">Cancel</button>
-              <button className="neon-button flex-1">Upload &amp; Process</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* AI Ad Generator Modal */}
       {showAdModal && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowAdModal(false)}>
           <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -240,11 +290,8 @@ export default function ProductsPage() {
                 <div className="font-mono text-xs tracking-[3px] text-white/50">AI AD GENERATOR</div>
                 <div className="text-2xl sm:text-3xl font-semibold tracking-tight">{selectedProduct?.name}</div>
               </div>
-              <button onClick={() => setShowAdModal(false)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
+              <button onClick={() => setShowAdModal(false)} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
             </div>
-
             {isGeneratingConcepts ? (
               <div className="flex flex-col items-center py-12">
                 <Loader2 className="w-8 h-8 text-[#7c3aed] animate-spin mb-4" />
@@ -253,52 +300,69 @@ export default function ProductsPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {adConcepts.map((concept, index) => (
-                  <div
-                    key={index}
-                    className={`p-5 rounded-2xl border transition-all cursor-pointer ${
-                      selectedConcept === index
-                        ? 'border-[#7c3aed] bg-[#7c3aed]/10'
-                        : 'border-white/10 bg-white/5 hover:border-white/20'
-                    }`}
-                    onClick={() => handleGenerateImage(concept, index)}
-                  >
+                  <div key={index} className={`p-5 rounded-2xl border transition-all cursor-pointer ${selectedConcept === index ? 'border-[#7c3aed] bg-[#7c3aed]/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`} onClick={() => handleGenerateImage(concept, index)}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="font-semibold">{concept.name}</div>
-                      {selectedConcept === index && isGeneratingImage && (
-                        <Loader2 className="w-4 h-4 text-[#7c3aed] animate-spin" />
-                      )}
+                      {selectedConcept === index && isGeneratingImage && <Loader2 className="w-4 h-4 text-[#7c3aed] animate-spin" />}
                     </div>
                     <div className="text-white/50 text-sm">{concept.description}</div>
                   </div>
                 ))}
               </div>
             )}
-
-            {/* Generated Image Preview */}
             {generatedImage && (
               <div className="mt-6 p-5 rounded-2xl border border-[#7c3aed]/40 bg-[#7c3aed]/5">
                 <div className="font-mono text-xs text-white/50 mb-3">GENERATED IMAGE</div>
-                <img
-                  src={generatedImage.imageUrl}
-                  alt="Generated ad"
-                  className="w-full max-h-96 object-contain rounded-xl mb-4"
-                  loading="lazy"
-                />
+                <img src={generatedImage.imageUrl} alt="Generated ad" className="w-full max-h-96 object-contain rounded-xl mb-4" loading="lazy" />
                 <div className="flex gap-3">
-                  <button
-                    onClick={() => handleDownloadImage(generatedImage.imageUrl, selectedProduct?.name || 'ad')}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-white/20 hover:bg-white/5 text-sm transition-colors"
-                  >
+                  <button onClick={() => handleDownloadImage(generatedImage.imageUrl, selectedProduct?.name || 'ad')} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-white/20 hover:bg-white/5 text-sm transition-colors">
                     <Download className="w-4 h-4" /> Download
                   </button>
-                  <button
-                    onClick={() => handleGenerateImage(adConcepts[selectedConcept!], selectedConcept!)}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#7c3aed]/15 text-[#7c3aed] text-sm font-medium hover:bg-[#7c3aed]/25 transition-colors"
-                  >
+                  <button onClick={() => handleGenerateImage(adConcepts[selectedConcept!], selectedConcept!)} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#7c3aed]/15 text-[#7c3aed] text-sm font-medium hover:bg-[#7c3aed]/25 transition-colors">
                     <Sparkles className="w-4 h-4" /> Regenerate
                   </button>
                 </div>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showAnalyzeModal && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowAnalyzeModal(false)}>
+          <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <div className="font-mono text-xs tracking-[3px] text-white/50">AI PRODUCT ANALYSIS</div>
+                <div className="text-2xl sm:text-3xl font-semibold tracking-tight">{selectedProduct?.name}</div>
+              </div>
+              <button onClick={() => setShowAnalyzeModal(false)} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
+            </div>
+            {isAnalyzing ? (
+              <div className="flex flex-col items-center py-12">
+                <Loader2 className="w-8 h-8 text-[#ec4899] animate-spin mb-4" />
+                <div className="text-white/50">Analyzing product and generating social media suggestions...</div>
+              </div>
+            ) : suggestions.length > 0 ? (
+              <div className="space-y-4">
+                {suggestions.map((s, i) => (
+                  <div key={i} className="p-5 rounded-2xl border border-white/10 bg-white/5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="px-3 py-1 rounded-full bg-[#7c3aed]/20 text-[#7c3aed] text-xs font-medium">{s.platform}</span>
+                    </div>
+                    <div className="text-sm leading-relaxed mb-3 whitespace-pre-wrap">{s.caption}</div>
+                    {s.hashtags && <div className="text-xs text-[#ec4899] mb-3">{s.hashtags}</div>}
+                    {s.imagePrompt && (
+                      <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                        <div className="font-mono text-[10px] text-white/40 mb-1">IMAGE PROMPT</div>
+                        <div className="text-xs text-white/60">{s.imagePrompt}</div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-white/50">No suggestions generated</div>
             )}
           </div>
         </div>
