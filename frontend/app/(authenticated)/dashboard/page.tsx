@@ -19,8 +19,8 @@ export default function DashboardPage() {
     reachThisWeek: '132.4k',
     engagement: '4.9%',
     recentPosts: [
-      { id: '1', title: 'Eco Bottle Launch', platform: 'Instagram', status: 'Ready', scheduledFor: '09:00' },
-      { id: '2', title: 'Summer Sustainability Tips', platform: 'LinkedIn', status: 'Approved', scheduledFor: '14:30' },
+      { id: '1', title: 'Eco Bottle Launch', platform: 'Instagram', status: 'Ready', scheduledFor: '09:00', caption: '', platforms: ['Instagram'], scheduledAt: null, publishedAt: null, reach: null, engagement: null, imageUrl: null, videoUrl: null, hashtags: [], content: '', platformContent: null, userId: '', product: null, createdAt: '', updatedAt: '' },
+      { id: '2', title: 'Summer Sustainability Tips', platform: 'LinkedIn', status: 'Approved', scheduledFor: '14:30', caption: '', platforms: ['LinkedIn'], scheduledAt: null, publishedAt: null, reach: null, engagement: null, imageUrl: null, videoUrl: null, hashtags: [], content: '', platformContent: null, userId: '', product: null, createdAt: '', updatedAt: '' },
     ],
     platformStats: [
       { name: 'Instagram', reach: '68.4k', engagement: '5.1%' },
