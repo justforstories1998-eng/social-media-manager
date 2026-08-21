@@ -154,8 +154,8 @@ export default function PostsPage() {
 
       {/* AI Post Generator Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => { setShowModal(false); resetModal(); }} role="dialog" aria-modal="true">
-          <div ref={modalRef} className="glass max-w-lg w-full p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] outline-none max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-3 sm:p-6" onClick={() => { setShowModal(false); resetModal(); }} role="dialog" aria-modal="true">
+          <div ref={modalRef} className="glass w-full max-w-lg p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] outline-none max-h-[90vh] overflow-y-auto overflow-x-hidden" onClick={e => e.stopPropagation()}>
             {step === 'input' ? (
               <>
                 <div className="flex items-center gap-3 mb-6">
@@ -218,13 +218,13 @@ export default function PostsPage() {
                   <div className="space-y-5">
                     <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
                       <div className="font-mono text-[10px] text-white/40 mb-2">CAPTION</div>
-                      <div className="text-sm leading-relaxed whitespace-pre-wrap">{generated.caption}</div>
+                      <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">{generated.caption}</div>
                     </div>
 
                     {generated.hashtags && (
                       <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
                         <div className="font-mono text-[10px] text-white/40 mb-2">HASHTAGS</div>
-                        <div className="text-sm text-[#ec4899]">{generated.hashtags}</div>
+                        <div className="text-sm text-[#ec4899] break-words">{generated.hashtags}</div>
                       </div>
                     )}
 

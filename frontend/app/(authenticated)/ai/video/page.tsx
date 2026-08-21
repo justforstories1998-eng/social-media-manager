@@ -62,32 +62,32 @@ export default function AIVideoPage() {
 
       <div className="px-4 sm:px-8 grid grid-cols-1 lg:grid-cols-2 gap-6 pb-10">
         {/* Controls */}
-        <div className="glass p-6 sm:p-9 rounded-[2.5rem]">
-          <div className="space-y-6">
+        <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden">
+          <div className="space-y-5">
             <div>
               <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">PROMPT</label>
               <textarea
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-3xl px-6 py-5 text-sm h-32 resize-none"
+                className="w-full bg-white/5 border border-white/10 rounded-3xl px-4 sm:px-6 py-4 text-sm h-28 resize-none"
                 placeholder="Describe the video you want to generate..."
               />
             </div>
 
             <div>
               <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">MODEL</label>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="space-y-2">
                 {videoModels.map(m => (
                   <button
                     key={m.id}
                     onClick={() => setModel(m.id)}
-                    className={`text-left p-3 rounded-2xl border transition-all ${
+                    className={`w-full text-left p-3 rounded-2xl border transition-all text-sm ${
                       model === m.id
                         ? 'border-[#7c3aed] bg-[#7c3aed]/10'
                         : 'border-white/10 bg-white/5 hover:border-white/20'
                     }`}
                   >
-                    <div className="font-medium text-sm">{m.name}</div>
+                    <div className="font-medium">{m.name}</div>
                     <div className="text-white/50 text-xs">{m.description}</div>
                   </button>
                 ))}
@@ -144,7 +144,7 @@ export default function AIVideoPage() {
         </div>
 
         {/* Result */}
-        <div className="glass p-6 sm:p-9 rounded-[2.5rem]">
+        <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden min-h-[400px]">
           {!result ? (
             <div className="h-full flex items-center justify-center text-center px-4 min-h-[400px]">
               <div>
