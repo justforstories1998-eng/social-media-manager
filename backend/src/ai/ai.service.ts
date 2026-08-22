@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
+import { ProviderRegistry } from './providers/provider-registry';
+import { PollinationsProvider } from './providers/pollinations.provider';
 
 const FREE_OPENROUTER_MODELS = [
   { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra', context: '1M tokens', description: 'Best for long-context reasoning' },
@@ -19,6 +21,7 @@ export class AIService {
   private readonly logger = new Logger(AIService.name);
   private ollamaUrl: string;
   private openrouterKey: string;
+  private readonly providerRegistry: ProviderRegistry;
 
   constructor(
     private configService: ConfigService,
@@ -26,6 +29,11 @@ export class AIService {
   ) {
     this.ollamaUrl = this.configService.get('OLLAMA_URL') || 'http://localhost:11434';
     this.openrouterKey = this.configService.get('OPENROUTER_API_KEY') || '';
+
+    this.providerRegistry = new ProviderRegistry();
+    const pollinations = new PollinationsProvider();
+    this.providerRegistry.registerImageProvider(pollinations);
+    this.providerRegistry.registerVideoProvider(pollinations);
   }
 
   private get isUsingOpenRouter(): boolean {
@@ -371,36 +379,28 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
   }
 
   async generateAdImage(prompt: string, width = 1024, height = 1024) {
-    const encodedPrompt = encodeURIComponent(prompt);
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=flux&nologo=true`;
-
     try {
-      // Verify the image is accessible
-      const response = await axios.head(imageUrl, { timeout: 10000 });
-      if (response.status === 200) {
-        return { imageUrl, prompt, model: 'flux', provider: 'pollinations' };
-      }
+      const provider = await this.providerRegistry.getImageProvider();
+      const result = await provider.generate({ prompt, width, height, model: 'flux' });
+      return { ...result, prompt };
     } catch (error) {
-      this.logger.warn(`Pollinations image verification failed: ${error.message}`);
+      this.logger.warn(`Image generation failed: ${error.message}`);
+      const encodedPrompt = encodeURIComponent(prompt);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=flux&nologo=true`;
+      return { imageUrl, prompt, model: 'flux', provider: 'pollinations' };
     }
-
-    // Return the URL anyway - Pollinations may still generate it on first access
-    return { imageUrl, prompt, model: 'flux', provider: 'pollinations' };
   }
 
   async generateImage(prompt: string, model = 'flux', width = 1024, height = 1024, seed?: number) {
-    const encodedPrompt = encodeURIComponent(prompt);
-    const seedParam = seed ? `&seed=${seed}` : '';
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${model}&width=${width}&height=${height}${seedParam}&nologo=true`;
+    const provider = await this.providerRegistry.getImageProvider();
+    const result = await provider.generate({ prompt, model, width, height, seed });
 
     return {
-      imageUrl,
+      ...result,
       prompt,
-      model,
       width,
       height,
       seed: seed || Math.floor(Math.random() * 1000000),
-      provider: 'pollinations',
     };
   }
 
@@ -465,15 +465,13 @@ Return JSON array:
   }
 
   async generateVideo(prompt: string, model = 'stable-video', duration = 5) {
-    const encodedPrompt = encodeURIComponent(prompt);
-    const videoUrl = `https://video.pollinations.ai/prompt/${encodedPrompt}?model=${model}&duration=${duration}`;
+    const provider = await this.providerRegistry.getVideoProvider();
+    const result = await provider.generateVideo({ prompt, model, duration });
 
     return {
-      videoUrl,
+      ...result,
       prompt,
-      model,
       duration,
-      provider: 'pollinations',
     };
   }
 }

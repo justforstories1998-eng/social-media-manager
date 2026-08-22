@@ -15,12 +15,8 @@ export function useBusinessProfile() {
   return useQuery({
     queryKey: ['business', 'profile'],
     queryFn: async () => {
-      try {
-        const res = await api.get<BusinessProfile>('/business/profile');
-        return res.data;
-      } catch {
-        return defaultProfile as BusinessProfile;
-      }
+      const res = await api.get<BusinessProfile>('/business/profile');
+      return res.data;
     },
     retry: false,
   });

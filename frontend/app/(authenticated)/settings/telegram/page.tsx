@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import api, { type TelegramSettings } from '@/lib/api';
 import { toast } from 'sonner';
-import { ExternalLink, CheckCircle } from 'lucide-react';
+import { ExternalLink, CheckCircle, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 const steps = [
   {
@@ -53,25 +53,32 @@ export default function TelegramSettingsPage() {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(true);
 
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const res = await api.get<TelegramSettings>('/telegram/settings');
-        if (res.data) {
-          setForm({
-            botToken: res.data.botToken || '',
-            chatId: res.data.chatId || '',
-            channelId: res.data.channelId || '',
-            groupId: res.data.groupId || '',
-            enabled: res.data.enabled ?? true,
-          });
-        }
-      } catch {
-        // Settings don't exist yet, use defaults
+  const loadSettings = async () => {
+    setIsLoadingSettings(true);
+    setSettingsError(null);
+    try {
+      const res = await api.get<TelegramSettings>('/telegram/settings');
+      if (res.data) {
+        setForm({
+          botToken: res.data.botToken || '',
+          chatId: res.data.chatId || '',
+          channelId: res.data.channelId || '',
+          groupId: res.data.groupId || '',
+          enabled: res.data.enabled ?? true,
+        });
       }
-    };
+    } catch {
+      setSettingsError('Failed to load Telegram settings');
+    } finally {
+      setIsLoadingSettings(false);
+    }
+  };
+
+  useEffect(() => {
     loadSettings();
   }, []);
 
@@ -146,6 +153,26 @@ export default function TelegramSettingsPage() {
 
       <div className="px-4 sm:px-8 pb-10">
         <div className="glass p-6 sm:p-9 rounded-[2.5rem]">
+          {isLoadingSettings ? (
+            <div className="space-y-6 animate-pulse">
+              {[1, 2, 3].map(i => (
+                <div key={i}>
+                  <div className="h-3 bg-white/10 rounded w-24 mb-3" />
+                  <div className="h-12 bg-white/5 rounded-2xl" />
+                </div>
+              ))}
+            </div>
+          ) : settingsError ? (
+            <div className="text-center py-12">
+              <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-3" />
+              <div className="text-white/70 mb-2">{settingsError}</div>
+              <div className="text-white/40 text-sm mb-4">Check your connection and try again.</div>
+              <button onClick={loadSettings} className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-sm text-white/70">
+                <RefreshCw className="w-3.5 h-3.5" /> Retry
+              </button>
+            </div>
+          ) : (
+          <>
           <div className="flex justify-between items-center mb-8">
             <div>
               <div className="font-semibold text-lg">Enable Telegram Bot</div>
@@ -220,6 +247,8 @@ export default function TelegramSettingsPage() {
               </button>
             </div>
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>

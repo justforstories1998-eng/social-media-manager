@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Sparkles, X, Loader2, Calendar as CalendarIcon, Plus, FileText, Lightbulb, AlertTriangle, TrendingUp, Zap, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, X, Loader2, Calendar as CalendarIcon, Plus, FileText, Lightbulb, AlertTriangle, TrendingUp, Zap, Clock, AlertCircle, RefreshCw } from 'lucide-react';
 import { usePosts } from '@/hooks/usePosts';
 import { festivals, getFestivalsForDate, getFestivalsForMonth, monthNames, categoryColors, type Festival } from '@/lib/festivals';
 import api, { type Post } from '@/lib/api';
@@ -20,7 +20,7 @@ interface Recommendation {
 
 export default function CalendarPage() {
   const router = useRouter();
-  const { data: posts } = usePosts();
+  const { data: posts, isLoading: isLoadingPosts, error: postsError, refetch: refetchPosts } = usePosts();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<{ month: number; day: number } | null>(null);
   const [showFestivalModal, setShowFestivalModal] = useState(false);
@@ -162,6 +162,20 @@ export default function CalendarPage() {
         <div className="text-4xl sm:text-5xl font-semibold tracking-[-2px]">{monthNames[month]} {year}</div>
         {monthFestivals.length > 0 && (
           <div className="text-white/50 text-sm mt-2">{monthFestivals.length} special day{monthFestivals.length > 1 ? 's' : ''} this month</div>
+        )}
+        {postsError && (
+          <div className="mt-4 p-3 rounded-xl border border-red-500/20 bg-red-500/5 flex items-center gap-3">
+            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+            <div className="flex-1 text-sm text-white/70">Failed to load posts</div>
+            <button onClick={() => refetchPosts()} className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-xs text-white/70">
+              <RefreshCw className="w-3 h-3" /> Retry
+            </button>
+          </div>
+        )}
+        {isLoadingPosts && (
+          <div className="mt-4 flex items-center gap-2 text-sm text-white/50">
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading posts...
+          </div>
         )}
       </div>
 

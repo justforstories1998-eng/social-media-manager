@@ -2,11 +2,11 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Calendar, TrendingUp, Users, Clock, ArrowRight } from 'lucide-react';
+import { Calendar, TrendingUp, Users, Clock, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react';
 import { useDashboardMetrics } from '@/hooks/useAnalytics';
 
 export default function DashboardPage() {
-  const { data: metrics, isLoading } = useDashboardMetrics();
+  const { data: metrics, isLoading, error: metricsError, refetch: refetchMetrics } = useDashboardMetrics();
 
   const now = new Date();
   const hours = now.getHours();
@@ -40,6 +40,18 @@ export default function DashboardPage() {
 
   return (
     <div className="floating-shell mx-auto ring-1 ring-white/10">
+      {metricsError && (
+        <div className="mx-4 sm:mx-8 mt-6 p-4 rounded-2xl border border-red-500/20 bg-red-500/5 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+          <div className="flex-1">
+            <div className="text-sm text-white/70">Failed to load dashboard data</div>
+            <div className="text-xs text-white/40">{metricsError.message || 'Showing cached data.'}</div>
+          </div>
+          <button onClick={() => refetchMetrics()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-xs text-white/70">
+            <RefreshCw className="w-3 h-3" /> Retry
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="pt-8 sm:pt-10 pb-6 sm:pb-8 px-4 sm:px-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>

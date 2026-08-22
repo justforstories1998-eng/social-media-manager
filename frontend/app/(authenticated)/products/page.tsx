@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Sparkles, Download, X, Loader2, Brain, Image, Film, Lightbulb, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Sparkles, Download, X, Loader2, Brain, Image, Film, Lightbulb, ChevronDown, AlertCircle, RefreshCw } from 'lucide-react';
 import { useProducts, useCreateProduct, useDeleteProduct } from '@/hooks/useProducts';
 import api, { type AdConcept, type AdImageResponse } from '@/lib/api';
 import { toast } from 'sonner';
@@ -31,7 +31,7 @@ interface ProductSuggestion {
 
 export default function ProductsPage() {
   const router = useRouter();
-  const { data: products, isLoading } = useProducts();
+  const { data: products, isLoading, error: productsError, refetch: refetchProducts } = useProducts();
   const createProduct = useCreateProduct();
   const deleteProduct = useDeleteProduct();
   const [showAdd, setShowAdd] = useState(false);
@@ -223,6 +223,15 @@ export default function ProductsPage() {
               <div className="h-4 bg-white/5 rounded w-1/3" />
             </div>
           ))
+        ) : productsError ? (
+          <div className="col-span-full text-center py-12">
+            <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-3" />
+            <div className="text-white/70 mb-2">Failed to load products</div>
+            <div className="text-white/40 text-sm mb-4">{productsError.message || 'Check your connection and try again.'}</div>
+            <button onClick={() => refetchProducts()} className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-sm text-white/70">
+              <RefreshCw className="w-3.5 h-3.5" /> Retry
+            </button>
+          </div>
         ) : products && products.length > 0 ? (
           products.map((product) => (
             <div key={product.id} className="glass p-6 sm:p-7 rounded-[2.5rem] border border-white/10 hover:border-[#7c3aed]/40 transition-colors relative group">

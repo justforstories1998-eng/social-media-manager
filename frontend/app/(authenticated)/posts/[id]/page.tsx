@@ -3,7 +3,7 @@
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Calendar, Globe, Hash, Clock, CheckCircle, Loader2, Pencil, Copy, Trash2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Globe, Hash, Clock, CheckCircle, Loader2, Pencil, Copy, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useUpdatePost, useDeletePost, useDuplicatePost } from '@/hooks/usePosts';
@@ -17,7 +17,7 @@ export default function PostDetailPage() {
   const deletePost = useDeletePost();
   const duplicatePost = useDuplicatePost();
 
-  const { data: post, isLoading } = useQuery({
+  const { data: post, isLoading, error: postError, refetch: refetchPost } = useQuery({
     queryKey: ['post', postId],
     queryFn: async () => {
       const res = await api.get(`/posts/${postId}`);
@@ -31,6 +31,22 @@ export default function PostDetailPage() {
       <div className="floating-shell mx-auto ring-1 ring-white/10 p-12 text-center">
         <Loader2 className="w-8 h-8 text-[#7c3aed] animate-spin mx-auto" />
         <div className="text-white/50 mt-4">Loading post...</div>
+      </div>
+    );
+  }
+
+  if (postError) {
+    return (
+      <div className="floating-shell mx-auto ring-1 ring-white/10 p-12 text-center">
+        <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-3" />
+        <div className="text-xl font-semibold mb-2">Failed to load post</div>
+        <div className="text-white/40 text-sm mb-4">{postError.message || 'Check your connection and try again.'}</div>
+        <div className="flex gap-3 justify-center">
+          <button onClick={() => refetchPost()} className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-sm text-white/70">
+            <RefreshCw className="w-3.5 h-3.5" /> Retry
+          </button>
+          <Link href="/posts" className="px-4 py-2 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-sm text-white/70">Back to Posts</Link>
+        </div>
       </div>
     );
   }

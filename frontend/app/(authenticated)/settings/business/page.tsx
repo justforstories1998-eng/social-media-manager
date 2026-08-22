@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { useBusinessProfile, useUpdateBusinessProfile } from '@/hooks/useBusiness';
 import { toast } from 'sonner';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function BusinessSettings() {
-  const { data: profile, isLoading } = useBusinessProfile();
+  const { data: profile, isLoading, error: profileError, refetch: refetchProfile } = useBusinessProfile();
   const updateProfile = useUpdateBusinessProfile();
   const [form, setForm] = useState({
     businessName: '',
@@ -57,6 +58,15 @@ export default function BusinessSettings() {
                   <div className="h-12 bg-white/5 rounded-2xl" />
                 </div>
               ))}
+            </div>
+          ) : profileError ? (
+            <div className="text-center py-12">
+              <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-3" />
+              <div className="text-white/70 mb-2">Failed to load business profile</div>
+              <div className="text-white/40 text-sm mb-4">{profileError.message || 'Check your connection and try again.'}</div>
+              <button onClick={() => refetchProfile()} className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-sm text-white/70">
+                <RefreshCw className="w-3.5 h-3.5" /> Retry
+              </button>
             </div>
           ) : (
             <div className="space-y-6">

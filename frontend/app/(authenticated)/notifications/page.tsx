@@ -3,9 +3,10 @@
 import React from 'react';
 import { useNotifications, useMarkAllRead } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function NotificationsPage() {
-  const { data: notifications, isLoading } = useNotifications();
+  const { data: notifications, isLoading, error: notifsError, refetch: refetchNotifs } = useNotifications();
   const markAllRead = useMarkAllRead();
 
   const notifs = notifications || [];
@@ -42,6 +43,15 @@ export default function NotificationsPage() {
       <div className="px-4 sm:px-8 pb-10">
         {isLoading ? (
           <div className="glass rounded-[2.5rem] p-8 text-center text-white/50">Loading notifications...</div>
+        ) : notifsError ? (
+          <div className="glass rounded-[2.5rem] p-8 text-center">
+            <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-3" />
+            <div className="text-white/70 mb-2">Failed to load notifications</div>
+            <div className="text-white/40 text-sm mb-4">{notifsError.message || 'Check your connection and try again.'}</div>
+            <button onClick={() => refetchNotifs()} className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-sm text-white/70">
+              <RefreshCw className="w-3.5 h-3.5" /> Retry
+            </button>
+          </div>
         ) : notifs.length > 0 ? (
           <ul className="glass rounded-[2.5rem] divide-y divide-white/10">
             {notifs.map((notif) => (

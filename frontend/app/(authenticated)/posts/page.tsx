@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Plus, Loader2, Sparkles, Pencil, Copy, Trash2, X } from 'lucide-react';
+import { Plus, Loader2, Sparkles, Pencil, Copy, Trash2, X, AlertCircle, RefreshCw } from 'lucide-react';
 import { usePosts, useCreatePost, useUpdatePost, useDeletePost, useDuplicatePost } from '@/hooks/usePosts';
 import api, { type Post, type GeneratePostResponse } from '@/lib/api';
 import { toast } from 'sonner';
@@ -14,7 +14,7 @@ const typeOptions = ['Product Promotion', 'Educational', 'Festival', 'Brand Stor
 export default function PostsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { data: posts, isLoading } = usePosts();
+  const { data: posts, isLoading, error: postsError, refetch: refetchPosts } = usePosts();
   const createPost = useCreatePost();
   const updatePost = useUpdatePost();
   const deletePost = useDeletePost();
@@ -232,6 +232,17 @@ export default function PostsPage() {
                 {isLoading ? (
                   <tr>
                     <td colSpan={6} className="px-8 py-12 text-center text-white/50">Loading posts...</td>
+                  </tr>
+                ) : postsError ? (
+                  <tr>
+                    <td colSpan={6} className="px-8 py-12 text-center">
+                      <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-3" />
+                      <div className="text-white/70 mb-2">Failed to load posts</div>
+                      <div className="text-white/40 text-sm mb-4">{postsError.message || 'Check your connection and try again.'}</div>
+                      <button onClick={() => refetchPosts()} className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-sm text-white/70">
+                        <RefreshCw className="w-3.5 h-3.5" /> Retry
+                      </button>
+                    </td>
                   </tr>
                 ) : posts && posts.length > 0 ? (
                   posts.map((post) => (

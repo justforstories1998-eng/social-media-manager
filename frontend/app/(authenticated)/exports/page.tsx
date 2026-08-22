@@ -21,7 +21,7 @@ export default function ExportsPage() {
       await api.post('/exports', { type: exportType, format });
       toast.success(`Exporting ${exportType} as ${format.toUpperCase()}...`);
     } catch {
-      toast.error('Export failed');
+      toast.error('Export failed. The server may be unavailable. Please try again.');
     } finally {
       setIsExporting(false);
     }

@@ -4,6 +4,8 @@ import { AIController } from './ai.controller';
 import { BullModule } from '@nestjs/bull';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AIGenerationModule } from '../ai-generation/ai-generation.module';
+import { ProviderRegistry } from './providers/provider-registry';
+import { PollinationsProvider } from './providers/pollinations.provider';
 
 @Module({
   imports: [
@@ -13,8 +15,8 @@ import { AIGenerationModule } from '../ai-generation/ai-generation.module';
     }),
     AIGenerationModule,
   ],
-  providers: [AIService],
+  providers: [AIService, ProviderRegistry, PollinationsProvider],
   controllers: [AIController],
-  exports: [AIService],
+  exports: [AIService, ProviderRegistry, PollinationsProvider],
 })
 export class AIModule {}

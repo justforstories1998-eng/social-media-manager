@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Download, RefreshCw, Loader2, Copy, Maximize2, Sparkles, Image as ImageIcon, Link as LinkIcon, Package } from 'lucide-react';
+import { Download, RefreshCw, Loader2, Copy, Maximize2, Sparkles, Image as ImageIcon, Link as LinkIcon, Package, AlertCircle } from 'lucide-react';
 import api, { type GenerateImageResponse, type Product } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -28,6 +28,8 @@ export default function AIImagePage() {
   const preselectedProductId = searchParams.get('productId');
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [productsError, setProductsError] = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [prompt, setPrompt] = useState('');
@@ -42,7 +44,19 @@ export default function AIImagePage() {
   const [showPostModal, setShowPostModal] = useState(false);
 
   useEffect(() => {
-    api.get<Product[]>('/products').then(res => setProducts(res.data)).catch(() => {});
+    let cancelled = false;
+    const loadProducts = async () => {
+      try {
+        const res = await api.get<Product[]>('/products');
+        if (!cancelled) setProducts(res.data);
+      } catch {
+        if (!cancelled) setProductsError('Failed to load products');
+      } finally {
+        if (!cancelled) setIsLoadingProducts(false);
+      }
+    };
+    loadProducts();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -206,7 +220,20 @@ export default function AIImagePage() {
               <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">
                 <Package className="w-3 h-3 inline mr-1" /> PRODUCT (REQUIRED)
               </label>
-              {products.length === 0 ? (
+              {isLoadingProducts ? (
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
+                  <Loader2 className="w-5 h-5 animate-spin text-[#7c3aed] mx-auto mb-2" />
+                  <div className="text-white/50 text-sm">Loading products...</div>
+                </div>
+              ) : productsError ? (
+                <div className="p-4 rounded-2xl bg-white/5 border border-red-500/20 text-center">
+                  <AlertCircle className="w-5 h-5 text-red-400 mx-auto mb-2" />
+                  <div className="text-white/50 text-sm mb-2">{productsError}</div>
+                  <button onClick={() => { setIsLoadingProducts(true); setProductsError(null); api.get<Product[]>('/products').then(res => setProducts(res.data)).catch(() => setProductsError('Failed to load products')).finally(() => setIsLoadingProducts(false)); }} className="text-xs px-4 py-2 rounded-full border border-white/10 hover:bg-white/5 transition-colors">
+                    Retry
+                  </button>
+                </div>
+              ) : products.length === 0 ? (
                 <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
                   <div className="text-white/50 text-sm mb-2">Add a product first to generate AI images.</div>
                   <button onClick={() => router.push('/products')} className="text-xs px-4 py-2 rounded-full border border-[#7c3aed] text-[#7c3aed] hover:bg-[#7c3aed]/10 transition-colors">
@@ -395,6 +422,32 @@ export default function AIImagePage() {
                   </div>
                 )}
               </div>
+
+              {selectedProduct && (
+                <div className="mt-4 p-4 rounded-2xl bg-white/5 border border-white/10">
+                  <div className="font-mono text-[10px] text-white/40 mb-2">SOURCE</div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-white/50">Product</span>
+                      <span>{selectedProduct.emoji} {selectedProduct.name}</span>
+                    </div>
+                    {generationId && (
+                      <div className="flex justify-between">
+                        <span className="text-white/50">Generation ID</span>
+                        <span className="font-mono text-xs">{generationId}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-white/50">Provider</span>
+                      <span className="font-mono">{result.provider}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/50">Prompt</span>
+                      <span className="text-right max-w-[60%] text-xs truncate">{result.prompt}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-3 mt-6">
                 <button
