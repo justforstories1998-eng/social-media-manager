@@ -404,6 +404,66 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
     };
   }
 
+  async generateRecommendations(userId: string) {
+    const [products, posts, scheduledPosts, aiHistory] = await Promise.all([
+      this.prisma.product.findMany({ where: { userId }, orderBy: { updatedAt: 'desc' } }),
+      this.prisma.post.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 20 }),
+      this.prisma.scheduledPost.findMany({ where: { userId }, orderBy: { scheduledFor: 'asc' } }),
+      this.prisma.aIHistory.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 20 }),
+    ]);
+
+    const prompt = `Analyze this social media content portfolio and recommend 3 specific content ideas.
+
+PRODUCTS: ${products.map(p => `${p.name} (${p.category || 'uncategorized'}) - last posted: ${posts.find(post => post.productId === p.id)?.createdAt || 'never'}`).join('\n')}
+
+RECENT POSTS (last 10): ${posts.slice(0, 10).map(p => `${p.platforms?.[0] || 'unknown'}: ${p.caption?.slice(0, 50)}... [${p.status}]`).join('\n')}
+
+SCHEDULED: ${scheduledPosts.length} posts scheduled
+
+CONTENT TYPES USED: ${[...new Set(posts.map(p => p.platforms?.[0] || 'unknown'))].join(', ')}
+
+Return JSON array:
+[{
+  "product": "product name",
+  "contentType": "image/video/post",
+  "reason": "why this content is needed now",
+  "concept": "brief creative concept",
+  "suggestedCaption": "caption idea",
+  "platform": "recommended platform",
+  "priority": "high/medium/low"
+}]`;
+
+    let rawResponse: string;
+    if (this.isUsingOpenRouter) {
+      rawResponse = await this.callOpenRouter(prompt, 'openrouter/free');
+    } else {
+      rawResponse = await this.callOllama(prompt, 'qwen2.5:7b', true);
+    }
+
+    let recommendations;
+    try {
+      const jsonMatch = rawResponse.match(/\[[\s\S]*\]/);
+      recommendations = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+    } catch {
+      recommendations = [];
+    }
+
+    return {
+      recommendations,
+      stats: {
+        totalProducts: products.length,
+        totalPosts: posts.length,
+        scheduledPosts: scheduledPosts.length,
+        productsWithoutContent: products.filter(p => !posts.some(post => post.productId === p.id)).length,
+        platformBreakdown: posts.reduce((acc, p) => {
+          const platform = p.platforms?.[0] || 'unknown';
+          acc[platform] = (acc[platform] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+      },
+    };
+  }
+
   async generateVideo(prompt: string, model = 'stable-video', duration = 5) {
     const encodedPrompt = encodeURIComponent(prompt);
     const videoUrl = `https://video.pollinations.ai/prompt/${encodedPrompt}?model=${model}&duration=${duration}`;

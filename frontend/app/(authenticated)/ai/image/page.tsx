@@ -178,8 +178,12 @@ export default function AIImagePage() {
         imageUrl: result.imageUrl,
         productId: selectedProductId || undefined,
       });
-      toast.success('Post created with this image!');
-      router.push(`/posts/${res.data.id}`);
+      toast.success('Post created with this image!', {
+        action: {
+          label: 'View Post',
+          onClick: () => router.push(`/posts/${res.data.id}`),
+        },
+      });
     } catch {
       toast.error('Failed to create post');
     }

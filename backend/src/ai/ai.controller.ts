@@ -34,6 +34,11 @@ export class AIController {
     return this.aiService.generateDailyContent(req.user.id, {}, []);
   }
 
+  @Post('recommendations')
+  async getRecommendations(@Request() req) {
+    return this.aiService.generateRecommendations(req.user.id);
+  }
+
   @Post('generate-ad-concepts')
   async generateAdConcepts(@Body() body: { productName: string; category?: string; description?: string; imageUrl?: string }) {
     return this.aiService.generateAdConcepts(body.productName, body.category || '', body.description || '', body.imageUrl);

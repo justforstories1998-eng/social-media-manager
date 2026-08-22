@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Sparkles, Download, X, Loader2, Brain, Image, Film, Lightbulb } from 'lucide-react';
+import { Plus, Trash2, Sparkles, Download, X, Loader2, Brain, Image, Film, Lightbulb, ChevronDown } from 'lucide-react';
 import { useProducts, useCreateProduct, useDeleteProduct } from '@/hooks/useProducts';
 import api, { type AdConcept, type AdImageResponse } from '@/lib/api';
 import { toast } from 'sonner';
@@ -49,6 +49,7 @@ export default function ProductsPage() {
   const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
   const [contentIdeas, setContentIdeas] = useState<string>('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [quickContentOpen, setQuickContentOpen] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ name: '', category: '', price: '', currency: 'USD', description: '', emoji: '' });
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
@@ -255,15 +256,36 @@ export default function ProductsPage() {
                 <button onClick={() => router.push(`/posts?productId=${product.id}`)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-white/10 text-white/60 text-[11px] font-medium hover:bg-white/5 hover:text-white transition-colors">
                   <Plus className="w-3 h-3" /> Post
                 </button>
-                <button onClick={() => router.push(`/ai/image?productId=${product.id}`)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-white/10 text-white/60 text-[11px] font-medium hover:bg-white/5 hover:text-white transition-colors">
-                  <Image className="w-3 h-3" /> Image
-                </button>
-                <button onClick={() => router.push(`/ai/video?productId=${product.id}`)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-white/10 text-white/60 text-[11px] font-medium hover:bg-white/5 hover:text-white transition-colors">
-                  <Film className="w-3 h-3" /> Video
-                </button>
-                <button onClick={() => handleGenerateContentIdeas(product)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-white/10 text-white/60 text-[11px] font-medium hover:bg-white/5 hover:text-white transition-colors">
-                  <Lightbulb className="w-3 h-3" /> Ideas
-                </button>
+                <div className="relative flex-1">
+                  <button
+                    onClick={() => setQuickContentOpen(quickContentOpen === product.id ? null : product.id)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#7c3aed]/15 text-[#7c3aed] text-[11px] font-medium hover:bg-[#7c3aed]/25 transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3" /> Quick Content <ChevronDown className="w-3 h-3" />
+                  </button>
+                  {quickContentOpen === product.id && (
+                    <div className="absolute bottom-full mb-2 left-0 right-0 glass rounded-2xl border border-white/10 p-2 z-20 shadow-xl">
+                      <button
+                        onClick={() => { setQuickContentOpen(null); router.push(`/ai/image?productId=${product.id}`); }}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors text-left"
+                      >
+                        <Image className="w-3.5 h-3.5" /> Generate Image → Post
+                      </button>
+                      <button
+                        onClick={() => { setQuickContentOpen(null); router.push(`/ai/video?productId=${product.id}`); }}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors text-left"
+                      >
+                        <Film className="w-3.5 h-3.5" /> Generate Video → Post
+                      </button>
+                      <button
+                        onClick={() => { setQuickContentOpen(null); handleGenerateContentIdeas(product); }}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors text-left"
+                      >
+                        <Lightbulb className="w-3.5 h-3.5" /> AI Post Ideas
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))

@@ -165,8 +165,12 @@ export default function AIVideoPage() {
         videoUrl: result.videoUrl,
         productId: selectedProductId || undefined,
       });
-      toast.success('Post created with this video!');
-      router.push(`/posts/${res.data.id}`);
+      toast.success('Post created with this video!', {
+        action: {
+          label: 'View Post',
+          onClick: () => router.push(`/posts/${res.data.id}`),
+        },
+      });
     } catch {
       toast.error('Failed to create post');
     }

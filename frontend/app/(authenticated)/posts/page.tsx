@@ -36,11 +36,13 @@ export default function PostsPage() {
   const [editPlatforms, setEditPlatforms] = useState<string[]>([]);
   const [editImageUrl, setEditImageUrl] = useState('');
   const [editVideoUrl, setEditVideoUrl] = useState('');
+  const [editScheduleDate, setEditScheduleDate] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Post | null>(null);
 
   const urlProductId = searchParams.get('productId');
   const urlCreate = searchParams.get('create');
   const urlScheduleDate = searchParams.get('scheduleDate');
+  const urlEditId = searchParams.get('edit');
 
   useEffect(() => {
     if (urlScheduleDate) {
@@ -51,6 +53,13 @@ export default function PostsPage() {
       setStep('input');
     }
   }, [urlCreate, urlScheduleDate]);
+
+  useEffect(() => {
+    if (urlEditId && posts && posts.length > 0) {
+      const post = posts.find(p => p.id === urlEditId);
+      if (post) openEdit(post);
+    }
+  }, [urlEditId, posts]);
 
   useEffect(() => {
     const active = showModal || !!editPost || !!deleteTarget;
@@ -138,6 +147,7 @@ export default function PostsPage() {
     setEditPlatforms(post.platforms || []);
     setEditImageUrl(post.imageUrl || '');
     setEditVideoUrl(post.videoUrl || '');
+    setEditScheduleDate(post.scheduledFor ? new Date(post.scheduledFor).toISOString().slice(0, 16) : '');
   };
 
   const handleEditSave = async () => {
@@ -147,16 +157,18 @@ export default function PostsPage() {
         .split(/[\s,]+/)
         .map(h => h.trim())
         .filter(h => h.length > 0);
+      const payload: Record<string, unknown> = {
+        caption: editCaption,
+        title: editTitle,
+        hashtags: hashtagsArr,
+        platforms: editPlatforms,
+      };
+      if (editScheduleDate) {
+        payload.scheduledFor = new Date(editScheduleDate).toISOString();
+      }
       await updatePost.mutateAsync({
         id: editPost.id,
-        data: {
-          title: editTitle || undefined,
-          caption: editCaption,
-          hashtags: hashtagsArr,
-          platforms: editPlatforms,
-          imageUrl: editImageUrl || undefined,
-          videoUrl: editVideoUrl || undefined,
-        },
+        data: payload as any,
       });
       toast.success('Post updated!');
       setEditPost(null);
@@ -466,6 +478,15 @@ export default function PostsPage() {
                   onChange={e => setEditVideoUrl(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-3xl p-4 text-sm"
                   placeholder="https://..."
+                />
+              </div>
+              <div>
+                <label className="text-xs font-mono tracking-[1px] text-white/50 block mb-2">SCHEDULE (OPTIONAL)</label>
+                <input
+                  type="datetime-local"
+                  value={editScheduleDate}
+                  onChange={e => setEditScheduleDate(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-3xl p-4 text-sm"
                 />
               </div>
             </div>

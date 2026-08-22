@@ -1,12 +1,22 @@
 ﻿'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Sparkles, X, Loader2, Calendar as CalendarIcon, Plus, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, X, Loader2, Calendar as CalendarIcon, Plus, FileText, Lightbulb, AlertTriangle, TrendingUp, Zap, Clock } from 'lucide-react';
 import { usePosts } from '@/hooks/usePosts';
 import { festivals, getFestivalsForDate, getFestivalsForMonth, monthNames, categoryColors, type Festival } from '@/lib/festivals';
 import api, { type Post } from '@/lib/api';
 import { toast } from 'sonner';
+
+interface Recommendation {
+  product: string;
+  contentType: string;
+  reason: string;
+  concept: string;
+  suggestedCaption: string;
+  platform: string;
+  priority: string;
+}
 
 export default function CalendarPage() {
   const router = useRouter();
@@ -20,6 +30,9 @@ export default function CalendarPage() {
   const [selectedDatePosts, setSelectedDatePosts] = useState<Post[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPost, setGeneratedPost] = useState<any>(null);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [showRecommendations, setShowRecommendations] = useState(false);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -54,6 +67,50 @@ export default function CalendarPage() {
 
   const monthFestivals = getFestivalsForMonth(month + 1);
   const festivalDays = new Set(monthFestivals.map(f => f.day));
+
+  const productFrequency = useMemo(() => {
+    if (!posts) return { recent: [] as { name: string; lastPosted: Date }[], overdue: [] as { name: string; daysSince: number }[] };
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const productMap = new Map<string, { name: string; lastPosted: Date }>();
+    posts.forEach(p => {
+      if (p.product) {
+        const existing = productMap.get(p.product.id);
+        const postDate = new Date(p.createdAt);
+        if (!existing || postDate > existing.lastPosted) {
+          productMap.set(p.product.id, { name: p.product.name, lastPosted: postDate });
+        }
+      }
+    });
+
+    const recent: { name: string; lastPosted: Date }[] = [];
+    const overdue: { name: string; daysSince: number }[] = [];
+
+    productMap.forEach(({ name, lastPosted }) => {
+      if (lastPosted >= sevenDaysAgo) {
+        recent.push({ name, lastPosted });
+      } else {
+        const daysSince = Math.floor((Date.now() - lastPosted.getTime()) / (1000 * 60 * 60 * 24));
+        overdue.push({ name, daysSince });
+      }
+    });
+
+    return { recent, overdue };
+  }, [posts]);
+
+  const getRecommendations = async () => {
+    setIsLoadingRecommendations(true);
+    try {
+      const res = await api.post('/ai/recommendations');
+      setRecommendations(res.data.recommendations || []);
+      setShowRecommendations(true);
+    } catch {
+      toast.error('Failed to load recommendations');
+    } finally {
+      setIsLoadingRecommendations(false);
+    }
+  };
 
   const handlePrevMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1));
@@ -132,11 +189,14 @@ export default function CalendarPage() {
               const hasPosts = dayPosts.length > 0;
               const dayFestivals = getFestivalsForDate(month + 1, day);
 
+              const isPast = new Date(year, month, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+              const showGap = !hasPosts && !hasFestival && !isPast;
+
               return (
                 <div
                   key={day}
                   onClick={() => handleDayClick(day)}
-                  className={`min-h-[60px] sm:min-h-[110px] bg-[#0c0c0c] p-2 sm:p-3 text-sm border-r border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${isToday ? 'bg-[#7c3aed]/10' : ''} ${hasFestival ? 'ring-1 ring-[#ec4899]/30' : ''} ${hasPosts ? 'ring-1 ring-[#7c3aed]/30' : ''}`}
+                  className={`min-h-[60px] sm:min-h-[110px] bg-[#0c0c0c] p-2 sm:p-3 text-sm border-r border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${isToday ? 'bg-[#7c3aed]/10' : ''} ${hasFestival ? 'ring-1 ring-[#ec4899]/30' : ''} ${hasPosts ? 'ring-1 ring-[#7c3aed]/30' : ''} ${showGap ? 'opacity-60' : ''}`}
                 >
                   <div className={`font-medium mb-1 ${isToday ? 'text-[#7c3aed]' : ''} ${hasFestival ? 'text-[#ec4899]' : ''}`}>{day}</div>
                   {hasFestival && (
@@ -152,7 +212,8 @@ export default function CalendarPage() {
                     <div className="hidden sm:block">
                       {dayPosts.slice(0, 2).map((p, pi) => (
                         <div key={pi} className="text-[10px] p-1 mt-1 rounded-lg bg-[#7c3aed]/10 border border-[#7c3aed]/20 truncate">
-                          📝 {p.title || p.caption?.slice(0, 30) || 'Post'}
+                          <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${p.status === 'SCHEDULED' ? 'bg-[#7c3aed]' : p.status === 'PUBLISHED' ? 'bg-green-400' : p.status === 'DRAFT' ? 'bg-yellow-400' : 'bg-white/40'}`} />
+                          {p.title || p.caption?.slice(0, 30) || 'Post'}
                         </div>
                       ))}
                       {dayPosts.length > 2 && (
@@ -160,11 +221,14 @@ export default function CalendarPage() {
                       )}
                     </div>
                   )}
+                  {showGap && (
+                    <div className="hidden sm:block text-[10px] text-white/30 mt-1 italic">no content</div>
+                  )}
                   {hasFestival && <div className="w-1.5 h-1.5 rounded-full bg-[#ec4899] sm:hidden mt-1" />}
                   {hasPosts && (
                     <div className="flex gap-0.5 mt-1 sm:hidden">
-                      {dayPosts.slice(0, 3).map((_, pi) => (
-                        <div key={pi} className="w-1.5 h-1.5 rounded-full bg-[#7c3aed]" />
+                      {dayPosts.slice(0, 3).map((p, pi) => (
+                        <div key={pi} className={`w-1.5 h-1.5 rounded-full ${p.status === 'SCHEDULED' ? 'bg-[#7c3aed]' : p.status === 'PUBLISHED' ? 'bg-green-400' : p.status === 'DRAFT' ? 'bg-yellow-400' : 'bg-white/40'}`} />
                       ))}
                     </div>
                   )}
@@ -196,6 +260,65 @@ export default function CalendarPage() {
             </div>
           </div>
         )}
+
+        {/* Content Opportunities Panel */}
+        <div className="mt-6">
+          <div className="font-mono text-xs tracking-[2px] text-white/50 mb-4">CONTENT OPPORTUNITIES</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Products Needing Content */}
+            <div className="p-4 rounded-2xl border border-white/10 bg-white/5">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="w-4 h-4 text-[#ec4899]" />
+                <span className="text-sm font-medium">Products Needing Content</span>
+              </div>
+              {productFrequency.overdue.length > 0 ? (
+                <div className="space-y-2">
+                  {productFrequency.overdue.map((p, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <span className="text-white/70">{p.name}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#ec4899]/20 text-[#ec4899]">{p.daysSince}d ago</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-white/40 text-sm">All products have recent content</div>
+              )}
+            </div>
+
+            {/* Recent Activity */}
+            <div className="p-4 rounded-2xl border border-white/10 bg-white/5">
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp className="w-4 h-4 text-green-400" />
+                <span className="text-sm font-medium">Recently Active</span>
+              </div>
+              {productFrequency.recent.length > 0 ? (
+                <div className="space-y-2">
+                  {productFrequency.recent.slice(0, 3).map((p, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <span className="text-white/70">{p.name}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">active</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-white/40 text-sm">No recent product posts</div>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={getRecommendations}
+            disabled={isLoadingRecommendations}
+            className="w-full mt-4 py-3 rounded-xl border border-[#7c3aed]/30 hover:bg-[#7c3aed]/10 transition-colors text-sm flex items-center justify-center gap-2 text-[#7c3aed] disabled:opacity-50"
+          >
+            {isLoadingRecommendations ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Zap className="w-4 h-4" />
+            )}
+            Get AI Content Recommendations
+          </button>
+        </div>
       </div>
 
       {/* Festival Detail Modal */}
@@ -273,18 +396,20 @@ export default function CalendarPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium text-sm truncate">{post.title || post.caption?.slice(0, 60) || 'Untitled Post'}</div>
-                      <div className="text-white/50 text-xs mt-1 line-clamp-2">{post.caption?.slice(0, 100)}</div>
+                      <div className="font-medium text-sm truncate max-w-[240px]">{post.title || post.caption?.slice(0, 40) || 'Untitled Post'}</div>
                     </div>
                     <FileText className="w-4 h-4 text-white/30 group-hover:text-[#7c3aed] shrink-0 mt-0.5 transition-colors" />
                   </div>
-                  <div className="flex items-center gap-2 mt-3">
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#7c3aed]/20 text-[#7c3aed]">{post.platforms?.[0] || post.platform || '—'}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${post.status === 'PUBLISHED' ? 'bg-green-500/20 text-green-400' : post.status === 'SCHEDULED' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-white/10 text-white/50'}`}>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${post.status === 'PUBLISHED' ? 'bg-green-500/20 text-green-400' : post.status === 'SCHEDULED' ? 'bg-[#7c3aed]/20 text-[#7c3aed]' : post.status === 'DRAFT' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-white/10 text-white/50'}`}>
                       {post.status}
                     </span>
                     {post.scheduledFor && (
-                      <span className="text-[10px] text-white/40">{new Date(post.scheduledFor).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="text-[10px] text-white/40 flex items-center gap-0.5">
+                        <Clock className="w-3 h-3" />
+                        {new Date(post.scheduledFor).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     )}
                   </div>
                 </button>
@@ -320,16 +445,103 @@ export default function CalendarPage() {
               <button onClick={() => setShowDateModal(false)} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
             </div>
 
-            <button
-              onClick={() => {
-                setShowDateModal(false);
-                const dateStr = `${year}-${String(selectedDate.month).padStart(2, '0')}-${String(selectedDate.day).padStart(2, '0')}T10:00`;
-                router.push(`/posts?create=true&scheduleDate=${dateStr}`);
-              }}
-              className="neon-button w-full"
-            >
-              <span className="flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Create Post for This Date</span>
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  setShowDateModal(false);
+                  const dateStr = `${year}-${String(selectedDate.month).padStart(2, '0')}-${String(selectedDate.day).padStart(2, '0')}T10:00`;
+                  router.push(`/posts?create=true&scheduleDate=${dateStr}`);
+                }}
+                className="neon-button w-full"
+              >
+                <span className="flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Create Post for This Date</span>
+              </button>
+
+              <button
+                onClick={async () => {
+                  setIsLoadingRecommendations(true);
+                  try {
+                    const res = await api.post('/ai/recommendations');
+                    setRecommendations(res.data.recommendations || []);
+                    setShowDateModal(false);
+                    setShowRecommendations(true);
+                  } catch {
+                    toast.error('Failed to load recommendations');
+                  } finally {
+                    setIsLoadingRecommendations(false);
+                  }
+                }}
+                disabled={isLoadingRecommendations}
+                className="w-full py-3 rounded-xl border border-[#ec4899]/30 hover:bg-[#ec4899]/10 transition-colors text-sm flex items-center justify-center gap-2 text-[#ec4899] disabled:opacity-50"
+              >
+                {isLoadingRecommendations ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Lightbulb className="w-4 h-4" />
+                )}
+                Get AI Recommendation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recommendations Modal */}
+      {showRecommendations && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowRecommendations(false)}>
+          <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <div className="font-mono text-xs tracking-[3px] text-white/50">AI RECOMMENDATIONS</div>
+                <div className="text-2xl sm:text-3xl font-semibold tracking-tight mt-1">Content Ideas</div>
+                <div className="text-white/50 text-sm mt-1">{recommendations.length} recommendation{recommendations.length !== 1 ? 's' : ''}</div>
+              </div>
+              <button onClick={() => setShowRecommendations(false)} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="space-y-4">
+              {recommendations.map((rec, i) => (
+                <div key={i} className="p-4 rounded-2xl border border-white/10 bg-white/5">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${rec.priority === 'high' ? 'bg-red-500/20 text-red-400' : rec.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-white/10 text-white/50'}`}>
+                        {rec.priority}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#7c3aed]/20 text-[#7c3aed]">{rec.contentType}</span>
+                    </div>
+                    <span className="text-[10px] text-white/40">{rec.platform}</span>
+                  </div>
+                  <div className="font-medium text-sm mb-1">{rec.product}</div>
+                  <div className="text-white/60 text-xs mb-3">{rec.reason}</div>
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 mb-3">
+                    <div className="font-mono text-[10px] text-white/40 mb-1">CONCEPT</div>
+                    <div className="text-xs text-white/70">{rec.concept}</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 mb-3">
+                    <div className="font-mono text-[10px] text-white/40 mb-1">SUGGESTED CAPTION</div>
+                    <div className="text-xs text-white/70 italic">"{rec.suggestedCaption}"</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowRecommendations(false);
+                      const dateStr = selectedDate
+                        ? `${year}-${String(selectedDate.month).padStart(2, '0')}-${String(selectedDate.day).padStart(2, '0')}T10:00`
+                        : `${year}-${String(month + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}T10:00`;
+                      router.push(`/posts?create=true&scheduleDate=${dateStr}&prompt=${encodeURIComponent(rec.concept)}`);
+                    }}
+                    className="w-full py-2 rounded-xl border border-[#7c3aed]/30 hover:bg-[#7c3aed]/10 transition-colors text-xs flex items-center justify-center gap-2 text-[#7c3aed]"
+                  >
+                    <Sparkles className="w-3 h-3" /> Generate This Post
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {recommendations.length === 0 && (
+              <div className="text-center py-8 text-white/40 text-sm">
+                No recommendations available. Try adding more products or posts first.
+              </div>
+            )}
           </div>
         </div>
       )}
