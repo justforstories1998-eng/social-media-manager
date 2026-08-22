@@ -17,6 +17,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ExportsModule } from './exports/exports.module';
 import { AdminModule } from './admin/admin.module';
 import { WebsocketsModule } from './websockets/websockets.module';
+import { AIGenerationModule } from './ai-generation/ai-generation.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { WebsocketsModule } from './websockets/websockets.module';
     ExportsModule,
     AdminModule,
     WebsocketsModule,
+    AIGenerationModule,
   ],
 })
 export class AppModule {}

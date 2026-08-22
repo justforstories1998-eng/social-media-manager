@@ -35,6 +35,7 @@ model User {
   telegramSettings TelegramSetting?
   socialAccounts  SocialAccount[]
   aiHistory       AIHistory[]
+  aiGenerations   AIGeneration[]
   exports         Export[]
   activityLogs    ActivityLog[]
   auditLogs       AuditLog[]
@@ -171,6 +172,7 @@ model Product {
 
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   posts       Post[]
+  aiGenerations AIGeneration[]
 
   @@index([userId])
   @@index([category])
@@ -225,6 +227,7 @@ model Post {
   product         Product? @relation(fields: [productId], references: [id])
   history         PostHistory[]
   scheduledPosts  ScheduledPost[]
+  aiGenerations   AIGeneration[]
 
   @@index([userId])
   @@index([status])
@@ -342,6 +345,39 @@ model AIHistory {
 
   @@index([userId])
   @@index([type])
+}
+
+model AIGeneration {
+  id           String   @id @default(cuid())
+  userId       String
+  productId    String?
+  postId       String?
+  type         String   // image, video, post, caption, hashtag
+  status       String   @default("pending") // pending, processing, completed, failed
+  prompt       String
+  revisedPrompt String?  // User-edited version of the prompt
+  model        String?
+  provider     String?  // pollinations, openrouter, ollama
+  outputUrl    String?  // URL of generated asset
+  outputData   Json?    // Full response data
+  error        String?  // Error message if failed
+  width        Int?
+  height       Int?
+  duration     Int?     // Video duration in seconds
+  seed         Int?
+  metadata     Json?    // Additional generation parameters
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+  post    Post?    @relation(fields: [postId], references: [id])
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([productId])
+  @@index([postId])
 }
 
 // ==================== NOTIFICATIONS ====================

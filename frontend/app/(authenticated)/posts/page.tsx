@@ -2,17 +2,23 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Plus, Loader2, Sparkles, Calendar, Send } from 'lucide-react';
-import { usePosts, useCreatePost } from '@/hooks/usePosts';
-import api, { type GeneratePostResponse } from '@/lib/api';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Plus, Loader2, Sparkles, Pencil, Copy, Trash2, X } from 'lucide-react';
+import { usePosts, useCreatePost, useUpdatePost, useDeletePost, useDuplicatePost } from '@/hooks/usePosts';
+import api, { type Post, type GeneratePostResponse } from '@/lib/api';
 import { toast } from 'sonner';
 
 const platformOptions = ['Instagram', 'LinkedIn', 'Facebook', 'X', 'TikTok'];
 const typeOptions = ['Product Promotion', 'Educational', 'Festival', 'Brand Story', 'Tips & Tricks', 'Behind the Scenes'];
 
 export default function PostsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { data: posts, isLoading } = usePosts();
   const createPost = useCreatePost();
+  const updatePost = useUpdatePost();
+  const deletePost = useDeletePost();
+  const duplicatePost = useDuplicatePost();
   const [showModal, setShowModal] = useState(false);
   const [step, setStep] = useState<'input' | 'preview'>('input');
   const [prompt, setPrompt] = useState('');
@@ -23,31 +29,63 @@ export default function PostsPage() {
   const [scheduleDate, setScheduleDate] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
 
+  const [editPost, setEditPost] = useState<Post | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editCaption, setEditCaption] = useState('');
+  const [editHashtags, setEditHashtags] = useState('');
+  const [editPlatforms, setEditPlatforms] = useState<string[]>([]);
+  const [editImageUrl, setEditImageUrl] = useState('');
+  const [editVideoUrl, setEditVideoUrl] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<Post | null>(null);
+
+  const urlProductId = searchParams.get('productId');
+  const urlCreate = searchParams.get('create');
+  const urlScheduleDate = searchParams.get('scheduleDate');
+
   useEffect(() => {
-    if (!showModal) return;
+    if (urlScheduleDate) {
+      setScheduleDate(urlScheduleDate);
+    }
+    if (urlCreate === 'true') {
+      setShowModal(true);
+      setStep('input');
+    }
+  }, [urlCreate, urlScheduleDate]);
+
+  useEffect(() => {
+    const active = showModal || !!editPost || !!deleteTarget;
+    if (!active) return;
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setShowModal(false); resetModal(); }
+      if (e.key === 'Escape') {
+        setShowModal(false);
+        resetModal();
+        setEditPost(null);
+        setDeleteTarget(null);
+      }
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [showModal]);
+  }, [showModal, editPost, deleteTarget]);
 
   const resetModal = () => {
     setStep('input');
     setPrompt('');
     setGenerated(null);
     setScheduleDate('');
+    if (urlCreate || urlScheduleDate) {
+      router.replace('/posts');
+    }
   };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     setIsGenerating(true);
     try {
-      const res = await api.post<GeneratePostResponse>('/ai/generate-post', {
-        prompt,
-        platform,
-        type,
-      });
+      const payload: Record<string, unknown> = { prompt, platform, type };
+      if (urlProductId) {
+        payload.productId = urlProductId;
+      }
+      const res = await api.post<GeneratePostResponse>('/ai/generate-post', payload);
       setGenerated(res.data);
       setStep('preview');
     } catch {
@@ -77,6 +115,9 @@ export default function PostsPage() {
       if (scheduleDate) {
         payload.scheduledFor = scheduleDate;
       }
+      if (urlProductId) {
+        payload.productId = urlProductId;
+      }
       await createPost.mutateAsync(payload as any);
       toast.success(scheduleDate ? 'Post scheduled!' : 'Post created!');
       setShowModal(false);
@@ -86,6 +127,65 @@ export default function PostsPage() {
       const msg = axiosErr?.response?.data?.message || axiosErr?.message || 'Failed to create post';
       console.error('Post creation error:', axiosErr?.response?.data || axiosErr);
       toast.error(msg);
+    }
+  };
+
+  const openEdit = (post: Post) => {
+    setEditPost(post);
+    setEditTitle(post.title || '');
+    setEditCaption(post.caption || '');
+    setEditHashtags(post.hashtags?.join(', ') || '');
+    setEditPlatforms(post.platforms || []);
+    setEditImageUrl(post.imageUrl || '');
+    setEditVideoUrl(post.videoUrl || '');
+  };
+
+  const handleEditSave = async () => {
+    if (!editPost) return;
+    try {
+      const hashtagsArr = editHashtags
+        .split(/[\s,]+/)
+        .map(h => h.trim())
+        .filter(h => h.length > 0);
+      await updatePost.mutateAsync({
+        id: editPost.id,
+        data: {
+          title: editTitle || undefined,
+          caption: editCaption,
+          hashtags: hashtagsArr,
+          platforms: editPlatforms,
+          imageUrl: editImageUrl || undefined,
+          videoUrl: editVideoUrl || undefined,
+        },
+      });
+      toast.success('Post updated!');
+      setEditPost(null);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
+      toast.error(axiosErr?.response?.data?.message || axiosErr?.message || 'Failed to update post');
+    }
+  };
+
+  const handleDuplicate = async (post: Post) => {
+    try {
+      const newPost = await duplicatePost.mutateAsync(post.id);
+      toast.success('Post duplicated!');
+      openEdit(newPost);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
+      toast.error(axiosErr?.response?.data?.message || axiosErr?.message || 'Failed to duplicate post');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deletePost.mutateAsync(deleteTarget.id);
+      toast.success('Post deleted!');
+      setDeleteTarget(null);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
+      toast.error(axiosErr?.response?.data?.message || axiosErr?.message || 'Failed to delete post');
     }
   };
 
@@ -113,7 +213,7 @@ export default function PostsPage() {
                   <th className="px-4 sm:px-8 py-5 text-left hidden sm:table-cell">STATUS</th>
                   <th className="px-4 sm:px-8 py-5 text-left hidden md:table-cell">SCHEDULED</th>
                   <th className="px-4 sm:px-8 py-5 text-right hidden lg:table-cell">REACH</th>
-                  <th className="px-4 sm:px-8"></th>
+                  <th className="px-4 sm:px-8 py-5 text-right">ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
@@ -145,10 +245,21 @@ export default function PostsPage() {
                       <td className="px-4 sm:px-8 py-4 sm:py-6 text-right font-mono text-sm hidden lg:table-cell">
                         {post.reach ? `${post.reach}k` : '—'}
                       </td>
-                      <td className="px-4 sm:px-8 py-4 sm:py-6 text-right hidden md:table-cell">
-                        <Link href={`/posts/${post.id}`} className="text-xs px-4 py-2 border border-white/10 rounded-full hover:bg-white/10 transition-colors inline-block">
-                          View
-                        </Link>
+                      <td className="px-4 sm:px-8 py-4 sm:py-6 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Link href={`/posts/${post.id}`} className="p-2 rounded-xl border border-white/10 hover:bg-white/10 transition-colors text-white/70 hover:text-white" title="View">
+                            <span className="text-xs font-mono">View</span>
+                          </Link>
+                          <button onClick={() => openEdit(post)} className="p-2 rounded-xl border border-white/10 hover:bg-white/10 transition-colors text-white/70 hover:text-white" title="Edit">
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDuplicate(post)} disabled={duplicatePost.isPending} className="p-2 rounded-xl border border-white/10 hover:bg-white/10 transition-colors text-white/70 hover:text-white disabled:opacity-50" title="Duplicate">
+                            <Copy className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setDeleteTarget(post)} className="p-2 rounded-xl border border-red-500/20 hover:bg-red-500/10 transition-colors text-red-400 hover:text-red-300" title="Delete">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -185,11 +296,16 @@ export default function PostsPage() {
                 <div className="space-y-5">
                   <div>
                     <label className="text-xs font-mono tracking-[1px] text-white/50 block mb-2">WHAT DO YOU WANT TO POST ABOUT?</label>
+                    {urlProductId && (
+                      <div className="mb-2 px-3 py-1.5 rounded-full bg-[#7c3aed]/10 text-[#7c3aed] text-xs inline-flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#7c3aed]" /> Product selected
+                      </div>
+                    )}
                     <textarea
                       value={prompt}
                       onChange={e => setPrompt(e.target.value)}
                       className="w-full bg-white/5 border border-white/10 rounded-3xl p-5 h-28 text-sm resize-none"
-                      placeholder="e.g. Earth Day campaign for sustainable water bottles, Summer sale announcement, New product launch..."
+                      placeholder={urlProductId ? "e.g. Summer sale announcement for this product..." : "e.g. Earth Day campaign for sustainable water bottles, Summer sale announcement, New product launch..."}
                     />
                   </div>
 
@@ -269,6 +385,129 @@ export default function PostsPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Post Modal */}
+      {editPost && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-3 sm:p-6" onClick={() => setEditPost(null)} role="dialog" aria-modal="true">
+          <div ref={modalRef} className="glass w-full max-w-lg p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] outline-none max-h-[90vh] overflow-y-auto overflow-x-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center">
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-mono text-xs tracking-[3px] text-white/50">EDIT POST</div>
+                  <div className="text-xl font-semibold tracking-tight">Edit Post</div>
+                </div>
+              </div>
+              <button onClick={() => setEditPost(null)} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
+                <X className="w-5 h-5 text-white/50" />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <label className="text-xs font-mono tracking-[1px] text-white/50 block mb-2">TITLE</label>
+                <input
+                  value={editTitle}
+                  onChange={e => setEditTitle(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-3xl p-4 text-sm"
+                  placeholder="Post title..."
+                />
+              </div>
+              <div>
+                <label className="text-xs font-mono tracking-[1px] text-white/50 block mb-2">CAPTION</label>
+                <textarea
+                  value={editCaption}
+                  onChange={e => setEditCaption(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-3xl p-5 h-32 text-sm resize-none"
+                  placeholder="Write your caption..."
+                />
+              </div>
+              <div>
+                <label className="text-xs font-mono tracking-[1px] text-white/50 block mb-2">HASHTAGS (comma separated)</label>
+                <input
+                  value={editHashtags}
+                  onChange={e => setEditHashtags(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-3xl p-4 text-sm"
+                  placeholder="#trending, #socialmedia, #marketing"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-mono tracking-[1px] text-white/50 block mb-2">PLATFORMS</label>
+                <div className="flex flex-wrap gap-2">
+                  {platformOptions.map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setEditPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])}
+                      className={`px-4 py-2 rounded-full text-xs border transition-colors ${editPlatforms.includes(p) ? 'bg-[#7c3aed]/20 border-[#7c3aed]/50 text-[#7c3aed]' : 'border-white/10 text-white/50 hover:bg-white/5'}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-mono tracking-[1px] text-white/50 block mb-2">IMAGE URL (optional)</label>
+                <input
+                  value={editImageUrl}
+                  onChange={e => setEditImageUrl(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-3xl p-4 text-sm"
+                  placeholder="https://..."
+                />
+              </div>
+              <div>
+                <label className="text-xs font-mono tracking-[1px] text-white/50 block mb-2">VIDEO URL (optional)</label>
+                <input
+                  value={editVideoUrl}
+                  onChange={e => setEditVideoUrl(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-3xl p-4 text-sm"
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setEditPost(null)} className="flex-1 py-4 rounded-full border border-white/10 hover:bg-white/5 transition-colors">
+                Cancel
+              </button>
+              <button onClick={handleEditSave} disabled={updatePost.isPending || !editCaption.trim()} className="neon-button flex-1">
+                {updatePost.isPending ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Saving...</span> : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-3 sm:p-6" onClick={() => setDeleteTarget(null)} role="dialog" aria-modal="true">
+          <div className="glass w-full max-w-md p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] outline-none" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-red-500/20 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <div className="font-mono text-xs tracking-[3px] text-white/50">DELETE POST</div>
+                <div className="text-xl font-semibold tracking-tight">Are you sure?</div>
+              </div>
+            </div>
+
+            <p className="text-sm text-white/60 mb-6">
+              This will permanently delete <span className="text-white font-medium">{deleteTarget.title || deleteTarget.caption?.slice(0, 50)}</span>. This action cannot be undone.
+            </p>
+
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteTarget(null)} className="flex-1 py-4 rounded-full border border-white/10 hover:bg-white/5 transition-colors">
+                Cancel
+              </button>
+              <button onClick={handleDelete} disabled={deletePost.isPending} className="flex-1 py-4 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-colors font-medium">
+                {deletePost.isPending ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Deleting...</span> : 'Delete Post'}
+              </button>
+            </div>
           </div>
         </div>
       )}

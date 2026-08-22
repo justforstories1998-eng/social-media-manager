@@ -88,4 +88,25 @@ export class PostsService {
       },
     });
   }
+
+  async duplicate(id: string, userId: string) {
+    const original = await this.findById(id, userId);
+
+    return this.prisma.post.create({
+      data: {
+        userId,
+        title: original.title ? `${original.title} (Copy)` : null,
+        caption: original.caption,
+        hashtags: original.hashtags,
+        platformContent: original.platformContent ?? undefined,
+        imageUrl: original.imageUrl,
+        videoUrl: original.videoUrl,
+        platforms: original.platforms,
+        scheduledFor: null,
+        status: 'DRAFT',
+        aiPrompt: original.aiPrompt,
+        aiModel: original.aiModel,
+      },
+    });
+  }
 }

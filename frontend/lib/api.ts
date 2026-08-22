@@ -79,13 +79,17 @@ export interface Product {
   id: string;
   name: string;
   description: string | null;
+  features: string[];
+  tags: string[];
   category: string;
   price: number;
   currency: string;
   status: string;
   imageUrl: string | null;
   images: string[];
+  videos: string[];
   emoji: string | null;
+  sku: string | null;
   userId: string;
   createdAt: string;
   updatedAt: string;

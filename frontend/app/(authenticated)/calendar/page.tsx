@@ -1,18 +1,23 @@
 ﻿'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Sparkles, X, Loader2, Calendar as CalendarIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ChevronLeft, ChevronRight, Sparkles, X, Loader2, Calendar as CalendarIcon, Plus, FileText } from 'lucide-react';
 import { usePosts } from '@/hooks/usePosts';
 import { festivals, getFestivalsForDate, getFestivalsForMonth, monthNames, categoryColors, type Festival } from '@/lib/festivals';
-import api from '@/lib/api';
+import api, { type Post } from '@/lib/api';
 import { toast } from 'sonner';
 
 export default function CalendarPage() {
+  const router = useRouter();
   const { data: posts } = usePosts();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<{ month: number; day: number } | null>(null);
   const [showFestivalModal, setShowFestivalModal] = useState(false);
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [showDateModal, setShowDateModal] = useState(false);
   const [selectedFestival, setSelectedFestival] = useState<Festival | null>(null);
+  const [selectedDatePosts, setSelectedDatePosts] = useState<Post[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPost, setGeneratedPost] = useState<any>(null);
 
@@ -23,6 +28,22 @@ export default function CalendarPage() {
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const postsByDate = new Map<string, Post[]>();
+  posts?.forEach(p => {
+    if (p.scheduledFor) {
+      const d = new Date(p.scheduledFor);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      const arr = postsByDate.get(key) || [];
+      arr.push(p);
+      postsByDate.set(key, arr);
+    }
+  });
+
+  const getPostsForDay = (day: number): Post[] => {
+    const key = `${year}-${month}-${day}`;
+    return postsByDate.get(key) || [];
+  };
 
   const scheduled = posts
     ?.filter(p => p.scheduledFor)
@@ -47,10 +68,17 @@ export default function CalendarPage() {
   const handleDayClick = (day: number) => {
     setSelectedDate({ month: month + 1, day });
     const dayFestivals = getFestivalsForDate(month + 1, day);
+    const dayPosts = getPostsForDay(day);
+
     if (dayFestivals.length > 0) {
       setSelectedFestival(dayFestivals[0]);
       setShowFestivalModal(true);
       setGeneratedPost(null);
+    } else if (dayPosts.length > 0) {
+      setSelectedDatePosts(dayPosts);
+      setShowPostModal(true);
+    } else {
+      setShowDateModal(true);
     }
   };
 
@@ -100,14 +128,15 @@ export default function CalendarPage() {
               const day = i + 1;
               const isToday = isCurrentMonth && day === today.getDate();
               const hasFestival = festivalDays.has(day);
-              const post = scheduled.find(p => p.day === day && p.month === month);
+              const dayPosts = getPostsForDay(day);
+              const hasPosts = dayPosts.length > 0;
               const dayFestivals = getFestivalsForDate(month + 1, day);
 
               return (
                 <div
                   key={day}
                   onClick={() => handleDayClick(day)}
-                  className={`min-h-[60px] sm:min-h-[110px] bg-[#0c0c0c] p-2 sm:p-3 text-sm border-r border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${isToday ? 'bg-[#7c3aed]/10' : ''} ${hasFestival ? 'ring-1 ring-[#ec4899]/30' : ''}`}
+                  className={`min-h-[60px] sm:min-h-[110px] bg-[#0c0c0c] p-2 sm:p-3 text-sm border-r border-b border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${isToday ? 'bg-[#7c3aed]/10' : ''} ${hasFestival ? 'ring-1 ring-[#ec4899]/30' : ''} ${hasPosts ? 'ring-1 ring-[#7c3aed]/30' : ''}`}
                 >
                   <div className={`font-medium mb-1 ${isToday ? 'text-[#7c3aed]' : ''} ${hasFestival ? 'text-[#ec4899]' : ''}`}>{day}</div>
                   {hasFestival && (
@@ -119,15 +148,25 @@ export default function CalendarPage() {
                       ))}
                     </div>
                   )}
-                  {hasFestival && <div className="w-1.5 h-1.5 rounded-full bg-[#ec4899] sm:hidden mt-1" />}
-                  {post && (
-                    <div className="text-[10px] p-1.5 mt-1 rounded-xl bg-white/5 border border-white/10 hidden sm:block">
-                      <div className="font-medium truncate">{post.title}</div>
-                      <div className="text-white/40 text-[9px]">{post.platform}</div>
+                  {hasPosts && (
+                    <div className="hidden sm:block">
+                      {dayPosts.slice(0, 2).map((p, pi) => (
+                        <div key={pi} className="text-[10px] p-1 mt-1 rounded-lg bg-[#7c3aed]/10 border border-[#7c3aed]/20 truncate">
+                          📝 {p.title || p.caption?.slice(0, 30) || 'Post'}
+                        </div>
+                      ))}
+                      {dayPosts.length > 2 && (
+                        <div className="text-[10px] text-[#7c3aed] mt-0.5">+{dayPosts.length - 2} more</div>
+                      )}
                     </div>
                   )}
-                  {post && !hasFestival && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#7c3aed] sm:hidden mt-1" />
+                  {hasFestival && <div className="w-1.5 h-1.5 rounded-full bg-[#ec4899] sm:hidden mt-1" />}
+                  {hasPosts && (
+                    <div className="flex gap-0.5 mt-1 sm:hidden">
+                      {dayPosts.slice(0, 3).map((_, pi) => (
+                        <div key={pi} className="w-1.5 h-1.5 rounded-full bg-[#7c3aed]" />
+                      ))}
+                    </div>
                   )}
                 </div>
               );
@@ -206,6 +245,91 @@ export default function CalendarPage() {
                 <span className="flex items-center justify-center gap-2"><Sparkles className="w-4 h-4" /> Generate Post for {selectedFestival.name}</span>
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Post List Modal */}
+      {showPostModal && selectedDate && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowPostModal(false)}>
+          <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <div className="font-mono text-xs tracking-[3px] text-white/50">SCHEDULED POSTS</div>
+                <div className="text-2xl sm:text-3xl font-semibold tracking-tight">
+                  {monthNames[selectedDate.month - 1]} {selectedDate.day}
+                </div>
+                <div className="text-white/50 text-sm mt-1">{selectedDatePosts.length} post{selectedDatePosts.length !== 1 ? 's' : ''}</div>
+              </div>
+              <button onClick={() => setShowPostModal(false)} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="space-y-3">
+              {selectedDatePosts.map((post) => (
+                <button
+                  key={post.id}
+                  onClick={() => { setShowPostModal(false); router.push(`/posts/${post.id}`); }}
+                  className="w-full text-left p-4 rounded-2xl border border-white/10 bg-white/5 hover:border-[#7c3aed]/40 hover:bg-[#7c3aed]/5 transition-all group"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-sm truncate">{post.title || post.caption?.slice(0, 60) || 'Untitled Post'}</div>
+                      <div className="text-white/50 text-xs mt-1 line-clamp-2">{post.caption?.slice(0, 100)}</div>
+                    </div>
+                    <FileText className="w-4 h-4 text-white/30 group-hover:text-[#7c3aed] shrink-0 mt-0.5 transition-colors" />
+                  </div>
+                  <div className="flex items-center gap-2 mt-3">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#7c3aed]/20 text-[#7c3aed]">{post.platforms?.[0] || post.platform || '—'}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${post.status === 'PUBLISHED' ? 'bg-green-500/20 text-green-400' : post.status === 'SCHEDULED' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-white/10 text-white/50'}`}>
+                      {post.status}
+                    </span>
+                    {post.scheduledFor && (
+                      <span className="text-[10px] text-white/40">{new Date(post.scheduledFor).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => {
+                setShowPostModal(false);
+                const dateStr = `${year}-${String(selectedDate.month).padStart(2, '0')}-${String(selectedDate.day).padStart(2, '0')}T10:00`;
+                router.push(`/posts?create=true&scheduleDate=${dateStr}`);
+              }}
+              className="w-full mt-4 py-3 rounded-xl border border-dashed border-white/20 hover:border-[#7c3aed]/40 hover:bg-[#7c3aed]/5 transition-all text-sm flex items-center justify-center gap-2 text-white/60 hover:text-[#7c3aed]"
+            >
+              <Plus className="w-4 h-4" /> Create New Post for This Date
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Date Modal (no posts, no festivals) */}
+      {showDateModal && selectedDate && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowDateModal(false)}>
+          <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <div className="text-3xl mb-2">📅</div>
+                <div className="text-2xl font-semibold tracking-tight">
+                  {monthNames[selectedDate.month - 1]} {selectedDate.day}
+                </div>
+                <div className="text-white/50 text-sm mt-1">No posts scheduled</div>
+              </div>
+              <button onClick={() => setShowDateModal(false)} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowDateModal(false);
+                const dateStr = `${year}-${String(selectedDate.month).padStart(2, '0')}-${String(selectedDate.day).padStart(2, '0')}T10:00`;
+                router.push(`/posts?create=true&scheduleDate=${dateStr}`);
+              }}
+              className="neon-button w-full"
+            >
+              <span className="flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Create Post for This Date</span>
+            </button>
           </div>
         </div>
       )}

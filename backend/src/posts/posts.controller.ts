@@ -47,4 +47,9 @@ export class PostsController {
   async publish(@Request() req: any, @Param('id') id: string) {
     return this.postsService.publish(id, req.user.id);
   }
+
+  @Post(':id/duplicate')
+  async duplicate(@Request() req: any, @Param('id') id: string) {
+    return this.postsService.duplicate(id, req.user.id);
+  }
 }

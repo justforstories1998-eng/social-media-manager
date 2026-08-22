@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Download, Loader2, Film, AlertCircle } from 'lucide-react';
-import api, { type GenerateVideoResponse } from '@/lib/api';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Download, Loader2, Film, AlertCircle, Sparkles, Link as LinkIcon, Package } from 'lucide-react';
+import api, { type GenerateVideoResponse, type Product } from '@/lib/api';
 import { toast } from 'sonner';
 
 const videoModels = [
@@ -17,26 +18,124 @@ const durationOptions = [
 ];
 
 export default function AIVideoPage() {
-  const [prompt, setPrompt] = useState('A timelapse of a sunset over the ocean with waves crashing on rocks, golden light, cinematic');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const preselectedProductId = searchParams.get('productId');
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [prompt, setPrompt] = useState('');
   const [model, setModel] = useState('stable-video');
   const [duration, setDuration] = useState(5);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<GenerateVideoResponse | null>(null);
+  const [generationId, setGenerationId] = useState<string | null>(null);
   const [history, setHistory] = useState<GenerateVideoResponse[]>([]);
 
-  const handleGenerate = async () => {
-    setIsGenerating(true);
+  useEffect(() => {
+    api.get<Product[]>('/products').then(res => setProducts(res.data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (preselectedProductId) {
+      setSelectedProductId(preselectedProductId);
+    }
+  }, [preselectedProductId]);
+
+  useEffect(() => {
+    if (selectedProductId && products.length) {
+      const p = products.find(pr => pr.id === selectedProductId);
+      if (p) {
+        setSelectedProduct(p);
+        if (!prompt) {
+          buildProductPrompt(p);
+        }
+      }
+    }
+  }, [selectedProductId, products]);
+
+  const buildProductPrompt = (p: Product) => {
+    const parts = [`Product showcase video of ${p.name}`];
+    if (p.description) parts.push(p.description);
+    if (p.category) parts.push(`Category: ${p.category}`);
+    if (p.price) parts.push(`Price: ${p.currency} ${p.price}`);
+    parts.push('Style: Cinematic product video, professional lighting, smooth camera movement');
+    setPrompt(parts.join(', '));
+  };
+
+  const handleSmartPrompt = async () => {
+    if (!selectedProduct) return;
+    setIsAnalyzing(true);
     try {
+      const context = [
+        `Product: ${selectedProduct.name}`,
+        selectedProduct.description ? `Description: ${selectedProduct.description}` : '',
+        selectedProduct.category ? `Category: ${selectedProduct.category}` : '',
+        selectedProduct.images?.length ? `Product image: ${selectedProduct.images[0]}` : '',
+      ].filter(Boolean).join('\n');
+
+      const res = await api.post<{ content?: string; prompt?: string }>('/ai/generate', {
+        prompt: `Generate a video prompt for this product:\n${context}`,
+        type: 'video',
+      });
+      const smartPrompt = res.data.content || res.data.prompt;
+      if (smartPrompt) setPrompt(smartPrompt);
+      toast.success('Smart video prompt generated! Review and edit below.');
+    } catch {
+      toast.error('Failed to generate smart prompt');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return;
+    if (!selectedProductId) {
+      toast.error('Select a product before generating. Your product gives the AI the context it needs.');
+      return;
+    }
+    setIsGenerating(true);
+    let genId = generationId;
+    try {
+      if (!genId) {
+        const genRes = await api.post<{ id: string }>('/ai-generations', {
+          productId: selectedProductId,
+          type: 'video',
+          prompt,
+          model,
+          provider: 'pollinations',
+          duration,
+        });
+        genId = genRes.data.id;
+        setGenerationId(genId);
+      }
+
       const res = await api.post<GenerateVideoResponse>('/ai/generate-video', {
         prompt,
         model,
         duration,
+        productId: selectedProductId,
       });
+
+      if (genId) {
+        api.patch(`/ai-generations/${genId}`, {
+          status: 'completed',
+          outputUrl: res.data.videoUrl,
+        }).catch(() => {});
+      }
+
       setResult(res.data);
-      setHistory(prev => [res.data, ...prev].slice(0, 10));
+      setHistory(prev => [res.data, ...prev].slice(0, 20));
       toast.success('Video generated!');
-    } catch {
-      toast.error('Failed to generate video');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
+      const msg = axiosErr?.response?.data?.message || axiosErr?.message || 'Failed to generate video';
+      if (genId) {
+        api.patch(`/ai-generations/${genId}`, { status: 'failed', error: msg }).catch(() => {});
+      }
+      toast.error(msg);
     } finally {
       setIsGenerating(false);
     }
@@ -52,6 +151,27 @@ export default function AIVideoPage() {
     document.body.removeChild(link);
   };
 
+  const handleAttachToPost = async () => {
+    if (!result) return;
+    try {
+      const hashtagsArr = selectedProduct
+        ? [`#${selectedProduct.name?.replace(/\s+/g, '')}`, `#${selectedProduct.category || 'product'}`]
+        : [];
+      const res = await api.post('/posts', {
+        caption: `${selectedProduct?.name || 'New product'} — Check out this video!`,
+        title: `${selectedProduct?.name || 'New product'} Video Post`,
+        hashtags: hashtagsArr,
+        platforms: ['Instagram'],
+        videoUrl: result.videoUrl,
+        productId: selectedProductId || undefined,
+      });
+      toast.success('Post created with this video!');
+      router.push(`/posts/${res.data.id}`);
+    } catch {
+      toast.error('Failed to create post');
+    }
+  };
+
   return (
     <div className="floating-shell mx-auto ring-1 ring-white/10">
       <div className="px-4 sm:px-8 pt-9 pb-6">
@@ -64,6 +184,47 @@ export default function AIVideoPage() {
         {/* Controls */}
         <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden">
           <div className="space-y-5">
+            {/* Product Selection */}
+            <div>
+              <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">
+                <Package className="w-3 h-3 inline mr-1" /> PRODUCT (REQUIRED)
+              </label>
+              {products.length === 0 ? (
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
+                  <div className="text-white/50 text-sm mb-2">Add a product first to generate AI videos</div>
+                  <button onClick={() => router.push('/products')} className="text-xs px-4 py-2 rounded-full border border-[#7c3aed] text-[#7c3aed] hover:bg-[#7c3aed]/10 transition-colors">
+                    + Add Product
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={selectedProductId}
+                  onChange={e => setSelectedProductId(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-3xl px-4 py-3 text-sm"
+                >
+                  <option value="">Select a product...</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.emoji || '📦'} {p.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Smart Prompt Button */}
+            {selectedProduct && (
+              <button
+                onClick={handleSmartPrompt}
+                disabled={isAnalyzing}
+                className="w-full py-3 rounded-2xl border border-[#7c3aed]/30 bg-[#7c3aed]/5 text-[#7c3aed] text-sm flex items-center justify-center gap-2 hover:bg-[#7c3aed]/10 transition-colors"
+              >
+                {isAnalyzing ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing product...</>
+                ) : (
+                  <><Sparkles className="w-4 h-4" /> Generate Smart Video Prompt</>
+                )}
+              </button>
+            )}
+
             <div>
               <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">PROMPT</label>
               <textarea
@@ -127,8 +288,8 @@ export default function AIVideoPage() {
 
             <button
               onClick={handleGenerate}
-              disabled={isGenerating || !prompt.trim()}
-              className="neon-button w-full mt-2"
+              disabled={isGenerating || !prompt.trim() || !selectedProductId}
+              className="neon-button w-full mt-2 disabled:opacity-40"
             >
               {isGenerating ? (
                 <span className="flex items-center gap-2">
@@ -150,7 +311,11 @@ export default function AIVideoPage() {
               <div>
                 <div className="text-6xl mb-4">🎬</div>
                 <div className="text-2xl sm:text-3xl font-semibold tracking-tight">Ready to create</div>
-                <div className="text-white/50 mt-2 text-sm">Enter a prompt and click Generate Video</div>
+                <div className="text-white/50 mt-2 text-sm">
+                  {selectedProductId
+                    ? 'Review the prompt and click Generate Video'
+                    : 'Select a product first to get started'}
+                </div>
               </div>
             </div>
           ) : (
@@ -187,15 +352,29 @@ export default function AIVideoPage() {
                   <span className="text-white/50">Provider</span>
                   <span className="font-mono">{result.provider}</span>
                 </div>
+                {selectedProduct && (
+                  <div className="flex justify-between">
+                    <span className="text-white/50">Product</span>
+                    <span className="font-mono">{selectedProduct.emoji} {selectedProduct.name}</span>
+                  </div>
+                )}
               </div>
 
-              <button
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="neon-button w-full mt-6"
-              >
-                {isGenerating ? 'Regenerating...' : 'Regenerate'}
-              </button>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleAttachToPost}
+                  className="flex-1 py-3 rounded-2xl border border-white/10 hover:bg-white/5 transition-colors text-sm flex items-center justify-center gap-2"
+                >
+                  <LinkIcon className="w-4 h-4" /> Attach to Post
+                </button>
+                <button
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                  className="neon-button flex-1"
+                >
+                  {isGenerating ? 'Regenerating...' : 'Regenerate'}
+                </button>
+              </div>
             </div>
           )}
         </div>

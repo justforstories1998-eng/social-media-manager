@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Download, RefreshCw, Loader2, Copy, Maximize2 } from 'lucide-react';
-import api, { type GenerateImageResponse } from '@/lib/api';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Download, RefreshCw, Loader2, Copy, Maximize2, Sparkles, Image as ImageIcon, Link as LinkIcon, Package } from 'lucide-react';
+import api, { type GenerateImageResponse, type Product } from '@/lib/api';
 import { toast } from 'sonner';
 
 const imageModels = [
@@ -22,31 +23,132 @@ const sizePresets = [
 ];
 
 export default function AIImagePage() {
-  const [prompt, setPrompt] = useState('A serene Japanese garden with cherry blossoms, koi pond, golden hour lighting, cinematic');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const preselectedProductId = searchParams.get('productId');
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [prompt, setPrompt] = useState('');
   const [model, setModel] = useState('flux');
   const [size, setSize] = useState(0);
   const [seed, setSeed] = useState<number | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<GenerateImageResponse | null>(null);
+  const [generationId, setGenerationId] = useState<string | null>(null);
   const [history, setHistory] = useState<GenerateImageResponse[]>([]);
+  const [showPostModal, setShowPostModal] = useState(false);
+
+  useEffect(() => {
+    api.get<Product[]>('/products').then(res => setProducts(res.data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (preselectedProductId) {
+      setSelectedProductId(preselectedProductId);
+    }
+  }, [preselectedProductId]);
+
+  useEffect(() => {
+    if (selectedProductId) {
+      const p = products.find(pr => pr.id === selectedProductId);
+      if (p) {
+        setSelectedProduct(p);
+        if (!prompt) {
+          buildProductPrompt(p);
+        }
+      }
+    }
+  }, [selectedProductId, products]);
+
+  const buildProductPrompt = (p: Product) => {
+    const parts = [`Product: ${p.name}`];
+    if (p.description) parts.push(`Description: ${p.description}`);
+    if (p.category) parts.push(`Category: ${p.category}`);
+    if (p.features?.length) parts.push(`Features: ${p.features.join(', ')}`);
+    if (p.price) parts.push(`Price: ${p.currency} ${p.price}`);
+    parts.push('Style: Professional product photography, clean background, studio lighting, high detail');
+    setPrompt(parts.join('\n'));
+  };
+
+  const handleSmartPrompt = async () => {
+    if (!selectedProduct) return;
+    setIsAnalyzing(true);
+    try {
+      const context = [
+        `Product: ${selectedProduct.name}`,
+        selectedProduct.description ? `Description: ${selectedProduct.description}` : '',
+        selectedProduct.category ? `Category: ${selectedProduct.category}` : '',
+        selectedProduct.features?.length ? `Features: ${selectedProduct.features.join(', ')}` : '',
+        selectedProduct.images?.length ? `Product image: ${selectedProduct.images[0]}` : '',
+      ].filter(Boolean).join('\n');
+
+      const res = await api.post<{ prompt: string }>('/ai/generate-image-prompt', {
+        prompt: context,
+      });
+      setPrompt(res.data.prompt);
+      toast.success('Smart prompt generated! Review and edit below.');
+    } catch {
+      toast.error('Failed to generate smart prompt');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const currentSize = sizePresets[size];
 
   const handleGenerate = async () => {
+    if (!prompt.trim()) return;
+    if (!selectedProductId) {
+      toast.error('Select a product before generating. Your product gives the AI the context it needs.');
+      return;
+    }
     setIsGenerating(true);
     try {
+      let genId = generationId;
+      if (!genId) {
+        const genRes = await api.post<{ id: string }>('/ai-generations', {
+          productId: selectedProductId,
+          type: 'image',
+          prompt,
+          model,
+          provider: 'pollinations',
+          width: currentSize.width,
+          height: currentSize.height,
+          seed,
+        });
+        genId = genRes.data.id;
+        setGenerationId(genId);
+      }
+
       const res = await api.post<GenerateImageResponse>('/ai/generate-image', {
         prompt,
         model,
         width: currentSize.width,
         height: currentSize.height,
         seed,
+        productId: selectedProductId,
       });
+
+      if (genId) {
+        api.patch(`/ai-generations/${genId}`, {
+          status: 'completed',
+          outputUrl: res.data.imageUrl,
+        }).catch(() => {});
+      }
+
       setResult(res.data);
       setHistory(prev => [res.data, ...prev].slice(0, 20));
       toast.success('Image generated!');
-    } catch {
-      toast.error('Failed to generate image');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
+      const msg = axiosErr?.response?.data?.message || axiosErr?.message || 'Failed to generate image';
+      if (generationId) {
+        api.patch(`/ai-generations/${generationId}`, { status: 'failed', error: msg }).catch(() => {});
+      }
+      toast.error(msg);
     } finally {
       setIsGenerating(false);
     }
@@ -62,8 +164,25 @@ export default function AIImagePage() {
     document.body.removeChild(link);
   };
 
-  const handleRandomSeed = () => {
-    setSeed(Math.floor(Math.random() * 1000000));
+  const handleAttachToPost = async () => {
+    if (!result) return;
+    try {
+      const hashtagsArr = selectedProduct
+        ? [`#${selectedProduct.name?.replace(/\s+/g, '')}`, `#${selectedProduct.category || 'product'}`]
+        : [];
+      const res = await api.post('/posts', {
+        caption: `${selectedProduct?.name || 'New product'} — Check out this amazing product!`,
+        title: `${selectedProduct?.name || 'New product'} Image Post`,
+        hashtags: hashtagsArr,
+        platforms: ['Instagram'],
+        imageUrl: result.imageUrl,
+        productId: selectedProductId || undefined,
+      });
+      toast.success('Post created with this image!');
+      router.push(`/posts/${res.data.id}`);
+    } catch {
+      toast.error('Failed to create post');
+    }
   };
 
   return (
@@ -71,13 +190,54 @@ export default function AIImagePage() {
       <div className="px-4 sm:px-8 pt-9 pb-6">
         <div className="font-mono text-xs tracking-[3px] text-white/50">AI STUDIO</div>
         <div className="text-4xl sm:text-5xl font-semibold tracking-[-2px]">Image Generator</div>
-        <div className="text-white/50 text-sm mt-2">Generate images for free using Pollinations.ai</div>
+        <div className="text-white/50 text-sm mt-2">Generate product images for free using Pollinations.ai</div>
       </div>
 
       <div className="px-4 sm:px-8 grid grid-cols-1 lg:grid-cols-2 gap-6 pb-10">
         {/* Controls */}
         <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden">
           <div className="space-y-5">
+            {/* Product Selection */}
+            <div>
+              <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">
+                <Package className="w-3 h-3 inline mr-1" /> PRODUCT (REQUIRED)
+              </label>
+              {products.length === 0 ? (
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
+                  <div className="text-white/50 text-sm mb-2">Add a product first to generate AI images.</div>
+                  <button onClick={() => router.push('/products')} className="text-xs px-4 py-2 rounded-full border border-[#7c3aed] text-[#7c3aed] hover:bg-[#7c3aed]/10 transition-colors">
+                    + Add Product
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={selectedProductId}
+                  onChange={e => setSelectedProductId(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-3xl px-4 py-3 text-sm"
+                >
+                  <option value="">Select a product...</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.emoji || '📦'} {p.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Smart Prompt Button */}
+            {selectedProduct && (
+              <button
+                onClick={handleSmartPrompt}
+                disabled={isAnalyzing}
+                className="w-full py-3 rounded-2xl border border-[#7c3aed]/30 bg-[#7c3aed]/5 text-[#7c3aed] text-sm flex items-center justify-center gap-2 hover:bg-[#7c3aed]/10 transition-colors"
+              >
+                {isAnalyzing ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing product...</>
+                ) : (
+                  <><Sparkles className="w-4 h-4" /> Generate Smart Prompt from Product</>
+                )}
+              </button>
+            )}
+
             <div>
               <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">PROMPT</label>
               <textarea
@@ -139,7 +299,7 @@ export default function AIImagePage() {
                   className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm"
                 />
                 <button
-                  onClick={handleRandomSeed}
+                  onClick={() => setSeed(Math.floor(Math.random() * 1000000))}
                   className="p-3 rounded-2xl border border-white/10 hover:bg-white/5 transition-colors shrink-0"
                 >
                   <RefreshCw className="w-4 h-4" />
@@ -149,8 +309,8 @@ export default function AIImagePage() {
 
             <button
               onClick={handleGenerate}
-              disabled={isGenerating || !prompt.trim()}
-              className="neon-button w-full mt-2"
+              disabled={isGenerating || !prompt.trim() || !selectedProductId}
+              className="neon-button w-full mt-2 disabled:opacity-40"
             >
               {isGenerating ? (
                 <span className="flex items-center gap-2">
@@ -170,7 +330,11 @@ export default function AIImagePage() {
               <div>
                 <div className="text-6xl mb-4">🎨</div>
                 <div className="text-2xl sm:text-3xl font-semibold tracking-tight">Ready to create</div>
-                <div className="text-white/50 mt-2 text-sm">Enter a prompt and click Generate</div>
+                <div className="text-white/50 mt-2 text-sm">
+                  {selectedProductId
+                    ? 'Review the prompt and click Generate'
+                    : 'Select a product first to get started'}
+                </div>
               </div>
             </div>
           ) : (
@@ -220,15 +384,29 @@ export default function AIImagePage() {
                   <span className="text-white/50">Seed</span>
                   <span className="font-mono">{result.seed}</span>
                 </div>
+                {selectedProduct && (
+                  <div className="flex justify-between">
+                    <span className="text-white/50">Product</span>
+                    <span className="font-mono">{selectedProduct.emoji} {selectedProduct.name}</span>
+                  </div>
+                )}
               </div>
 
-              <button
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="neon-button w-full mt-6"
-              >
-                {isGenerating ? 'Regenerating...' : 'Regenerate'}
-              </button>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleAttachToPost}
+                  className="flex-1 py-3 rounded-2xl border border-white/10 hover:bg-white/5 transition-colors text-sm flex items-center justify-center gap-2"
+                >
+                  <LinkIcon className="w-4 h-4" /> Attach to Post
+                </button>
+                <button
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                  className="neon-button flex-1"
+                >
+                  {isGenerating ? 'Regenerating...' : 'Regenerate'}
+                </button>
+              </div>
             </div>
           )}
         </div>

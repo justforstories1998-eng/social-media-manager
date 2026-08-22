@@ -1,7 +1,8 @@
 ﻿'use client';
 
 import React, { useState, useRef } from 'react';
-import { Plus, Trash2, Sparkles, Download, X, Loader2, Brain } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus, Trash2, Sparkles, Download, X, Loader2, Brain, Image, Film, Lightbulb } from 'lucide-react';
 import { useProducts, useCreateProduct, useDeleteProduct } from '@/hooks/useProducts';
 import api, { type AdConcept, type AdImageResponse } from '@/lib/api';
 import { toast } from 'sonner';
@@ -29,12 +30,14 @@ interface ProductSuggestion {
 }
 
 export default function ProductsPage() {
+  const router = useRouter();
   const { data: products, isLoading } = useProducts();
   const createProduct = useCreateProduct();
   const deleteProduct = useDeleteProduct();
   const [showAdd, setShowAdd] = useState(false);
   const [showAdModal, setShowAdModal] = useState(false);
   const [showAnalyzeModal, setShowAnalyzeModal] = useState(false);
+  const [showIdeasModal, setShowIdeasModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [adConcepts, setAdConcepts] = useState<AdConcept[]>([]);
   const [generatedImage, setGeneratedImage] = useState<AdImageResponse | null>(null);
@@ -42,7 +45,9 @@ export default function ProductsPage() {
   const [isGeneratingConcepts, setIsGeneratingConcepts] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false);
   const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
+  const [contentIdeas, setContentIdeas] = useState<string>('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ name: '', category: '', price: '', currency: 'USD', description: '', emoji: '' });
@@ -175,6 +180,25 @@ export default function ProductsPage() {
     document.body.removeChild(link);
   };
 
+  const handleGenerateContentIdeas = async (product: any) => {
+    setSelectedProduct(product);
+    setShowIdeasModal(true);
+    setIsGeneratingIdeas(true);
+    setContentIdeas('');
+    try {
+      const res = await api.post('/ai/generate-post', {
+        prompt: `Generate 3 content ideas for ${product.name}: ${product.description || product.category}. For each idea, provide: 1) A content concept, 2) The best platform for it, 3) A brief caption preview. Format as a numbered list.`,
+        platform: 'Instagram',
+        type: 'Content Ideas',
+      });
+      setContentIdeas(res.data.caption || 'No ideas generated');
+    } catch {
+      toast.error('Failed to generate content ideas');
+    } finally {
+      setIsGeneratingIdeas(false);
+    }
+  };
+
   return (
     <div className="floating-shell mx-auto ring-1 ring-white/10">
       <div className="px-4 sm:px-8 h-20 flex items-center justify-between border-b border-white/10">
@@ -225,6 +249,20 @@ export default function ProductsPage() {
                 </button>
                 <button onClick={() => handleDelete(product.id)} className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
                   <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button onClick={() => router.push(`/posts?productId=${product.id}`)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-white/10 text-white/60 text-[11px] font-medium hover:bg-white/5 hover:text-white transition-colors">
+                  <Plus className="w-3 h-3" /> Post
+                </button>
+                <button onClick={() => router.push(`/ai/image?productId=${product.id}`)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-white/10 text-white/60 text-[11px] font-medium hover:bg-white/5 hover:text-white transition-colors">
+                  <Image className="w-3 h-3" /> Image
+                </button>
+                <button onClick={() => router.push(`/ai/video?productId=${product.id}`)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-white/10 text-white/60 text-[11px] font-medium hover:bg-white/5 hover:text-white transition-colors">
+                  <Film className="w-3 h-3" /> Video
+                </button>
+                <button onClick={() => handleGenerateContentIdeas(product)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-white/10 text-white/60 text-[11px] font-medium hover:bg-white/5 hover:text-white transition-colors">
+                  <Lightbulb className="w-3 h-3" /> Ideas
                 </button>
               </div>
             </div>
@@ -363,6 +401,56 @@ export default function ProductsPage() {
               </div>
             ) : (
               <div className="text-center py-12 text-white/50">No suggestions generated</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Content Ideas Modal */}
+      {showIdeasModal && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowIdeasModal(false)}>
+          <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <div className="font-mono text-xs tracking-[3px] text-white/50">CONTENT IDEAS</div>
+                <div className="text-2xl sm:text-3xl font-semibold tracking-tight">{selectedProduct?.name}</div>
+              </div>
+              <button onClick={() => setShowIdeasModal(false)} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
+            </div>
+            {isGeneratingIdeas ? (
+              <div className="flex flex-col items-center py-12">
+                <Loader2 className="w-8 h-8 text-[#7c3aed] animate-spin mb-4" />
+                <div className="text-white/50">Generating content ideas for {selectedProduct?.name}...</div>
+              </div>
+            ) : contentIdeas ? (
+              <div className="space-y-4">
+                <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
+                  <div className="font-mono text-[10px] text-white/40 mb-3">AI-GENERATED IDEAS</div>
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap text-white/80">{contentIdeas}</div>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setShowIdeasModal(false); router.push(`/posts?productId=${selectedProduct?.id}`); }}
+                    className="flex-1 py-3 rounded-xl bg-[#7c3aed]/15 text-[#7c3aed] text-sm font-medium hover:bg-[#7c3aed]/25 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> Create Post
+                  </button>
+                  <button
+                    onClick={() => { setShowIdeasModal(false); router.push(`/ai/image?productId=${selectedProduct?.id}`); }}
+                    className="flex-1 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors text-sm flex items-center justify-center gap-2"
+                  >
+                    <Image className="w-4 h-4" /> Generate Image
+                  </button>
+                </div>
+                <button
+                  onClick={() => handleGenerateContentIdeas(selectedProduct)}
+                  className="w-full py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors text-sm flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" /> Regenerate Ideas
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-white/50">No ideas generated</div>
             )}
           </div>
         </div>

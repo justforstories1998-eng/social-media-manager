@@ -3,14 +3,19 @@
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Calendar, Globe, Hash, Clock, CheckCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Globe, Hash, Clock, CheckCircle, Loader2, Pencil, Copy, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { useUpdatePost, useDeletePost, useDuplicatePost } from '@/hooks/usePosts';
+import { toast } from 'sonner';
 
 export default function PostDetailPage() {
   const params = useParams();
   const router = useRouter();
   const postId = params.id as string;
+  const updatePost = useUpdatePost();
+  const deletePost = useDeletePost();
+  const duplicatePost = useDuplicatePost();
 
   const { data: post, isLoading } = useQuery({
     queryKey: ['post', postId],
@@ -46,6 +51,31 @@ export default function PostDetailPage() {
     APPROVED: 'status-approved',
     PENDING_APPROVAL: 'status-ready',
     DRAFT: 'status-draft',
+  };
+
+  const handleDuplicate = async () => {
+    if (!post) return;
+    try {
+      const newPost = await duplicatePost.mutateAsync(post.id);
+      toast.success('Post duplicated!');
+      router.push(`/posts/${newPost.id}`);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
+      toast.error(axiosErr?.response?.data?.message || axiosErr?.message || 'Failed to duplicate post');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!post) return;
+    if (!window.confirm(`Delete "${post.title || post.caption?.slice(0, 50)}"? This cannot be undone.`)) return;
+    try {
+      await deletePost.mutateAsync(post.id);
+      toast.success('Post deleted!');
+      router.push('/posts');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
+      toast.error(axiosErr?.response?.data?.message || axiosErr?.message || 'Failed to delete post');
+    }
   };
 
   return (
@@ -170,14 +200,27 @@ export default function PostDetailPage() {
             <div className="glass p-6 rounded-[2rem]">
               <div className="font-mono text-xs tracking-[2px] text-white/50 mb-4">ACTIONS</div>
               <div className="space-y-2">
-                <button className="w-full py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors text-sm">
-                  Edit Post
+                <button
+                  onClick={() => router.push('/posts')}
+                  className="w-full py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors text-sm flex items-center justify-center gap-2"
+                >
+                  <Pencil className="w-4 h-4" /> Edit Post
                 </button>
-                <button className="w-full py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors text-sm">
-                  Duplicate
+                <button
+                  onClick={handleDuplicate}
+                  disabled={duplicatePost.isPending}
+                  className="w-full py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {duplicatePost.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
+                  {duplicatePost.isPending ? 'Duplicating...' : 'Duplicate'}
                 </button>
-                <button className="w-full py-3 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors text-sm">
-                  Delete
+                <button
+                  onClick={handleDelete}
+                  disabled={deletePost.isPending}
+                  className="w-full py-3 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {deletePost.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  {deletePost.isPending ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </div>
