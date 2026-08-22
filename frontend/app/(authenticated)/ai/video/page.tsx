@@ -111,44 +111,23 @@ export default function AIVideoPage() {
       return;
     }
     setIsGenerating(true);
-    let genId = generationId;
     try {
-      if (!genId) {
-        const genRes = await api.post<{ id: string }>('/ai-generations', {
-          productId: selectedProductId,
-          type: 'video',
-          prompt,
-          model,
-          provider: 'pollinations',
-          duration,
-        });
-        genId = genRes.data.id;
-        setGenerationId(genId);
-      }
-
-      const res = await api.post<GenerateVideoResponse>('/ai/generate-video', {
+      const res = await api.post<{ generation: { id: string }; result: GenerateVideoResponse }>('/ai/generate-video', {
         prompt,
         model,
         duration,
         productId: selectedProductId,
       });
 
-      if (genId) {
-        api.patch(`/ai-generations/${genId}`, {
-          status: 'completed',
-          outputUrl: res.data.videoUrl,
-        }).catch(() => {});
-      }
+      const genId = res.data.generation?.id;
+      if (genId) setGenerationId(genId);
 
-      setResult(res.data);
-      setHistory(prev => [res.data, ...prev].slice(0, 20));
+      setResult(res.data.result);
+      setHistory(prev => [res.data.result, ...prev].slice(0, 10));
       toast.success('Video generated!');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
       const msg = axiosErr?.response?.data?.message || axiosErr?.message || 'Failed to generate video';
-      if (genId) {
-        api.patch(`/ai-generations/${genId}`, { status: 'failed', error: msg }).catch(() => {});
-      }
       toast.error(msg);
     } finally {
       setIsGenerating(false);

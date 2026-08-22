@@ -121,23 +121,7 @@ export default function AIImagePage() {
     }
     setIsGenerating(true);
     try {
-      let genId = generationId;
-      if (!genId) {
-        const genRes = await api.post<{ id: string }>('/ai-generations', {
-          productId: selectedProductId,
-          type: 'image',
-          prompt,
-          model,
-          provider: 'pollinations',
-          width: currentSize.width,
-          height: currentSize.height,
-          seed,
-        });
-        genId = genRes.data.id;
-        setGenerationId(genId);
-      }
-
-      const res = await api.post<GenerateImageResponse>('/ai/generate-image', {
+      const res = await api.post<{ generation: { id: string }; result: GenerateImageResponse }>('/ai/generate-image', {
         prompt,
         model,
         width: currentSize.width,
@@ -146,22 +130,15 @@ export default function AIImagePage() {
         productId: selectedProductId,
       });
 
-      if (genId) {
-        api.patch(`/ai-generations/${genId}`, {
-          status: 'completed',
-          outputUrl: res.data.imageUrl,
-        }).catch(() => {});
-      }
+      const genId = res.data.generation?.id;
+      if (genId) setGenerationId(genId);
 
-      setResult(res.data);
-      setHistory(prev => [res.data, ...prev].slice(0, 20));
+      setResult(res.data.result);
+      setHistory(prev => [res.data.result, ...prev].slice(0, 20));
       toast.success('Image generated!');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
       const msg = axiosErr?.response?.data?.message || axiosErr?.message || 'Failed to generate image';
-      if (generationId) {
-        api.patch(`/ai-generations/${generationId}`, { status: 'failed', error: msg }).catch(() => {});
-      }
       toast.error(msg);
     } finally {
       setIsGenerating(false);
