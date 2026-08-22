@@ -183,7 +183,7 @@ export interface GeneratePostRequest {
 
 export interface GeneratePostResponse {
   caption: string;
-  hashtags: string;
+  hashtags: string | string[];
   imagePrompt: string;
   model: string;
   confidence: string;

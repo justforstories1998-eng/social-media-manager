@@ -60,18 +60,32 @@ export default function PostsPage() {
   const handlePublish = async () => {
     if (!generated) return;
     try {
-      await createPost.mutateAsync({
+      let hashtagsArr: string[] = [];
+      if (generated.hashtags) {
+        if (Array.isArray(generated.hashtags)) {
+          hashtagsArr = generated.hashtags.filter((h: string) => h.startsWith('#'));
+        } else if (typeof generated.hashtags === 'string') {
+          hashtagsArr = generated.hashtags.split(/[\s,]+/).filter((h: string) => h.startsWith('#'));
+        }
+      }
+      const payload: Record<string, unknown> = {
         caption: generated.caption,
         title: generated.caption.slice(0, 80),
-        hashtags: generated.hashtags ? generated.hashtags.split(/\s+/).filter((h: string) => h.startsWith('#')) : [],
+        hashtags: hashtagsArr,
         platforms: [platform],
-        scheduledFor: scheduleDate || undefined,
-      });
+      };
+      if (scheduleDate) {
+        payload.scheduledFor = scheduleDate;
+      }
+      await createPost.mutateAsync(payload as any);
       toast.success(scheduleDate ? 'Post scheduled!' : 'Post created!');
       setShowModal(false);
       resetModal();
-    } catch {
-      toast.error('Failed to create post');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
+      const msg = axiosErr?.response?.data?.message || axiosErr?.message || 'Failed to create post';
+      console.error('Post creation error:', axiosErr?.response?.data || axiosErr);
+      toast.error(msg);
     }
   };
 
