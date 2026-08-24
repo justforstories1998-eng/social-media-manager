@@ -7,6 +7,7 @@ import { usePosts } from '@/hooks/usePosts';
 import { festivals, getFestivalsForDate, getFestivalsForMonth, monthNames, categoryColors, type Festival } from '@/lib/festivals';
 import api, { type Post } from '@/lib/api';
 import { toast } from 'sonner';
+import { TourButton } from '../../../components/tour/TourButton';
 
 interface Recommendation {
   product: string;
@@ -158,8 +159,13 @@ export default function CalendarPage() {
   return (
     <div className="floating-shell mx-auto ring-1 ring-white/10">
       <div className="px-4 sm:px-8 pt-8 pb-6">
-        <div className="font-mono text-xs tracking-[3px] text-white/50">CONTENT CALENDAR</div>
-        <div className="text-4xl sm:text-5xl font-semibold tracking-[-2px]">{monthNames[month]} {year}</div>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="font-mono text-xs tracking-[3px] text-white/50">CONTENT CALENDAR</div>
+            <div className="text-4xl sm:text-5xl font-semibold tracking-[-2px]">{monthNames[month]} {year}</div>
+          </div>
+          <TourButton moduleId="calendar" />
+        </div>
         {monthFestivals.length > 0 && (
           <div className="text-white/50 text-sm mt-2">{monthFestivals.length} special day{monthFestivals.length > 1 ? 's' : ''} this month</div>
         )}
@@ -188,7 +194,7 @@ export default function CalendarPage() {
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-px bg-white/5 rounded-3xl overflow-hidden border border-white/10">
+          <div data-tour="calendar-grid" className="grid grid-cols-7 gap-px bg-white/5 rounded-3xl overflow-hidden border border-white/10">
             {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
               <div key={d} className="bg-[#0c0c0c] py-3 text-center text-[10px] font-mono tracking-[2px] text-white/40">{d}</div>
             ))}
@@ -276,7 +282,7 @@ export default function CalendarPage() {
         )}
 
         {/* Content Opportunities Panel */}
-        <div className="mt-6">
+        <div data-tour="content-gaps" className="mt-6">
           <div className="font-mono text-xs tracking-[2px] text-white/50 mb-4">CONTENT OPPORTUNITIES</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Products Needing Content */}
@@ -321,6 +327,7 @@ export default function CalendarPage() {
           </div>
 
           <button
+            data-tour="daily-recommendations"
             onClick={getRecommendations}
             disabled={isLoadingRecommendations}
             className="w-full mt-4 py-3 rounded-xl border border-[#7c3aed]/30 hover:bg-[#7c3aed]/10 transition-colors text-sm flex items-center justify-center gap-2 text-[#7c3aed] disabled:opacity-50"
@@ -461,6 +468,7 @@ export default function CalendarPage() {
 
             <div className="space-y-3">
               <button
+                data-tour="create-for-date"
                 onClick={() => {
                   setShowDateModal(false);
                   const dateStr = `${year}-${String(selectedDate.month).padStart(2, '0')}-${String(selectedDate.day).padStart(2, '0')}T10:00`;

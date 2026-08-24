@@ -7,6 +7,7 @@ import { Plus, Loader2, Sparkles, Pencil, Copy, Trash2, X, AlertCircle, RefreshC
 import { usePosts, useCreatePost, useUpdatePost, useDeletePost, useDuplicatePost } from '@/hooks/usePosts';
 import api, { type Post, type GeneratePostResponse } from '@/lib/api';
 import { toast } from 'sonner';
+import { TourButton } from '../../../components/tour/TourButton';
 
 const platformOptions = ['Instagram', 'LinkedIn', 'Facebook', 'X', 'TikTok'];
 const typeOptions = ['Product Promotion', 'Educational', 'Festival', 'Brand Story', 'Tips & Tricks', 'Behind the Scenes'];
@@ -208,14 +209,17 @@ export default function PostsPage() {
           <div className="font-mono text-xs tracking-[3px] text-white/50">CONTENT STUDIO</div>
           <div className="text-4xl sm:text-5xl font-semibold tracking-[-2px]">All Posts</div>
         </div>
-        <button onClick={() => { setShowModal(true); resetModal(); }} className="neon-button flex items-center gap-2 text-sm">
-          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Generate with AI</span>
-          <span className="sm:hidden">New Post</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button data-tour="create-post" onClick={() => { setShowModal(true); resetModal(); }} className="neon-button flex items-center gap-2 text-sm">
+            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Generate with AI</span>
+            <span className="sm:hidden">New Post</span>
+          </button>
+          <TourButton moduleId="posts" />
+        </div>
       </div>
 
       <div className="px-4 sm:px-8 pb-12">
-        <div className="glass rounded-[2.5rem] overflow-hidden border border-white/10">
+        <div data-tour="post-filters" className="glass rounded-[2.5rem] overflow-hidden border border-white/10">
           <div className="table-wrapper">
             <table className="w-full">
               <thead>
@@ -246,7 +250,7 @@ export default function PostsPage() {
                   </tr>
                 ) : posts && posts.length > 0 ? (
                   posts.map((post) => (
-                    <tr key={post.id} className="border-b border-white/10 hover:bg-white/5 last:border-none">
+                    <tr key={post.id} data-tour="post-card" className="border-b border-white/10 hover:bg-white/5 last:border-none">
                       <td className="px-4 sm:px-8 py-4 sm:py-6 font-medium text-base sm:text-lg tracking-tight">
                         {post.title || post.caption?.slice(0, 60)}
                         <div className="flex items-center gap-2 mt-1 sm:hidden">
@@ -306,7 +310,7 @@ export default function PostsPage() {
           <div ref={modalRef} className="glass w-full max-w-lg p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] outline-none max-h-[90vh] overflow-y-auto overflow-x-hidden" onClick={e => e.stopPropagation()}>
             {step === 'input' ? (
               <>
-                <div className="flex items-center gap-3 mb-6">
+                <div data-tour="ai-assist" className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center">
                     <Sparkles className="w-5 h-5" />
                   </div>
@@ -386,7 +390,7 @@ export default function PostsPage() {
                       <div className="text-sm">{platform} • {type}</div>
                     </div>
 
-                    <div>
+                    <div data-tour="post-schedule">
                       <label className="text-xs font-mono tracking-[1px] text-white/50 block mb-2">SCHEDULE (OPTIONAL)</label>
                       <input
                         type="datetime-local"

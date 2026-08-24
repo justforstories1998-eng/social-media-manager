@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Calendar, TrendingUp, Users, Clock, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react';
 import { useDashboardMetrics } from '@/hooks/useAnalytics';
+import { TourButton } from '../../../components/tour/TourButton';
 
 export default function DashboardPage() {
   const { data: metrics, isLoading, error: metricsError, refetch: refetchMetrics } = useDashboardMetrics();
@@ -53,18 +54,21 @@ export default function DashboardPage() {
         </div>
       )}
       {/* Header */}
-      <div className="pt-8 sm:pt-10 pb-6 sm:pb-8 px-4 sm:px-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+      <div data-tour="quick-actions" className="pt-8 sm:pt-10 pb-6 sm:pb-8 px-4 sm:px-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <div className="font-mono tracking-[3px] text-xs text-white/40">{dateStr} • {greeting}</div>
           <div className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-[-2px] sm:tracking-[-2.5px] mt-1">Welcome back.</div>
         </div>
-        <Link href="/ai/generate" className="neon-button flex items-center gap-2 text-sm sm:text-base">
-          Generate Today&apos;s Content <ArrowRight className="w-4 h-4" />
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/ai/generate" className="neon-button flex items-center gap-2 text-sm sm:text-base">
+            Generate Today&apos;s Content <ArrowRight className="w-4 h-4" />
+          </Link>
+          <TourButton moduleId="dashboard" />
+        </div>
       </div>
 
       {/* Metrics */}
-      <div className="px-4 sm:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-8">
+      <div data-tour="stats" className="px-4 sm:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-8">
         {[
           { label: "TODAY'S POSTS", value: String(m.todayPosts), change: "+1", icon: Calendar },
           { label: "SCHEDULED", value: String(m.scheduled), change: "+4", icon: Clock },
@@ -85,7 +89,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Today's Posts + Platform Stats */}
-      <div className="px-4 sm:px-8 grid grid-cols-1 lg:grid-cols-12 gap-4 pb-8">
+      <div data-tour="recent-posts" className="px-4 sm:px-8 grid grid-cols-1 lg:grid-cols-12 gap-4 pb-8">
         <div className="lg:col-span-8 glass p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem]">
           <div className="flex justify-between mb-6">
             <div>
@@ -141,7 +145,7 @@ export default function DashboardPage() {
       </div>
 
       {/* AI Usage + Activity */}
-      <div className="px-4 sm:px-8 grid grid-cols-1 lg:grid-cols-2 gap-4 pb-8">
+      <div data-tour="performance" className="px-4 sm:px-8 grid grid-cols-1 lg:grid-cols-2 gap-4 pb-8">
         <div className="glass p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem]">
           <div className="font-mono text-xs tracking-[2px] text-white/50 mb-1">AI USAGE TODAY</div>
           <div className="flex justify-between items-baseline">

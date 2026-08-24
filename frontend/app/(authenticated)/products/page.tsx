@@ -7,6 +7,7 @@ import { useProducts, useCreateProduct, useDeleteProduct } from '@/hooks/useProd
 import api, { type AdConcept, type AdImageResponse, type ComboAnalysis } from '@/lib/api';
 import { toast } from 'sonner';
 import CustomDropdown from '@/components/CustomDropdown';
+import { TourButton } from '../../../components/tour/TourButton';
 
 const currencyOptions = [
   { value: 'USD', label: '$ USD' },
@@ -380,10 +381,13 @@ export default function ProductsPage() {
     <div className="floating-shell mx-auto ring-1 ring-white/10">
       <div className="px-4 sm:px-8 h-20 flex items-center justify-between border-b border-white/10">
         <div className="font-mono text-xs tracking-[3px] text-white/50">PRODUCT LIBRARY</div>
-        <button onClick={() => setShowAdd(true)} className="neon-button flex items-center gap-2 text-sm">
-          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Add Product</span>
-          <span className="sm:hidden">Add</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button data-tour="add-product" onClick={() => setShowAdd(true)} className="neon-button flex items-center gap-2 text-sm">
+            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Add Product</span>
+            <span className="sm:hidden">Add</span>
+          </button>
+          <TourButton moduleId="products" />
+        </div>
       </div>
 
       <div className="px-4 sm:px-8 pt-9 pb-6">
@@ -410,7 +414,7 @@ export default function ProductsPage() {
           </div>
         ) : products && products.length > 0 ? (
           products.map((product) => (
-            <div key={product.id} className="glass p-6 sm:p-7 rounded-[2.5rem] border border-white/10 hover:border-[#7c3aed]/40 transition-colors relative group">
+            <div key={product.id} data-tour="product-card" className="glass p-6 sm:p-7 rounded-[2.5rem] border border-white/10 hover:border-[#7c3aed]/40 transition-colors relative group">
               <div className="absolute top-3 right-3 z-10">
                 <button
                   onClick={(e) => {
@@ -443,7 +447,7 @@ export default function ProductsPage() {
                   <span className="text-xs text-white/40 ml-1">{product.currency}</span>
                 </div>
               </div>
-              <div className="flex gap-2 mt-4">
+              <div data-tour="product-actions" className="flex gap-2 mt-4">
                 <button onClick={() => handleGenerateAdConcepts(product)} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#7c3aed]/15 text-[#7c3aed] text-xs font-medium hover:bg-[#7c3aed]/25 transition-colors">
                   <Sparkles className="w-3.5 h-3.5" /> AI Ad
                 </button>
@@ -681,7 +685,7 @@ export default function ProductsPage() {
       )}
 
       {selectedProductIds.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 p-4 sm:p-6">
+        <div data-tour="combo-offer" className="fixed bottom-0 left-0 right-0 z-40 p-4 sm:p-6">
           <div className="glass max-w-4xl mx-auto rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4 border border-[#7c3aed]/30">
             <div className="flex-1">
               <div className="font-mono text-xs tracking-[2px] text-white/50">SELECTION</div>

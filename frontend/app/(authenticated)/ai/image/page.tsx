@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Download, RefreshCw, Loader2, Copy, Maximize2, Sparkles, Image as ImageIcon, Link as LinkIcon, Package, AlertCircle } from 'lucide-react';
 import api, { type GenerateImageResponse, type Product } from '@/lib/api';
 import { toast } from 'sonner';
+import { TourButton } from '../../../../components/tour/TourButton';
 
 const imageModels = [
   { id: 'flux', name: 'FLUX', description: 'Fast, photorealistic, versatile' },
@@ -183,9 +184,14 @@ export default function AIImagePage() {
   return (
     <div className="floating-shell mx-auto ring-1 ring-white/10">
       <div className="px-4 sm:px-8 pt-9 pb-6">
-        <div className="font-mono text-xs tracking-[3px] text-white/50">AI STUDIO</div>
-        <div className="text-4xl sm:text-5xl font-semibold tracking-[-2px]">Image Generator</div>
-        <div className="text-white/50 text-sm mt-2">Generate product images for free using Pollinations.ai</div>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="font-mono text-xs tracking-[3px] text-white/50">AI STUDIO</div>
+            <div className="text-4xl sm:text-5xl font-semibold tracking-[-2px]">Image Generator</div>
+            <div className="text-white/50 text-sm mt-2">Generate product images for free using Pollinations.ai</div>
+          </div>
+          <TourButton moduleId="aiImage" />
+        </div>
       </div>
 
       <div className="px-4 sm:px-8 grid grid-cols-1 lg:grid-cols-2 gap-6 pb-10">
@@ -193,7 +199,7 @@ export default function AIImagePage() {
         <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden">
           <div className="space-y-5">
             {/* Product Selection */}
-            <div>
+            <div data-tour="product-selector">
               <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">
                 <Package className="w-3 h-3 inline mr-1" /> PRODUCT (REQUIRED)
               </label>
@@ -246,7 +252,7 @@ export default function AIImagePage() {
               </button>
             )}
 
-            <div>
+            <div data-tour="prompt-input">
               <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">PROMPT</label>
               <textarea
                 value={prompt}
@@ -256,7 +262,7 @@ export default function AIImagePage() {
               />
             </div>
 
-            <div>
+            <div data-tour="style-options">
               <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">MODEL</label>
               <div className="space-y-2">
                 {imageModels.map(m => (
@@ -426,7 +432,7 @@ export default function AIImagePage() {
                 </div>
               )}
 
-              <div className="flex gap-3 mt-6">
+              <div data-tour="result-actions" className="flex gap-3 mt-6">
                 <button
                   onClick={handleAttachToPost}
                   className="flex-1 py-3 rounded-2xl border border-white/10 hover:bg-white/5 transition-colors text-sm flex items-center justify-center gap-2"

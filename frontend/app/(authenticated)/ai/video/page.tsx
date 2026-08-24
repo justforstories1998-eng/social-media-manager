@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Download, Loader2, Film, AlertCircle, Sparkles, Link as LinkIcon, Package, RefreshCw } from 'lucide-react';
 import api, { type GenerateVideoResponse, type Product } from '@/lib/api';
 import { toast } from 'sonner';
+import { TourButton } from '../../../../components/tour/TourButton';
 
 const videoModels = [
   { id: 'stable-video', name: 'Stable Video', description: 'Fast, general purpose video generation' },
@@ -172,9 +173,14 @@ export default function AIVideoPage() {
   return (
     <div className="floating-shell mx-auto ring-1 ring-white/10">
       <div className="px-4 sm:px-8 pt-9 pb-6">
-        <div className="font-mono text-xs tracking-[3px] text-white/50">AI STUDIO</div>
-        <div className="text-4xl sm:text-5xl font-semibold tracking-[-2px]">Video Generator</div>
-        <div className="text-white/50 text-sm mt-2">Generate short videos for free using Pollinations.ai</div>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="font-mono text-xs tracking-[3px] text-white/50">AI STUDIO</div>
+            <div className="text-4xl sm:text-5xl font-semibold tracking-[-2px]">Video Generator</div>
+            <div className="text-white/50 text-sm mt-2">Generate short videos for free using Pollinations.ai</div>
+          </div>
+          <TourButton moduleId="aiVideo" />
+        </div>
       </div>
 
       <div className="px-4 sm:px-8 grid grid-cols-1 lg:grid-cols-2 gap-6 pb-10">
@@ -182,7 +188,7 @@ export default function AIVideoPage() {
         <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden">
           <div className="space-y-5">
             {/* Product Selection */}
-            <div>
+            <div data-tour="video-product">
               <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">
                 <Package className="w-3 h-3 inline mr-1" /> PRODUCT (REQUIRED)
               </label>
@@ -235,7 +241,7 @@ export default function AIVideoPage() {
               </button>
             )}
 
-            <div>
+            <div data-tour="video-prompt">
               <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">PROMPT</label>
               <textarea
                 value={prompt}
@@ -245,7 +251,7 @@ export default function AIVideoPage() {
               />
             </div>
 
-            <div>
+            <div data-tour="video-settings">
               <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">MODEL</label>
               <div className="space-y-2">
                 {videoModels.map(m => (
@@ -396,7 +402,7 @@ export default function AIVideoPage() {
                 </div>
               )}
 
-              <div className="flex gap-3 mt-6">
+              <div data-tour="video-result" className="flex gap-3 mt-6">
                 <button
                   onClick={handleAttachToPost}
                   className="flex-1 py-3 rounded-2xl border border-white/10 hover:bg-white/5 transition-colors text-sm flex items-center justify-center gap-2"

@@ -22,22 +22,22 @@ import {
 import { useAuthStore } from '@/stores/authStore';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/posts', label: 'Posts', icon: FileText },
-  { href: '/products', label: 'Products', icon: Package },
-  { href: '/calendar', label: 'Calendar', icon: Calendar },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/ai/generate', label: 'AI Generate', icon: Sparkles },
-  { href: '/ai/image', label: 'AI Image', icon: Image },
-  { href: '/ai/video', label: 'AI Video', icon: Film },
-  { href: '/notifications', label: 'Notifications', icon: Bell },
-  { href: '/exports', label: 'Exports', icon: Download },
-  { href: '/settings/telegram', label: 'Telegram', icon: MessageCircle },
-  { href: '/settings/business', label: 'Settings', icon: Settings },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, tour: 'nav-dashboard' },
+  { href: '/posts', label: 'Posts', icon: FileText, tour: 'nav-posts' },
+  { href: '/products', label: 'Products', icon: Package, tour: 'nav-products' },
+  { href: '/calendar', label: 'Calendar', icon: Calendar, tour: 'nav-calendar' },
+  { href: '/analytics', label: 'Analytics', icon: BarChart3, tour: 'nav-analytics' },
+  { href: '/ai/generate', label: 'AI Generate', icon: Sparkles, tour: 'nav-ai' },
+  { href: '/ai/image', label: 'AI Image', icon: Image, tour: 'nav-ai' },
+  { href: '/ai/video', label: 'AI Video', icon: Film, tour: 'nav-ai' },
+  { href: '/notifications', label: 'Notifications', icon: Bell, tour: 'nav-notifications' },
+  { href: '/exports', label: 'Exports', icon: Download, tour: 'nav-exports' },
+  { href: '/settings/telegram', label: 'Telegram', icon: MessageCircle, tour: 'nav-settings' },
+  { href: '/settings/business', label: 'Settings', icon: Settings, tour: 'nav-settings' },
 ];
 
 const adminItems = [
-  { href: '/admin', label: 'Admin Dashboard', icon: Shield },
+  { href: '/admin', label: 'Admin Dashboard', icon: Shield, tour: 'nav-admin' },
 ];
 
 export default function Sidebar() {
@@ -58,7 +58,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-60 flex-col bg-[#0c0c0c] border-r border-white/10 z-40">
+      <aside data-tour="sidebar" className="hidden md:flex fixed left-0 top-0 bottom-0 w-60 flex-col bg-[#0c0c0c] border-r border-white/10 z-40">
         <div className="p-5 border-b border-white/10">
           <Link href="/dashboard" className="flex items-center gap-3">
             <img src="/logo.jpg" alt="WonderMedia" className="w-9 h-9 rounded-2xl object-cover" />
@@ -76,6 +76,7 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                data-tour={item.tour}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-[#7c3aed]/15 text-[#7c3aed]'
@@ -109,6 +110,7 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                data-tour={item.tour}
                 className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-medium transition-colors whitespace-nowrap flex-shrink-0 min-w-[56px] ${
                   isActive ? 'text-[#7c3aed]' : 'text-white/40'
                 }`}
