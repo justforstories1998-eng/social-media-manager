@@ -2,9 +2,9 @@
 
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Sparkles, Download, X, Loader2, Brain, Image, Film, Lightbulb, ChevronDown, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Sparkles, Download, X, Loader2, Brain, Image, Film, Lightbulb, ChevronDown, AlertCircle, RefreshCw, Package, Check } from 'lucide-react';
 import { useProducts, useCreateProduct, useDeleteProduct } from '@/hooks/useProducts';
-import api, { type AdConcept, type AdImageResponse } from '@/lib/api';
+import api, { type AdConcept, type AdImageResponse, type ComboAnalysis } from '@/lib/api';
 import { toast } from 'sonner';
 import CustomDropdown from '@/components/CustomDropdown';
 
@@ -53,6 +53,43 @@ export default function ProductsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ name: '', category: '', price: '', currency: 'USD', description: '', emoji: '' });
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+  const [showComboBuilder, setShowComboBuilder] = useState(false);
+  const [comboStep, setComboStep] = useState<'config' | 'analysis' | 'prompt' | 'generating' | 'result'>('config');
+  const [comboName, setComboName] = useState('');
+  const [comboDiscount, setComboDiscount] = useState('');
+  const [comboAudience, setComboAudience] = useState('');
+  const [comboPlatform, setComboPlatform] = useState('Instagram');
+  const [comboVisualStyle, setComboVisualStyle] = useState('');
+  const [comboObjective, setComboObjective] = useState('');
+  const [comboAnalysis, setComboAnalysis] = useState<ComboAnalysis | null>(null);
+  const [comboPrompt, setComboPrompt] = useState('');
+  const [comboResult, setComboResult] = useState<{ imageUrl: string } | null>(null);
+  const [comboOfferId, setComboOfferId] = useState<string | null>(null);
+  const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
+  const [comboGeneratingImage, setComboGeneratingImage] = useState(false);
+  const [comboError, setComboError] = useState<string | null>(null);
+  const [generationStep, setGenerationStep] = useState(0);
+
+  const promptSuggestions = [
+    'Premium studio shot',
+    'Natural lifestyle scene',
+    'Gift bundle presentation',
+    'E-commerce promotional banner',
+    'Summer campaign',
+    'Christmas bundle',
+    'Luxury product advertisement',
+    'Limited-time offer',
+  ];
+
+  const generationSteps = [
+    { key: 'analyze', label: 'Analysing products' },
+    { key: 'concept', label: 'Building visual concept' },
+    { key: 'prepare', label: 'Preparing product references' },
+    { key: 'generate', label: 'Generating image' },
+    { key: 'finalize', label: 'Finalising image' },
+  ];
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -181,6 +218,145 @@ export default function ProductsPage() {
     document.body.removeChild(link);
   };
 
+  const toggleProductSelection = (id: string) => {
+    setSelectedProductIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllProducts = () => {
+    if (products) {
+      setSelectedProductIds(new Set(products.map(p => p.id)));
+    }
+  };
+
+  const clearSelection = () => setSelectedProductIds(new Set());
+
+  const handleAnalyzeCombo = async () => {
+    if (selectedProductIds.size < 2) {
+      toast.error('Please select at least two products');
+      return;
+    }
+    setComboStep('generating');
+    setGenerationStep(0);
+    setComboError(null);
+    try {
+      setGenerationStep(0);
+      await new Promise(r => setTimeout(r, 800));
+      setGenerationStep(1);
+      
+      const res = await api.post<ComboAnalysis>('/combo-offers/analyze', { productIds: [...selectedProductIds] });
+      setComboAnalysis(res.data);
+      setComboStep('analysis');
+    } catch (err: any) {
+      setComboError(err.response?.data?.message || 'Failed to analyze combo offer');
+      setComboStep('config');
+      toast.error('Failed to analyze combo offer');
+    }
+  };
+
+  const handleGeneratePrompt = async () => {
+    if (!comboAnalysis) return;
+    setComboStep('generating');
+    setGenerationStep(2);
+    setComboError(null);
+    try {
+      setGenerationStep(2);
+      await new Promise(r => setTimeout(r, 600));
+      setGenerationStep(3);
+
+      const combo = await api.post('/combo-offers', {
+        name: comboName || comboAnalysis.concept || 'Combo Offer',
+        discount: comboDiscount || comboAnalysis.suggestedDiscount,
+        targetAudience: comboAudience || comboAnalysis.targetAudience,
+        platform: comboPlatform,
+        visualStyle: comboVisualStyle || comboAnalysis.visualStyle,
+        objective: comboObjective,
+        productIds: [...selectedProductIds],
+      });
+      setComboOfferId(combo.data.id);
+      
+      const promptRes = await api.post<{ prompt: string }>(`/combo-offers/${combo.data.id}/generate-prompt`);
+      setComboPrompt(promptRes.data.prompt);
+      setGenerationStep(4);
+      await new Promise(r => setTimeout(r, 400));
+      setComboStep('prompt');
+    } catch (err: any) {
+      setComboError(err.response?.data?.message || 'Failed to generate prompt');
+      setComboStep('analysis');
+      toast.error('Failed to generate prompt');
+    }
+  };
+
+  const handleGenerateComboImage = async () => {
+    if (!comboOfferId || !comboPrompt) return;
+    setComboGeneratingImage(true);
+    setComboError(null);
+    setGenerationStep(0);
+    setComboStep('generating');
+    try {
+      setGenerationStep(0);
+      await new Promise(r => setTimeout(r, 500));
+      setGenerationStep(1);
+      await new Promise(r => setTimeout(r, 500));
+      setGenerationStep(2);
+      await new Promise(r => setTimeout(r, 500));
+      setGenerationStep(3);
+
+      const imgRes = await api.post<{ imageUrl: string }>(`/combo-offers/${comboOfferId}/generate-image`, { prompt: comboPrompt });
+      setGenerationStep(4);
+      await new Promise(r => setTimeout(r, 400));
+      setComboResult(imgRes.data);
+      setComboStep('result');
+      toast.success('Combo offer image generated!');
+    } catch (err: any) {
+      setComboError(err.response?.data?.message || 'Failed to generate image');
+      setComboStep('prompt');
+      toast.error('Failed to generate image');
+    } finally {
+      setComboGeneratingImage(false);
+    }
+  };
+
+  const handleUseInPost = async () => {
+    if (!comboResult || !comboName) return;
+    try {
+      const postRes = await api.post('/posts', {
+        caption: `Special combo offer: ${comboName}`,
+        title: comboName,
+        hashtags: ['#combo', '#offer', '#bundle'],
+        platforms: [comboPlatform],
+        imageUrl: comboResult.imageUrl,
+      });
+      toast.success('Post created!');
+      setShowComboBuilder(false);
+      resetComboBuilder();
+      router.push(`/posts/${postRes.data.id}`);
+    } catch (err: any) {
+      toast.error('Failed to create post');
+    }
+  };
+
+  const resetComboBuilder = () => {
+    setShowComboBuilder(false);
+    setComboStep('config');
+    setComboName('');
+    setComboDiscount('');
+    setComboAudience('');
+    setComboPlatform('Instagram');
+    setComboVisualStyle('');
+    setComboObjective('');
+    setComboAnalysis(null);
+    setComboPrompt('');
+    setComboResult(null);
+    setComboOfferId(null);
+    setComboError(null);
+    setSelectedProductIds(new Set());
+  };
+
   const handleGenerateContentIdeas = async (product: any) => {
     setSelectedProduct(product);
     setShowIdeasModal(true);
@@ -235,6 +411,23 @@ export default function ProductsPage() {
         ) : products && products.length > 0 ? (
           products.map((product) => (
             <div key={product.id} className="glass p-6 sm:p-7 rounded-[2.5rem] border border-white/10 hover:border-[#7c3aed]/40 transition-colors relative group">
+              <div className="absolute top-3 right-3 z-10">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleProductSelection(product.id);
+                  }}
+                  className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                    selectedProductIds.has(product.id)
+                      ? 'bg-[#7c3aed] border-[#7c3aed]'
+                      : 'border-white/30 bg-black/20 hover:border-white/50'
+                  }`}
+                >
+                  {selectedProductIds.has(product.id) && (
+                    <Check className="w-3 h-3 text-white" />
+                  )}
+                </button>
+              </div>
               <div className="w-full h-40 rounded-2xl mb-6 overflow-hidden bg-white/5 flex items-center justify-center">
                 {product.images?.[0] || product.imageUrl ? (
                   <img src={product.images?.[0] || product.imageUrl || ''} alt={product.name} className="w-full h-full object-cover" />
@@ -482,6 +675,295 @@ export default function ProductsPage() {
               </div>
             ) : (
               <div className="text-center py-12 text-white/50">No ideas generated</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {selectedProductIds.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 p-4 sm:p-6">
+          <div className="glass max-w-4xl mx-auto rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4 border border-[#7c3aed]/30">
+            <div className="flex-1">
+              <div className="font-mono text-xs tracking-[2px] text-white/50">SELECTION</div>
+              <div className="text-lg font-semibold">{selectedProductIds.size} product{selectedProductIds.size !== 1 ? 's' : ''} selected</div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={selectAllProducts} className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-sm">
+                Select All
+              </button>
+              <button onClick={clearSelection} className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-sm">
+                Clear
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedProductIds.size < 2) {
+                    toast.error('Combo offers require at least two products. Select another product to continue.');
+                    return;
+                  }
+                  setShowComboBuilder(true);
+                  setComboStep('config');
+                }}
+                className="neon-button"
+                disabled={selectedProductIds.size < 2}
+              >
+                Create Combo Offer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showComboBuilder && (
+        <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4 sm:p-6">
+          <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <div className="font-mono text-xs tracking-[3px] text-white/50">COMBO OFFER BUILDER</div>
+                <div className="text-2xl sm:text-3xl font-semibold tracking-tight">
+                  {comboStep === 'config' && 'Configure Combo'}
+                  {comboStep === 'analysis' && 'AI Analysis'}
+                  {comboStep === 'prompt' && 'Image Prompt'}
+                  {comboStep === 'generating' && 'Generating...'}
+                  {comboStep === 'result' && 'Combo Offer Ready'}
+                </div>
+              </div>
+              <button onClick={resetComboBuilder} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
+            </div>
+
+            {comboStep === 'config' && (
+              <div className="space-y-6">
+                <div>
+                  <div className="font-mono text-xs tracking-[2px] text-white/50 mb-3">SELECTED PRODUCTS</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {products?.filter(p => selectedProductIds.has(p.id)).map(p => (
+                      <div key={p.id} className="glass rounded-2xl p-3 border border-white/10">
+                        <div className="w-full h-20 rounded-xl mb-2 overflow-hidden bg-white/5 flex items-center justify-center">
+                          {p.images?.[0] || p.imageUrl ? (
+                            <img src={p.images?.[0] || p.imageUrl || ''} alt={p.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="text-2xl opacity-80">{p.emoji || '📦'}</div>
+                          )}
+                        </div>
+                        <div className="text-xs font-medium truncate">{p.name}</div>
+                        <div className="text-xs text-white/40">${p.price.toFixed(2)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">COMBO NAME</label>
+                    <input value={comboName} onChange={e => setComboName(e.target.value)} placeholder="e.g. Summer Essentials Bundle" className="w-full rounded-3xl px-4 py-3 bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors" />
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">DISCOUNT</label>
+                    <input value={comboDiscount} onChange={e => setComboDiscount(e.target.value)} placeholder="e.g. 15% or $10 off" className="w-full rounded-3xl px-4 py-3 bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors" />
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">TARGET AUDIENCE</label>
+                    <input value={comboAudience} onChange={e => setComboAudience(e.target.value)} placeholder="e.g. Health-conscious millennials" className="w-full rounded-3xl px-4 py-3 bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors" />
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">PLATFORM</label>
+                    <CustomDropdown
+                      options={[
+                        { value: 'Instagram', label: 'Instagram' },
+                        { value: 'Facebook', label: 'Facebook' },
+                        { value: 'Twitter', label: 'Twitter' },
+                        { value: 'TikTok', label: 'TikTok' },
+                        { value: 'LinkedIn', label: 'LinkedIn' },
+                      ]}
+                      value={comboPlatform}
+                      onChange={setComboPlatform}
+                    />
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">VISUAL STYLE</label>
+                    <input value={comboVisualStyle} onChange={e => setComboVisualStyle(e.target.value)} placeholder="e.g. Minimalist, Bold, Elegant" className="w-full rounded-3xl px-4 py-3 bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors" />
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">OBJECTIVE</label>
+                    <input value={comboObjective} onChange={e => setComboObjective(e.target.value)} placeholder="e.g. Drive holiday sales" className="w-full rounded-3xl px-4 py-3 bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors" />
+                  </div>
+                </div>
+
+                {comboError && (
+                  <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                    {comboError}
+                  </div>
+                )}
+
+                <button onClick={handleAnalyzeCombo} className="neon-button w-full py-4 text-lg">
+                  <Sparkles className="w-5 h-5 inline mr-2" /> Analyze Combo
+                </button>
+              </div>
+            )}
+
+            {comboStep === 'analysis' && comboAnalysis && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
+                    <div className="font-mono text-[10px] text-white/40 mb-2">CONCEPT</div>
+                    <div className="text-lg font-semibold">{comboAnalysis.concept}</div>
+                  </div>
+                  <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
+                    <div className="font-mono text-[10px] text-white/40 mb-2">SELLING ANGLE</div>
+                    <div className="text-sm text-white/70">{comboAnalysis.sellingAngle}</div>
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
+                  <div className="font-mono text-[10px] text-white/40 mb-2">DESCRIPTION</div>
+                  <div className="text-sm text-white/70 leading-relaxed">{comboAnalysis.description}</div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="p-4 rounded-2xl bg-[#7c3aed]/10 border border-[#7c3aed]/30">
+                    <div className="font-mono text-[10px] text-white/40 mb-1">AUDIENCE</div>
+                    <div className="text-sm font-medium">{comboAnalysis.targetAudience}</div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-[#ec4899]/10 border border-[#ec4899]/30">
+                    <div className="font-mono text-[10px] text-white/40 mb-1">DISCOUNT</div>
+                    <div className="text-sm font-medium">{comboAnalysis.suggestedDiscount}</div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                    <div className="font-mono text-[10px] text-white/40 mb-1">STYLE</div>
+                    <div className="text-sm font-medium">{comboAnalysis.visualStyle}</div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                    <div className="font-mono text-[10px] text-white/40 mb-1">SUGGESTED</div>
+                    <div className="text-sm font-medium">{comboAnalysis.ideas?.length || 0} ideas</div>
+                  </div>
+                </div>
+
+                {comboAnalysis.ideas && comboAnalysis.ideas.length > 0 && (
+                  <div>
+                    <div className="font-mono text-xs tracking-[2px] text-white/50 mb-3">COMBO IDEAS</div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {comboAnalysis.ideas.map((idea, i) => (
+                        <div key={i} className="p-4 rounded-2xl border border-white/10 bg-white/5">
+                          <div className="font-semibold text-sm mb-1">{idea.name}</div>
+                          <div className="text-xs text-white/50">{idea.description}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {comboError && (
+                  <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                    {comboError}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button onClick={() => setComboStep('config')} className="flex-1 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors">
+                    Back to Config
+                  </button>
+                  <button onClick={handleGeneratePrompt} className="neon-button flex-1 py-3">
+                    <Sparkles className="w-4 h-4 inline mr-2" /> Generate Prompt
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {comboStep === 'prompt' && (
+              <div className="space-y-6">
+                <div>
+                  <div className="font-mono text-xs tracking-[2px] text-white/50 mb-3">IMAGE PROMPT</div>
+                  <textarea
+                    value={comboPrompt}
+                    onChange={e => setComboPrompt(e.target.value)}
+                    className="w-full h-40 rounded-2xl px-4 py-3 bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors resize-none"
+                    placeholder="Enter or edit the image prompt..."
+                  />
+                </div>
+
+                <div>
+                  <div className="font-mono text-xs tracking-[2px] text-white/50 mb-3">STYLE SUGGESTIONS</div>
+                  <div className="flex flex-wrap gap-2">
+                    {promptSuggestions.map((suggestion, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setComboPrompt(prev => prev + ` Style: ${suggestion}.`)}
+                        className="px-3 py-1.5 rounded-full border border-white/10 text-xs text-white/60 hover:bg-[#7c3aed]/20 hover:border-[#7c3aed]/40 hover:text-[#7c3aed] transition-colors"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {comboError && (
+                  <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                    {comboError}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button onClick={() => setComboStep('analysis')} className="flex-1 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors">
+                    Back to Analysis
+                  </button>
+                  <button onClick={handleGenerateComboImage} disabled={!comboPrompt || comboGeneratingImage} className="neon-button flex-1 py-3">
+                    {comboGeneratingImage ? (
+                      <><Loader2 className="w-4 h-4 inline mr-2 animate-spin" /> Generating...</>
+                    ) : (
+                      <><Image className="w-4 h-4 inline mr-2" /> Generate Image</>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {comboStep === 'generating' && (
+              <div className="py-12">
+                <div className="flex flex-col items-center">
+                  <Loader2 className="w-12 h-12 text-[#7c3aed] animate-spin mb-6" />
+                  <div className="text-lg font-semibold mb-8">Creating your combo offer image...</div>
+                  <div className="w-full max-w-md space-y-3">
+                    {generationSteps.map((step, i) => (
+                      <div key={step.key} className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                        i < generationStep ? 'bg-[#7c3aed]/10 border border-[#7c3aed]/30' :
+                        i === generationStep ? 'bg-white/5 border border-white/20' :
+                        'opacity-40'
+                      }`}>
+                        {i < generationStep ? (
+                          <Check className="w-5 h-5 text-[#7c3aed]" />
+                        ) : i === generationStep ? (
+                          <Loader2 className="w-5 h-5 text-[#7c3aed] animate-spin" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full border border-white/20" />
+                        )}
+                        <span className={`text-sm ${i <= generationStep ? 'text-white' : 'text-white/40'}`}>{step.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {comboStep === 'result' && comboResult && (
+              <div className="space-y-6">
+                <div className="rounded-2xl overflow-hidden border border-[#7c3aed]/30 bg-[#7c3aed]/5">
+                  <img src={comboResult.imageUrl} alt="Combo offer" className="w-full max-h-[500px] object-contain" />
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button onClick={() => setComboStep('prompt')} className="flex-1 min-w-[150px] py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors flex items-center justify-center gap-2 text-sm">
+                    <Sparkles className="w-4 h-4" /> Edit Prompt
+                  </button>
+                  <button onClick={handleGenerateComboImage} className="flex-1 min-w-[150px] py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors flex items-center justify-center gap-2 text-sm">
+                    <RefreshCw className="w-4 h-4" /> Regenerate
+                  </button>
+                  <button onClick={() => handleDownloadImage(comboResult.imageUrl, comboName || 'combo-offer')} className="flex-1 min-w-[150px] py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors flex items-center justify-center gap-2 text-sm">
+                    <Download className="w-4 h-4" /> Download
+                  </button>
+                  <button onClick={handleUseInPost} className="neon-button flex-1 min-w-[150px] py-3 flex items-center justify-center gap-2">
+                    <Plus className="w-4 h-4" /> Use in Post
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>

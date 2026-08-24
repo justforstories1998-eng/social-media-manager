@@ -223,3 +223,38 @@ export interface GenerateVideoResponse {
   duration: number;
   provider: string;
 }
+
+export interface ComboOffer {
+  id: string;
+  name: string;
+  description: string | null;
+  discount: string | null;
+  comboPrice: number | null;
+  targetAudience: string | null;
+  platform: string | null;
+  visualStyle: string | null;
+  objective: string | null;
+  aiConcept: string | null;
+  imagePrompt: string | null;
+  imageUrl: string | null;
+  status: string;
+  products: ComboOfferProduct[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ComboOfferProduct {
+  id: string;
+  productId: string;
+  product: Product;
+}
+
+export interface ComboAnalysis {
+  concept: string;
+  description: string;
+  targetAudience: string;
+  suggestedDiscount: string;
+  visualStyle: string;
+  sellingAngle: string;
+  ideas: Array<{ name: string; description: string }>;
+}

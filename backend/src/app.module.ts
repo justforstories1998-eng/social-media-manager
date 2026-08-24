@@ -18,6 +18,7 @@ import { ExportsModule } from './exports/exports.module';
 import { AdminModule } from './admin/admin.module';
 import { WebsocketsModule } from './websockets/websockets.module';
 import { AIGenerationModule } from './ai-generation/ai-generation.module';
+import { ComboOffersModule } from './combo-offers/combo-offers.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { AIGenerationModule } from './ai-generation/ai-generation.module';
     AdminModule,
     WebsocketsModule,
     AIGenerationModule,
+    ComboOffersModule,
   ],
 })
 export class AppModule {}
