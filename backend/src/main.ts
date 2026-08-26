@@ -57,8 +57,17 @@ async function bootstrap() {
     credentials: true,
   });
 
+  // CORS for uploaded files (express.static doesn't go through NestJS CORS)
+  const uploadsCors = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    res.header('Access-Control-Allow-Origin', frontendUrl);
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+  };
+
   // Serve uploaded files statically
-  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
+  app.use('/uploads', uploadsCors, express.static(join(process.cwd(), 'uploads')));
 
   // Swagger Documentation
   const config = new DocumentBuilder()
