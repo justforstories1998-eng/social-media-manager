@@ -59,19 +59,14 @@ export const moduleTourConfigs: Record<string, TourConfig> = {
       { target: 'create-for-date', title: 'Create for Date', description: 'Click any date to create a post scheduled for that day. No need to manually set the date.' },
     ],
   },
-  aiImage: {
-    module: 'aiImage',
+  aiStudio: {
+    module: 'aiStudio',
     steps: [
-      { target: 'product-selector', title: 'Product Context', description: "Select a product to give AI context. The product's details help generate more relevant, branded images." },
+      { target: 'content-prompt', title: 'Content Tab', description: 'Generate social media captions, hashtags, and text content. Select a platform and content type, then let AI write for you.' },
+      { target: 'product-selector', title: 'Product Context', description: 'Select a product to give AI context. The product\'s details help generate more relevant, branded images and videos.' },
       { target: 'prompt-input', title: 'Image Prompt', description: 'AI generates a detailed prompt from your product info, or write your own. Edit freely before generating.' },
       { target: 'style-options', title: 'Style & Settings', description: 'Choose visual style, dimensions, and model. Different styles suit different products and platforms.' },
-      { target: 'result-actions', title: 'Generated Image', description: 'Download your image, attach it to a post, or view the source traceability. Regenerate with different settings anytime.' },
-    ],
-  },
-  aiVideo: {
-    module: 'aiVideo',
-    steps: [
-      { target: 'video-product', title: 'Select Product', description: 'Choose a product to create a video for. Product context makes AI video generation more relevant.' },
+      { target: 'result-actions', title: 'Generated Result', description: 'Download your image, attach it to a post, or view the source traceability. Regenerate with different settings anytime.' },
       { target: 'video-prompt', title: 'Video Prompt', description: 'Describe the video you want. AI can suggest prompts based on your product details.' },
       { target: 'video-settings', title: 'Duration & Model', description: 'Set video duration and choose an AI model. Shorter videos generate faster.' },
       { target: 'video-result', title: 'Video Result', description: 'Preview and download your generated video. Attach it to a post or regenerate with different settings.' },
