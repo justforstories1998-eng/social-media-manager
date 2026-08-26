@@ -2,8 +2,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Sparkles, X, Loader2, Calendar as CalendarIcon, Plus, FileText, Lightbulb, AlertTriangle, TrendingUp, Zap, Clock, AlertCircle, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, X, Loader2, Calendar as CalendarIcon, Plus, FileText, Lightbulb, AlertTriangle, TrendingUp, Zap, Clock, AlertCircle, RefreshCw, Package } from 'lucide-react';
 import { usePosts } from '@/hooks/usePosts';
+import { useProducts } from '@/hooks/useProducts';
 import { festivals, getFestivalsForDate, getFestivalsForMonth, monthNames, categoryColors, type Festival } from '@/lib/festivals';
 import api, { type Post } from '@/lib/api';
 import { toast } from 'sonner';
@@ -22,6 +23,7 @@ interface Recommendation {
 export default function CalendarPage() {
   const router = useRouter();
   const { data: posts, isLoading: isLoadingPosts, error: postsError, refetch: refetchPosts } = usePosts();
+  const { data: products, isLoading: isLoadingProducts } = useProducts();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<{ month: number; day: number } | null>(null);
   const [showFestivalModal, setShowFestivalModal] = useState(false);
@@ -100,11 +102,17 @@ export default function CalendarPage() {
     return { recent, overdue };
   }, [posts]);
 
-  const getRecommendations = async () => {
+  const getRecommendations = async (date?: string) => {
     setIsLoadingRecommendations(true);
     try {
-      const res = await api.post('/ai/recommendations');
+      const dateStr = date || (selectedDate
+        ? `${year}-${String(selectedDate.month).padStart(2, '0')}-${String(selectedDate.day).padStart(2, '0')}`
+        : undefined);
+      const res = await api.post('/ai/recommendations', dateStr ? { date: dateStr } : {});
       setRecommendations(res.data.recommendations || []);
+      if (res.data.message) {
+        toast.info(res.data.message);
+      }
       setShowRecommendations(true);
     } catch {
       toast.error('Failed to load recommendations');
@@ -181,6 +189,23 @@ export default function CalendarPage() {
         {isLoadingPosts && (
           <div className="mt-4 flex items-center gap-2 text-sm text-white/50">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading posts...
+          </div>
+        )}
+        {!isLoadingProducts && (!products || products.length === 0) && (
+          <div className="mt-4 p-4 rounded-2xl border border-[#ec4899]/30 bg-[#ec4899]/5">
+            <div className="flex items-start gap-3">
+              <Package className="w-5 h-5 text-[#ec4899] mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <div className="font-medium text-sm mb-1">Add products to get started</div>
+                <div className="text-white/50 text-sm mb-3">AI recommendations work best when you have products. Add your product catalog first, then come back for personalized content suggestions.</div>
+                <button
+                  onClick={() => router.push('/products')}
+                  className="text-xs px-4 py-2 rounded-full border border-[#ec4899] text-[#ec4899] hover:bg-[#ec4899]/10 transition-colors"
+                >
+                  + Add Products
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -328,7 +353,7 @@ export default function CalendarPage() {
 
           <button
             data-tour="daily-recommendations"
-            onClick={getRecommendations}
+            onClick={() => getRecommendations()}
             disabled={isLoadingRecommendations}
             className="w-full mt-4 py-3 rounded-xl border border-[#7c3aed]/30 hover:bg-[#7c3aed]/10 transition-colors text-sm flex items-center justify-center gap-2 text-[#7c3aed] disabled:opacity-50"
           >
@@ -481,17 +506,9 @@ export default function CalendarPage() {
 
               <button
                 onClick={async () => {
-                  setIsLoadingRecommendations(true);
-                  try {
-                    const res = await api.post('/ai/recommendations');
-                    setRecommendations(res.data.recommendations || []);
-                    setShowDateModal(false);
-                    setShowRecommendations(true);
-                  } catch {
-                    toast.error('Failed to load recommendations');
-                  } finally {
-                    setIsLoadingRecommendations(false);
-                  }
+                  const dateStr = `${year}-${String(selectedDate.month).padStart(2, '0')}-${String(selectedDate.day).padStart(2, '0')}`;
+                  await getRecommendations(dateStr);
+                  setShowDateModal(false);
                 }}
                 disabled={isLoadingRecommendations}
                 className="w-full py-3 rounded-xl border border-[#ec4899]/30 hover:bg-[#ec4899]/10 transition-colors text-sm flex items-center justify-center gap-2 text-[#ec4899] disabled:opacity-50"

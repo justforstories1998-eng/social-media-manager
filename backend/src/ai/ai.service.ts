@@ -19,7 +19,6 @@ const FREE_OPENROUTER_MODELS = [
 @Injectable()
 export class AIService {
   private readonly logger = new Logger(AIService.name);
-  private ollamaUrl: string;
   private openrouterKey: string;
   private readonly providerRegistry: ProviderRegistry;
 
@@ -27,7 +26,6 @@ export class AIService {
     private configService: ConfigService,
     private prisma: PrismaService,
   ) {
-    this.ollamaUrl = this.configService.get('OLLAMA_URL') || 'http://localhost:11434';
     this.openrouterKey = this.configService.get('OPENROUTER_API_KEY') || '';
 
     this.providerRegistry = new ProviderRegistry();
@@ -36,39 +34,16 @@ export class AIService {
     this.providerRegistry.registerVideoProvider(pollinations);
   }
 
-  private get isUsingOpenRouter(): boolean {
-    return !!this.openrouterKey;
-  }
-
   async getAvailableModels() {
-    if (this.isUsingOpenRouter) {
-      return FREE_OPENROUTER_MODELS;
-    }
-
-    try {
-      const response = await axios.get(`${this.ollamaUrl}/api/tags`);
-      return response.data.models || [];
-    } catch {
-      return [
-        { id: 'qwen2.5:7b', name: 'Qwen 2.5 7B', size: '4.7GB' },
-        { id: 'llama3.2:1b', name: 'Llama 3.2 1B', size: '1.3GB' },
-        { id: 'gemma:2b', name: 'Gemma 2B', size: '1.6GB' },
-      ];
-    }
+    return FREE_OPENROUTER_MODELS;
   }
 
   async generateContent(prompt: string, type: string, userId: string, model?: string) {
-    const selectedModel = model || await this.getBestModel(type);
+    const selectedModel = model || 'openrouter/free';
     const startTime = Date.now();
 
     try {
-      let result: string;
-
-      if (this.isUsingOpenRouter) {
-        result = await this.callOpenRouter(this.buildPrompt(prompt, type), selectedModel);
-      } else {
-        result = await this.callOllama(this.buildPrompt(prompt, type), selectedModel);
-      }
+      const result = await this.callOpenRouter(this.buildPrompt(prompt, type), selectedModel);
 
       await this.prisma.aIHistory.create({
         data: {
@@ -90,7 +65,7 @@ export class AIService {
   }
 
   async generateFullPost(prompt: string, platform: string, type: string, userId: string, model?: string) {
-    const selectedModel = model || await this.getBestModel(type);
+    const selectedModel = model || 'openrouter/free';
     const startTime = Date.now();
 
     const fullPrompt = `Generate a complete social media post for ${platform} in ${type} style.
@@ -106,13 +81,7 @@ Please respond in this exact JSON format:
 }`;
 
     try {
-      let rawResponse: string;
-
-      if (this.isUsingOpenRouter) {
-        rawResponse = await this.callOpenRouter(fullPrompt, selectedModel);
-      } else {
-        rawResponse = await this.callOllama(fullPrompt, selectedModel, true);
-      }
+      const rawResponse = await this.callOpenRouter(fullPrompt, selectedModel);
 
       let parsed;
       try {
@@ -153,7 +122,7 @@ Please respond in this exact JSON format:
   }
 
   async generateImagePrompt(prompt: string, userId: string, brandColors: string[] = [], model?: string) {
-    const selectedModel = model || await this.getBestModel('image');
+    const selectedModel = model || 'openrouter/free';
 
     const enhancedPrompt = `Create a highly detailed, professional image generation prompt for Stable Diffusion / FLUX.
 
@@ -164,13 +133,7 @@ Style: Cinematic product photography, high detail, modern aesthetic, premium fee
 Respond with only the final image prompt.`;
 
     try {
-      let result: string;
-
-      if (this.isUsingOpenRouter) {
-        result = await this.callOpenRouter(enhancedPrompt, selectedModel);
-      } else {
-        result = await this.callOllama(enhancedPrompt, selectedModel);
-      }
+      const result = await this.callOpenRouter(enhancedPrompt, selectedModel);
 
       return {
         prompt: result.trim(),
@@ -182,31 +145,6 @@ Respond with only the final image prompt.`;
         prompt: `${prompt}, professional product photography, clean background, high detail`,
         model: "fallback",
       };
-    }
-  }
-
-  private async getBestModel(task: string): Promise<string> {
-    if (this.isUsingOpenRouter) {
-      return 'openrouter/free';
-    }
-
-    try {
-      const response = await axios.get(`${this.ollamaUrl}/api/tags`);
-      const models = response.data.models || [];
-
-      const modelPriority = [
-        'gemma:2b', 'qwen2:1.5b', 'llama3.2:1b', 'phi3:mini',
-        'mistral:7b', 'llama3:8b', 'qwen2:7b', 'deepseek-coder:6.7b'
-      ];
-
-      for (const model of modelPriority) {
-        if (models.some((m: any) => m.name.includes(model.split(':')[0]))) {
-          return model;
-        }
-      }
-      return 'llama3.2:1b';
-    } catch (error) {
-      return 'llama3.2:1b';
     }
   }
 
@@ -230,22 +168,6 @@ Respond with only the final image prompt.`;
     );
 
     return response.data.choices[0].message.content;
-  }
-
-  private async callOllama(prompt: string, model: string, jsonFormat = false): Promise<string> {
-    const body: any = {
-      model,
-      prompt,
-      stream: false,
-      options: { temperature: 0.7, num_predict: 1000 },
-    };
-
-    if (jsonFormat) {
-      body.format = 'json';
-    }
-
-    const response = await axios.post(`${this.ollamaUrl}/api/generate`, body);
-    return response.data.response;
   }
 
   private buildPrompt(userPrompt: string, type: string): string {
@@ -358,12 +280,7 @@ Respond in this exact JSON format:
 Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, social media, and editorial styles.`;
 
     try {
-      let rawResponse: string;
-      if (this.isUsingOpenRouter) {
-        rawResponse = await this.callOpenRouter(prompt, 'openrouter/free');
-      } else {
-        rawResponse = await this.callOllama(prompt, 'llama3.2:1b', true);
-      }
+      const rawResponse = await this.callOpenRouter(prompt, 'openrouter/free');
 
       const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
       const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(rawResponse);
@@ -404,41 +321,50 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
     };
   }
 
-  async generateRecommendations(userId: string) {
-    const [products, posts, scheduledPosts, aiHistory] = await Promise.all([
+  async generateRecommendations(userId: string, date?: string) {
+    const [products, posts, scheduledPosts] = await Promise.all([
       this.prisma.product.findMany({ where: { userId }, orderBy: { updatedAt: 'desc' } }),
       this.prisma.post.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 20 }),
       this.prisma.scheduledPost.findMany({ where: { userId }, orderBy: { scheduledFor: 'asc' } }),
-      this.prisma.aIHistory.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 20 }),
     ]);
 
-    const prompt = `Analyze this social media content portfolio and recommend 3 specific content ideas.
-
-PRODUCTS: ${products.map(p => `${p.name} (${p.category || 'uncategorized'}) - last posted: ${posts.find(post => post.productId === p.id)?.createdAt || 'never'}`).join('\n')}
-
-RECENT POSTS (last 10): ${posts.slice(0, 10).map(p => `${p.platforms?.[0] || 'unknown'}: ${p.caption?.slice(0, 50)}... [${p.status}]`).join('\n')}
-
-SCHEDULED: ${scheduledPosts.length} posts scheduled
-
-CONTENT TYPES USED: ${[...new Set(posts.map(p => p.platforms?.[0] || 'unknown'))].join(', ')}
-
-Return JSON array:
-[{
-  "product": "product name",
-  "contentType": "image/video/post",
-  "reason": "why this content is needed now",
-  "concept": "brief creative concept",
-  "suggestedCaption": "caption idea",
-  "platform": "recommended platform",
-  "priority": "high/medium/low"
-}]`;
-
-    let rawResponse: string;
-    if (this.isUsingOpenRouter) {
-      rawResponse = await this.callOpenRouter(prompt, 'openrouter/free');
-    } else {
-      rawResponse = await this.callOllama(prompt, 'qwen2.5:7b', true);
+    if (products.length === 0) {
+      return {
+        recommendations: [],
+        message: 'Add products first to get AI recommendations. Go to Products and add your product catalog.',
+        stats: { totalProducts: 0, totalPosts: posts.length, scheduledPosts: scheduledPosts.length },
+      };
     }
+
+    const dateContext = date
+      ? `The user wants content ideas for ${date}. Consider what's relevant for that specific date —季节性 events, weekly patterns, optimal posting times, and what products would perform well on that day.`
+      : 'Recommend general content ideas for the coming days.';
+
+    const prompt = `You are a social media strategist. ${dateContext}
+
+PRODUCTS:
+${products.map((p, i) => `${i + 1}. ${p.name} (${p.category || 'uncategorized'}) — ${p.description || 'No description'} — Features: ${(p.features || []).join(', ') || 'none'}`).join('\n')}
+
+RECENT POSTS (last 10):
+${posts.slice(0, 10).map(p => `- ${p.platforms?.[0] || 'unknown'}: "${(p.caption || '').slice(0, 80)}..." [${p.status}]`).join('\n')}
+
+SCHEDULED: ${scheduledPosts.length} posts already scheduled
+PLATFORMS USED: ${[...new Set(posts.map(p => p.platforms?.[0] || 'unknown'))].join(', ') || 'none yet'}
+
+Generate 3 specific, actionable content ideas. Each should be tailored to the specific date if provided.
+For each idea, provide:
+- product: Which product to feature (use exact product name from the list)
+- contentType: "image" or "video" or "post"
+- reason: Why this content makes sense right now for this date
+- concept: Brief creative concept
+- suggestedCaption: A ready-to-use caption draft
+- platform: Which platform to post on
+- priority: "high" or "medium" or "low"
+
+Return ONLY a JSON array, no other text:
+[{"product":"name","contentType":"image","reason":"...","concept":"...","suggestedCaption":"...","platform":"Instagram","priority":"high"}]`;
+
+    const rawResponse = await this.callOpenRouter(prompt, 'openrouter/free');
 
     let recommendations;
     try {
@@ -450,16 +376,12 @@ Return JSON array:
 
     return {
       recommendations,
+      date: date || 'general',
       stats: {
         totalProducts: products.length,
         totalPosts: posts.length,
         scheduledPosts: scheduledPosts.length,
         productsWithoutContent: products.filter(p => !posts.some(post => post.productId === p.id)).length,
-        platformBreakdown: posts.reduce((acc, p) => {
-          const platform = p.platforms?.[0] || 'unknown';
-          acc[platform] = (acc[platform] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
       },
     };
   }

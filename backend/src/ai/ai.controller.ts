@@ -35,8 +35,8 @@ export class AIController {
   }
 
   @Post('recommendations')
-  async getRecommendations(@Request() req) {
-    return this.aiService.generateRecommendations(req.user.id);
+  async getRecommendations(@Request() req, @Body() body?: { date?: string }) {
+    return this.aiService.generateRecommendations(req.user.id, body?.date);
   }
 
   @Post('generate-ad-concepts')

@@ -143,8 +143,8 @@ export function TourSpotlight({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 8 }}
           transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-          className="fixed z-[10000] glass rounded-2xl p-6 max-w-sm border border-[#7c3aed]/20 shadow-2xl"
-          style={{ top: tooltipPos.top, left: tooltipPos.left }}
+          className="fixed z-[10000] rounded-2xl p-6 max-w-sm border border-[#7c3aed]/30 shadow-2xl"
+          style={{ top: tooltipPos.top, left: tooltipPos.left, backgroundColor: '#0c0c0c' }}
         >
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-white">{step.title}</h3>
