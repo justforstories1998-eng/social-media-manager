@@ -434,10 +434,14 @@ export default function ProductsPage() {
               </div>
               <div className="w-full h-40 rounded-2xl mb-6 overflow-hidden bg-white/5 flex items-center justify-center">
                 {product.images?.[0] || product.imageUrl ? (
-                  <img src={product.images?.[0] || product.imageUrl || ''} alt={product.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="text-5xl sm:text-6xl opacity-80">{product.emoji || '📦'}</div>
-                )}
+                  <img
+                    src={product.images?.[0] || product.imageUrl || ''}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
+                  />
+                ) : null}
+                <div className={`text-5xl sm:text-6xl opacity-80 ${(product.images?.[0] || product.imageUrl) ? 'hidden' : ''}`}>{product.emoji || '📦'}</div>
               </div>
               <div className="font-semibold text-xl tracking-tight">{product.name}</div>
               <div className="text-white/50 text-sm mt-1">{product.category}</div>

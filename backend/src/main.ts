@@ -6,6 +6,8 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { join } from 'path';
+import * as express from 'express';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -54,6 +56,9 @@ async function bootstrap() {
     origin: frontendUrl,
     credentials: true,
   });
+
+  // Serve uploaded files statically
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   // Swagger Documentation
   const config = new DocumentBuilder()
