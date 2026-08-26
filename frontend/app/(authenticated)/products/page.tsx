@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Sparkles, Download, X, Loader2, Brain, Image, Film, Lightbulb, ChevronDown, AlertCircle, RefreshCw, Package, Check } from 'lucide-react';
 import { useProducts, useCreateProduct, useDeleteProduct } from '@/hooks/useProducts';
-import api, { type AdConcept, type AdImageResponse, type ComboAnalysis } from '@/lib/api';
+import api, { getUploadUrl, type AdConcept, type AdImageResponse, type ComboAnalysis } from '@/lib/api';
 import { toast } from 'sonner';
 import CustomDropdown from '@/components/CustomDropdown';
 import { TourButton } from '../../../components/tour/TourButton';
@@ -435,7 +435,7 @@ export default function ProductsPage() {
               <div className="w-full h-40 rounded-2xl mb-6 overflow-hidden bg-white/5 flex items-center justify-center">
                 {product.images?.[0] || product.imageUrl ? (
                   <img
-                    src={product.images?.[0] || product.imageUrl || ''}
+                    src={getUploadUrl(product.images?.[0] || product.imageUrl || '')}
                     alt={product.name}
                     className="w-full h-full object-cover"
                     onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
@@ -520,7 +520,7 @@ export default function ProductsPage() {
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                 {uploadedImageUrl ? (
                   <div className="relative">
-                    <img src={uploadedImageUrl} alt="Preview" className="w-full h-40 object-cover rounded-2xl" />
+                    <img src={getUploadUrl(uploadedImageUrl)} alt="Preview" className="w-full h-40 object-cover rounded-2xl" />
                     <button onClick={() => setUploadedImageUrl(null)} className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 hover:bg-black/80"><X className="w-4 h-4" /></button>
                   </div>
                 ) : (
@@ -747,7 +747,7 @@ export default function ProductsPage() {
                       <div key={p.id} className="glass rounded-2xl p-3 border border-white/10">
                         <div className="w-full h-20 rounded-xl mb-2 overflow-hidden bg-white/5 flex items-center justify-center">
                           {p.images?.[0] || p.imageUrl ? (
-                            <img src={p.images?.[0] || p.imageUrl || ''} alt={p.name} className="w-full h-full object-cover" />
+                            <img src={getUploadUrl(p.images?.[0] || p.imageUrl || '')} alt={p.name} className="w-full h-full object-cover" />
                           ) : (
                             <div className="text-2xl opacity-80">{p.emoji || '📦'}</div>
                           )}
