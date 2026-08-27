@@ -307,7 +307,7 @@ export default function PostsPage() {
       {/* AI Post Generator Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-3 sm:p-6" onClick={() => { setShowModal(false); resetModal(); }} role="dialog" aria-modal="true">
-          <div ref={modalRef} className="glass w-full max-w-lg p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] outline-none max-h-[90vh] overflow-y-auto overflow-x-hidden" onClick={e => e.stopPropagation()}>
+          <div ref={modalRef} className="bg-[#0c0c0c] w-full max-w-lg p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] outline-none max-h-[90vh] overflow-y-auto overflow-x-hidden border border-white/10" onClick={e => e.stopPropagation()}>
             {step === 'input' ? (
               <>
                 <div data-tour="ai-assist" className="flex items-center gap-3 mb-6">
@@ -419,7 +419,7 @@ export default function PostsPage() {
       {/* Edit Post Modal */}
       {editPost && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-3 sm:p-6" onClick={() => setEditPost(null)} role="dialog" aria-modal="true">
-          <div ref={modalRef} className="glass w-full max-w-lg p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] outline-none max-h-[90vh] overflow-y-auto overflow-x-hidden" onClick={e => e.stopPropagation()}>
+          <div ref={modalRef} className="bg-[#0c0c0c] w-full max-w-lg p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] outline-none max-h-[90vh] overflow-y-auto overflow-x-hidden border border-white/10" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#ec4899] flex items-center justify-center">
@@ -521,7 +521,7 @@ export default function PostsPage() {
       {/* Delete Confirmation Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-3 sm:p-6" onClick={() => setDeleteTarget(null)} role="dialog" aria-modal="true">
-          <div className="glass w-full max-w-md p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] outline-none" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#0c0c0c] w-full max-w-md p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] outline-none border border-white/10" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-2xl bg-red-500/20 flex items-center justify-center">
                 <Trash2 className="w-5 h-5 text-red-400" />

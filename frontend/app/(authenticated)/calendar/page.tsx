@@ -370,7 +370,7 @@ export default function CalendarPage() {
       {/* Festival Detail Modal */}
       {showFestivalModal && selectedFestival && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowFestivalModal(false)}>
-          <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#0c0c0c] p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-lg w-full max-h-[90vh] overflow-y-auto border border-white/10" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-6">
               <div>
                 <div className="text-4xl mb-2">{selectedFestival.emoji}</div>
@@ -421,7 +421,7 @@ export default function CalendarPage() {
       {/* Post List Modal */}
       {showPostModal && selectedDate && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowPostModal(false)}>
-          <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#0c0c0c] p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-lg w-full max-h-[90vh] overflow-y-auto border border-white/10" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-6">
               <div>
                 <div className="font-mono text-xs tracking-[3px] text-white/50">SCHEDULED POSTS</div>
@@ -479,7 +479,7 @@ export default function CalendarPage() {
       {/* Date Modal (no posts, no festivals) */}
       {showDateModal && selectedDate && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowDateModal(false)}>
-          <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-sm w-full" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#0c0c0c] p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-sm w-full border border-white/10" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-6">
               <div>
                 <div className="text-3xl mb-2">📅</div>
@@ -528,7 +528,7 @@ export default function CalendarPage() {
       {/* Recommendations Modal */}
       {showRecommendations && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowRecommendations(false)}>
-          <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#0c0c0c] p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-lg w-full max-h-[90vh] overflow-y-auto border border-white/10" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-6">
               <div>
                 <div className="font-mono text-xs tracking-[3px] text-white/50">AI RECOMMENDATIONS</div>

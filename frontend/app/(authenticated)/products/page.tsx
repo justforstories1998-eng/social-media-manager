@@ -2,8 +2,8 @@
 
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Sparkles, Download, X, Loader2, Brain, Image, Film, Lightbulb, ChevronDown, AlertCircle, RefreshCw, Package, Check } from 'lucide-react';
-import { useProducts, useCreateProduct, useDeleteProduct } from '@/hooks/useProducts';
+import { Plus, Trash2, Sparkles, Download, X, Loader2, Brain, Image, Film, Lightbulb, ChevronDown, AlertCircle, RefreshCw, Package, Check, AlertTriangle } from 'lucide-react';
+import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from '@/hooks/useProducts';
 import api, { getUploadUrl, type AdConcept, type AdImageResponse, type ComboAnalysis } from '@/lib/api';
 import { toast } from 'sonner';
 import CustomDropdown from '@/components/CustomDropdown';
@@ -34,6 +34,7 @@ export default function ProductsPage() {
   const router = useRouter();
   const { data: products, isLoading, error: productsError, refetch: refetchProducts } = useProducts();
   const createProduct = useCreateProduct();
+  const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
   const [showAdd, setShowAdd] = useState(false);
   const [showAdModal, setShowAdModal] = useState(false);
@@ -52,8 +53,15 @@ export default function ProductsPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [quickContentOpen, setQuickContentOpen] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ name: '', category: '', price: '', currency: 'USD', description: '', emoji: '' });
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', category: '', price: '', currency: 'USD', description: '', emoji: '' });
+  const [editImageUrl, setEditImageUrl] = useState<string | null>(null);
+  const [editUploading, setEditUploading] = useState(false);
+  const [deletingProduct, setDeletingProduct] = useState<any>(null);
 
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const [showComboBuilder, setShowComboBuilder] = useState(false);
@@ -129,6 +137,49 @@ export default function ProductsPage() {
       setUploadedImageUrl(null);
     } catch {
       toast.error('Failed to add product');
+    }
+  };
+
+  const handleEdit = async () => {
+    if (!editingProduct) return;
+    try {
+      await updateProduct.mutateAsync({
+        id: editingProduct.id,
+        data: {
+          name: editForm.name,
+          category: editForm.category,
+          price: parseFloat(editForm.price) || 0,
+          currency: editForm.currency,
+          description: editForm.description || undefined,
+          emoji: editForm.emoji || undefined,
+          images: editImageUrl ? [editImageUrl] : undefined,
+        },
+      });
+      toast.success('Product updated!');
+      setShowEdit(false);
+      setEditingProduct(null);
+    } catch {
+      toast.error('Failed to update product');
+    }
+  };
+
+  const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEditUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'products');
+      const res = await api.post('/media/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setEditImageUrl(res.data.url);
+      toast.success('Image uploaded!');
+    } catch {
+      toast.error('Failed to upload image');
+    } finally {
+      setEditUploading(false);
     }
   };
 
@@ -458,7 +509,25 @@ export default function ProductsPage() {
                 <button onClick={() => handleAnalyzeProduct(product)} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#ec4899]/15 text-[#ec4899] text-xs font-medium hover:bg-[#ec4899]/25 transition-colors">
                   <Brain className="w-3.5 h-3.5" /> Analyze
                 </button>
-                <button onClick={() => handleDelete(product.id)} className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
+                <button
+                  onClick={() => {
+                    setEditingProduct(product);
+                    setEditForm({
+                      name: product.name,
+                      category: product.category || '',
+                      price: String(product.price || ''),
+                      currency: product.currency || 'USD',
+                      description: product.description || '',
+                      emoji: product.emoji || '',
+                    });
+                    setEditImageUrl(product.images?.[0] || null);
+                    setShowEdit(true);
+                  }}
+                  className="px-3 py-1.5 rounded-xl border border-white/10 hover:bg-white/5 text-xs transition-colors"
+                >
+                  Edit
+                </button>
+                <button onClick={() => setDeletingProduct(product)} className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -474,7 +543,7 @@ export default function ProductsPage() {
                     <Sparkles className="w-3 h-3" /> Quick Content <ChevronDown className="w-3 h-3" />
                   </button>
                   {quickContentOpen === product.id && (
-                    <div className="absolute bottom-full mb-2 left-0 right-0 glass rounded-2xl border border-white/10 p-2 z-20 shadow-xl">
+                    <div className="absolute bottom-full mb-2 left-0 right-0 bg-[#0c0c0c] rounded-2xl border border-white/10 p-2 z-20 shadow-xl">
                       <button
                         onClick={() => { setQuickContentOpen(null); router.push(`/ai/image?productId=${product.id}`); }}
                         className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors text-left"
@@ -509,7 +578,7 @@ export default function ProductsPage() {
 
       {showAdd && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowAdd(false)}>
-          <div className="glass p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#0c0c0c] p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-md w-full max-h-[90vh] overflow-y-auto border border-white/10" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <div className="text-2xl sm:text-3xl font-semibold tracking-tight">Add Product</div>
               <button onClick={() => setShowAdd(false)} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
@@ -554,7 +623,7 @@ export default function ProductsPage() {
 
       {showAdModal && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowAdModal(false)}>
-          <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#0c0c0c] p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-white/10" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <div>
                 <div className="font-mono text-xs tracking-[3px] text-white/50">AI AD GENERATOR</div>
@@ -600,7 +669,7 @@ export default function ProductsPage() {
 
       {showAnalyzeModal && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowAnalyzeModal(false)}>
-          <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#0c0c0c] p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/10" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <div>
                 <div className="font-mono text-xs tracking-[3px] text-white/50">AI PRODUCT ANALYSIS</div>
@@ -688,9 +757,89 @@ export default function ProductsPage() {
         </div>
       )}
 
+      {/* Edit Product Modal */}
+      {showEdit && editingProduct && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowEdit(false)}>
+          <div className="bg-[#0c0c0c] p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-md w-full max-h-[90vh] overflow-y-auto border border-white/10" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <div className="font-mono text-xs tracking-[3px] text-white/50">EDIT PRODUCT</div>
+                <div className="text-2xl sm:text-3xl font-semibold tracking-tight mt-1">{editingProduct.name}</div>
+              </div>
+              <button onClick={() => setShowEdit(false)} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">PRODUCT IMAGE</label>
+                <input ref={editFileInputRef} type="file" accept="image/*" onChange={handleEditImageUpload} className="hidden" />
+                {editImageUrl ? (
+                  <div className="relative">
+                    <img src={getUploadUrl(editImageUrl)} alt="Preview" className="w-full h-40 object-cover rounded-2xl" />
+                    <button onClick={() => setEditImageUrl(null)} className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 hover:bg-black/80"><X className="w-4 h-4" /></button>
+                  </div>
+                ) : (
+                  <button onClick={() => editFileInputRef.current?.click()} className="w-full h-32 border-2 border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-[#7c3aed]/40 transition-colors">
+                    {editUploading ? <Loader2 className="w-6 h-6 animate-spin text-[#7c3aed]" /> : <><Sparkles className="w-6 h-6 text-white/40" /><span className="text-sm text-white/50">Click to upload image</span></>}
+                  </button>
+                )}
+              </div>
+              <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Product name" className="w-full" />
+              <input value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})} placeholder="Category" className="w-full" />
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <input value={editForm.price} onChange={e => setEditForm({...editForm, price: e.target.value})} placeholder="Price" type="number" className="w-full" />
+                </div>
+                <div>
+                  <CustomDropdown options={currencyOptions} value={editForm.currency} onChange={v => setEditForm({...editForm, currency: v})} />
+                </div>
+              </div>
+              <textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} placeholder="Description (optional)" className="w-full h-20" />
+              <input value={editForm.emoji} onChange={e => setEditForm({...editForm, emoji: e.target.value})} placeholder="Emoji fallback (e.g. 🧴)" className="w-full" />
+            </div>
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setShowEdit(false)} className="flex-1 py-4 rounded-full border border-white/10 hover:bg-white/5 transition-colors">Cancel</button>
+              <button onClick={handleEdit} disabled={updateProduct.isPending || !editForm.name} className="neon-button flex-1">
+                {updateProduct.isPending ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingProduct && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setDeletingProduct(null)}>
+          <div className="bg-[#0c0c0c] p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-sm w-full border border-white/10" onClick={e => e.stopPropagation()}>
+            <div className="text-center">
+              <div className="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-7 h-7 text-red-400" />
+              </div>
+              <div className="text-xl font-semibold mb-2">Delete Product</div>
+              <div className="text-white/50 text-sm mb-1">Are you sure you want to delete</div>
+              <div className="font-medium mb-4">&quot;{deletingProduct.name}&quot;?</div>
+              <div className="text-white/40 text-xs mb-6">This action cannot be undone. All associated content will be affected.</div>
+              <div className="flex gap-3">
+                <button onClick={() => setDeletingProduct(null)} className="flex-1 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors text-sm">
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    await handleDelete(deletingProduct.id);
+                    setDeletingProduct(null);
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-colors text-sm font-medium"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedProductIds.size > 0 && (
         <div data-tour="combo-offer" className="fixed bottom-0 left-0 right-0 z-40 p-4 sm:p-6">
-          <div className="glass max-w-4xl mx-auto rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4 border border-[#7c3aed]/30">
+          <div className="bg-[#0c0c0c] max-w-4xl mx-auto rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4 border border-white/10">
             <div className="flex-1">
               <div className="font-mono text-xs tracking-[2px] text-white/50">SELECTION</div>
               <div className="text-lg font-semibold">{selectedProductIds.size} product{selectedProductIds.size !== 1 ? 's' : ''} selected</div>
@@ -723,7 +872,7 @@ export default function ProductsPage() {
 
       {showComboBuilder && (
         <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4 sm:p-6">
-          <div className="glass p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#0c0c0c] p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] max-w-5xl w-full max-h-[90vh] overflow-y-auto border border-white/10">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <div className="font-mono text-xs tracking-[3px] text-white/50">COMBO OFFER BUILDER</div>
