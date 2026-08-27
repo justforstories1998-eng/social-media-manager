@@ -6,8 +6,6 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
-import { join } from 'path';
-import * as express from 'express';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -56,18 +54,6 @@ async function bootstrap() {
     origin: frontendUrl,
     credentials: true,
   });
-
-  // CORS for uploaded files (express.static doesn't go through NestJS CORS)
-  const uploadsCors = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    res.header('Access-Control-Allow-Origin', frontendUrl);
-    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    if (req.method === 'OPTIONS') return res.sendStatus(204);
-    next();
-  };
-
-  // Serve uploaded files statically
-  app.use('/uploads', uploadsCors, express.static(join(process.cwd(), 'uploads')));
 
   // Swagger Documentation
   const config = new DocumentBuilder()

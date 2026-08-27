@@ -10,8 +10,7 @@ const api = axios.create({
 export function getUploadUrl(path: string): string {
   if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  const base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api').replace(/\/api\/?$/, '');
-  return `${base}${path}`;
+  return path;
 }
 
 api.interceptors.request.use((config) => {

@@ -1,57 +1,68 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import sharp from 'sharp';
-import * as fs from 'fs';
-import * as path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { v2 as cloudinary } from 'cloudinary';
 
 @Injectable()
 export class MediaService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private configService: ConfigService,
+  ) {
+    cloudinary.config({
+      cloud_name: this.configService.get('CLOUDINARY_CLOUD_NAME'),
+      api_key: this.configService.get('CLOUDINARY_API_KEY'),
+      api_secret: this.configService.get('CLOUDINARY_API_SECRET'),
+    });
+  }
 
   async upload(userId: string, file: Express.Multer.File, folder?: string) {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
 
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4'];
+    const allowedMimeTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'image/svg+xml', 'image/bmp', 'image/tiff', 'image/avif',
+      'video/mp4', 'video/webm', 'video/quicktime',
+    ];
     if (!allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException('Invalid file type');
+      throw new BadRequestException(`Invalid file type: ${file.mimetype}. Accepted: images (jpg, png, gif, webp, svg, bmp, tiff, avif) and videos (mp4, webm, mov).`);
     }
 
-    const uploadDir = path.join(process.cwd(), 'uploads', folder || 'general');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
+    const uploadFolder = folder || 'general';
 
-    const filename = `${uuidv4()}${path.extname(file.originalname)}`;
-    const filepath = path.join(uploadDir, filename);
-
-    // Process image with Sharp if it's an image
-    if (file.mimetype.startsWith('image/')) {
-      await sharp(file.buffer)
-        .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 85 })
-        .toFile(filepath);
-    } else {
-      fs.writeFileSync(filepath, file.buffer);
-    }
-
-    const url = `/uploads/${folder || 'general'}/${filename}`;
+    const result = await new Promise<any>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `wondermedia/${uploadFolder}`,
+          resource_type: file.mimetype.startsWith('video/') ? 'video' : 'image',
+          transformation: file.mimetype.startsWith('image/')
+            ? [{ width: 1920, height: 1080, crop: 'limit', quality: 'auto' }]
+            : undefined,
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        },
+      );
+      uploadStream.end(file.buffer);
+    });
 
     const media = await this.prisma.media.create({
       data: {
         userId,
-        filename,
+        filename: result.public_id,
         originalName: file.originalname,
         mimeType: file.mimetype,
         size: file.size,
-        url,
-        folder: folder || 'general',
+        url: result.secure_url,
+        folder: uploadFolder,
         tags: [],
         metadata: {
-          width: file.mimetype.startsWith('image/') ? 1920 : undefined,
-          height: file.mimetype.startsWith('image/') ? 1080 : undefined,
+          width: result.width,
+          height: result.height,
+          cloudinaryId: result.public_id,
         },
       },
     });
@@ -78,10 +89,14 @@ export class MediaService {
       throw new NotFoundException('Media not found');
     }
 
-    // Delete file from disk
-    const filepath = path.join(process.cwd(), media.url);
-    if (fs.existsSync(filepath)) {
-      fs.unlinkSync(filepath);
+    // Delete from Cloudinary
+    const metadata = media.metadata as any;
+    if (metadata?.cloudinaryId) {
+      try {
+        await cloudinary.uploader.destroy(metadata.cloudinaryId);
+      } catch {
+        // Ignore Cloudinary deletion errors
+      }
     }
 
     return this.prisma.media.delete({
