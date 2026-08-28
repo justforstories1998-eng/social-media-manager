@@ -364,10 +364,11 @@ function ImageTab(props: MediaTabProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const preselectedProductId = searchParams.get('productId');
+  const urlPrompt = searchParams.get('prompt') || '';
 
   const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState(urlPrompt);
   const [model, setModel] = useState('flux');
   const [size, setSize] = useState(0);
   const [seed, setSeed] = useState<number | undefined>(undefined);
@@ -659,10 +660,11 @@ function VideoTab(props: MediaTabProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const preselectedProductId = searchParams.get('productId');
+  const urlPrompt = searchParams.get('prompt') || '';
 
   const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState(urlPrompt);
   const [model, setModel] = useState('stable-video');
   const [duration, setDuration] = useState(5);
   const [isGenerating, setIsGenerating] = useState(false);

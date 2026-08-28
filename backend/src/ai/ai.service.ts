@@ -115,9 +115,9 @@ Please respond in this exact JSON format:
         platform,
         duration: Date.now() - startTime,
       };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Full post generation failed: ${error.message}`);
-      throw error;
+      throw new Error(`AI generation failed: ${error.message}. Make sure OPENROUTER_API_KEY is set in your environment.`);
     }
   }
 
@@ -149,25 +149,33 @@ Respond with only the final image prompt.`;
   }
 
   private async callOpenRouter(prompt: string, model: string): Promise<string> {
-    const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
-      {
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 1000,
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${this.openrouterKey}`,
-          'HTTP-Referer': 'https://wondermedia.vercel.app',
-          'X-Title': 'WonderMedia',
-          'Content-Type': 'application/json',
+    if (!this.openrouterKey) {
+      throw new Error('OpenRouter API key not configured. Set OPENROUTER_API_KEY environment variable.');
+    }
+    try {
+      const response = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: 1000,
         },
-      }
-    );
-
-    return response.data.choices[0].message.content;
+        {
+          headers: {
+            'Authorization': `Bearer ${this.openrouterKey}`,
+            'HTTP-Referer': 'https://wondermedia.vercel.app',
+            'X-Title': 'WonderMedia',
+            'Content-Type': 'application/json',
+          },
+          timeout: 30000,
+        }
+      );
+      return response.data.choices[0].message.content;
+    } catch (error: any) {
+      this.logger.error(`OpenRouter API error: ${error.response?.status} ${error.response?.data?.error?.message || error.message}`);
+      throw new Error(`AI generation failed: ${error.response?.data?.error?.message || error.message}`);
+    }
   }
 
   private buildPrompt(userPrompt: string, type: string): string {

@@ -52,6 +52,7 @@ export default function ProductsPage() {
   const [contentIdeas, setContentIdeas] = useState<string>('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [quickContentOpen, setQuickContentOpen] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ name: '', category: '', price: '', currency: 'USD', description: '', emoji: '' });
@@ -488,7 +489,11 @@ export default function ProductsPage() {
                   <img
                     src={getUploadUrl(product.images?.[0] || product.imageUrl || '')}
                     alt={product.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewImage(getUploadUrl(product.images?.[0] || product.imageUrl || ''));
+                    }}
                     onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
                   />
                 ) : null}
@@ -545,13 +550,13 @@ export default function ProductsPage() {
                   {quickContentOpen === product.id && (
                     <div className="absolute bottom-full mb-2 left-0 right-0 bg-[#0c0c0c] rounded-2xl border border-white/10 p-2 z-20 shadow-xl">
                       <button
-                        onClick={() => { setQuickContentOpen(null); router.push(`/ai/image?productId=${product.id}`); }}
+                        onClick={() => { setQuickContentOpen(null); router.push(`/ai/image?productId=${product.id}&prompt=${encodeURIComponent(product.name + ' ' + (product.description || product.category || ''))}`); }}
                         className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors text-left"
                       >
                         <Image className="w-3.5 h-3.5" /> Generate Image → Post
                       </button>
                       <button
-                        onClick={() => { setQuickContentOpen(null); router.push(`/ai/video?productId=${product.id}`); }}
+                        onClick={() => { setQuickContentOpen(null); router.push(`/ai/video?productId=${product.id}&prompt=${encodeURIComponent(product.name + ' ' + (product.description || product.category || ''))}`); }}
                         className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors text-left"
                       >
                         <Film className="w-3.5 h-3.5" /> Generate Video → Post
@@ -737,7 +742,7 @@ export default function ProductsPage() {
                     <Plus className="w-4 h-4" /> Create Post
                   </button>
                   <button
-                    onClick={() => { setShowIdeasModal(false); router.push(`/ai/image?productId=${selectedProduct?.id}`); }}
+                    onClick={() => { setShowIdeasModal(false); router.push(`/ai/image?productId=${selectedProduct?.id}&prompt=${encodeURIComponent(contentIdeas || selectedProduct?.name || '')}`); }}
                     className="flex-1 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors text-sm flex items-center justify-center gap-2"
                   >
                     <Image className="w-4 h-4" /> Generate Image
@@ -1123,6 +1128,20 @@ export default function ProductsPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {previewImage && (
+        <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4" onClick={() => setPreviewImage(null)}>
+          <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10">
+            <X className="w-6 h-6" />
+          </button>
+          <img 
+            src={previewImage} 
+            alt="Product preview" 
+            className="max-w-full max-h-[90vh] object-contain rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>

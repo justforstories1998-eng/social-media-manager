@@ -7,14 +7,16 @@ export class PollinationsProvider implements ImageProvider, VideoProvider {
   name = 'pollinations';
 
   private imageModels = [
-    { id: 'flux', name: 'FLUX', description: 'High-quality image generation model' },
-    { id: 'flux-realism', name: 'FLUX Realism', description: 'Photorealistic image generation' },
-    { id: 'flux-anime', name: 'FLUX Anime', description: 'Anime-style image generation' },
-    { id: 'flux-3d', name: 'FLUX 3D', description: '3D rendered image generation' },
+    { id: 'flux', name: 'FLUX', description: 'High-quality image generation' },
+    { id: 'flux-realism', name: 'FLUX Realism', description: 'Photorealistic images' },
+    { id: 'flux-anime', name: 'FLUX Anime', description: 'Anime-style generation' },
+    { id: 'flux-3d', name: 'FLUX 3D', description: '3D rendered images' },
+    { id: 'flux-pro', name: 'FLUX Pro', description: 'Professional quality' },
   ];
 
   private videoModels = [
     { id: 'stable-video', name: 'Stable Video', description: 'Text-to-video generation' },
+    { id: 'fast-svd', name: 'Fast SVD', description: 'Faster video generation' },
   ];
 
   async isAvailable(): Promise<boolean> {
@@ -29,9 +31,10 @@ export class PollinationsProvider implements ImageProvider, VideoProvider {
     seed?: number;
   }): Promise<{ imageUrl: string; model: string; provider: string }> {
     const { prompt, model = 'flux', width = 1024, height = 1024, seed } = params;
-    const encodedPrompt = encodeURIComponent(prompt);
+    const enhancedPrompt = this.enhancePrompt(prompt);
+    const encodedPrompt = encodeURIComponent(enhancedPrompt);
     const seedParam = seed ? `&seed=${seed}` : '';
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${model}&width=${width}&height=${height}${seedParam}&nologo=true`;
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${model}&width=${width}&height=${height}${seedParam}&nologo=true&enhance=true`;
 
     return { imageUrl, model, provider: 'pollinations' };
   }
@@ -42,7 +45,8 @@ export class PollinationsProvider implements ImageProvider, VideoProvider {
     duration?: number;
   }): Promise<{ videoUrl: string; model: string; provider: string }> {
     const { prompt, model = 'stable-video', duration = 5 } = params;
-    const encodedPrompt = encodeURIComponent(prompt);
+    const enhancedPrompt = this.enhancePrompt(prompt);
+    const encodedPrompt = encodeURIComponent(enhancedPrompt);
     const videoUrl = `https://video.pollinations.ai/prompt/${encodedPrompt}?model=${model}&duration=${duration}`;
 
     return { videoUrl, model, provider: 'pollinations' };
@@ -64,5 +68,16 @@ export class PollinationsProvider implements ImageProvider, VideoProvider {
 
   getVideoModels(): Array<{ id: string; name: string; description: string }> {
     return this.videoModels;
+  }
+
+  private enhancePrompt(prompt: string): string {
+    const qualityModifiers = [
+      'masterpiece', 'best quality', 'highly detailed',
+      'professional', 'sharp focus', '8k resolution',
+      'cinematic lighting', 'vivid colors',
+    ];
+    const hasQuality = qualityModifiers.some(m => prompt.toLowerCase().includes(m.toLowerCase()));
+    if (hasQuality) return prompt;
+    return `${prompt}, masterpiece, best quality, highly detailed, professional, sharp focus, 8k resolution, cinematic lighting`;
   }
 }
