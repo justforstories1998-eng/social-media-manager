@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import axios from 'axios';
 import api, { type User, type AuthResponse } from '@/lib/api';
 
 interface AuthState {
@@ -46,6 +47,22 @@ export const useAuthStore = create<AuthState>((set) => ({
       const res = await api.get<User>('/auth/me');
       set({ user: res.data, isAuthenticated: true, isLoading: false });
     } catch {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (refreshToken) {
+        try {
+          const { data } = await axios.post(
+            `${api.defaults.baseURL}/auth/refresh`,
+            { refresh_token: refreshToken },
+          );
+          localStorage.setItem('access_token', data.access_token);
+          localStorage.setItem('refresh_token', data.refresh_token);
+          const res = await api.get<User>('/auth/me');
+          set({ user: res.data, isAuthenticated: true, isLoading: false });
+          return;
+        } catch {
+          // refresh failed, fall through to logout
+        }
+      }
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       set({ user: null, isAuthenticated: false, isLoading: false });
