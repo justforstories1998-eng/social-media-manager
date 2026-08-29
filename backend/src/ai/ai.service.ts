@@ -6,6 +6,7 @@ import { ProviderRegistry } from './providers/provider-registry';
 import { PollinationsProvider } from './providers/pollinations.provider';
 
 const FREE_OPENROUTER_MODELS = [
+  { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', context: '1M tokens', description: 'Best free model — high quality reasoning and generation' },
   { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra', context: '1M tokens', description: 'Best for long-context reasoning' },
   { id: 'google/gemma-4-31b-it:free', name: 'Gemma 4 31B', context: '262K tokens', description: 'General purpose, multimodal' },
   { id: 'google/gemma-4-26b-a4b-it:free', name: 'Gemma 4 26B', context: '262K tokens', description: 'Efficient multimodal model' },
@@ -39,7 +40,7 @@ export class AIService {
   }
 
   async generateContent(prompt: string, type: string, userId: string, model?: string) {
-    const selectedModel = model || 'openrouter/free';
+    const selectedModel = model || 'minimax/minimax-m3:free';
     const startTime = Date.now();
 
     try {
@@ -90,7 +91,7 @@ export class AIService {
   }
 
   async generateFullPost(prompt: string, platform: string, type: string, userId: string, model?: string) {
-    const selectedModel = model || 'openrouter/free';
+    const selectedModel = model || 'minimax/minimax-m3:free';
     const startTime = Date.now();
 
     const fullPrompt = `Generate a complete social media post for ${platform} in ${type} style.
@@ -203,7 +204,7 @@ Please respond in this exact JSON format:
   }
 
   async generateImagePrompt(prompt: string, userId: string, brandColors: string[] = [], model?: string) {
-    const selectedModel = model || 'openrouter/free';
+    const selectedModel = model || 'minimax/minimax-m3:free';
 
     const enhancedPrompt = `Create a highly detailed, professional image generation prompt for Stable Diffusion / FLUX.
 
