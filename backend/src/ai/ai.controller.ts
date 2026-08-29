@@ -1,8 +1,10 @@
 import { Controller, Post, Body, UseGuards, Request, Get } from '@nestjs/common';
 import { AIService } from './ai.service';
 import { AIGenerationService } from '../ai-generation/ai-generation.service';
+import { HuggingFaceProvider } from './providers/huggingface.provider';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import axios from 'axios';
 
 @ApiTags('ai')
 @ApiBearerAuth()
@@ -125,5 +127,39 @@ export class AIController {
   @Get('models')
   async getAvailableModels() {
     return this.aiService.getAvailableModels();
+  }
+
+  @Get('test-image-api')
+  async testImageApi() {
+    const results: any = {};
+
+    // Test huggingface.co
+    try {
+      await axios.get('https://huggingface.co', { timeout: 10000 });
+      results.huggingface = 'reachable';
+    } catch (e: any) {
+      results.huggingface = e.message;
+    }
+
+    // Test router.huggingface.co
+    try {
+      await axios.get('https://router.huggingface.co', { timeout: 10000 });
+      results.router = 'reachable';
+    } catch (e: any) {
+      results.router = e.message;
+    }
+
+    // Test api-inference.huggingface.co
+    try {
+      await axios.get('https://api-inference.huggingface.co', { timeout: 10000 });
+      results.apiInference = 'reachable';
+    } catch (e: any) {
+      results.apiInference = e.message;
+    }
+
+    // Check API key
+    results.hasApiKey = !!(process.env.HUGGINGFACE_API_KEY);
+
+    return results;
   }
 }

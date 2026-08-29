@@ -8,9 +8,11 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
   name = 'huggingface';
   private readonly logger = new Logger(HuggingFaceProvider.name);
   private apiKey: string;
+  private apiBase: string;
 
   constructor() {
     this.apiKey = process.env.HUGGINGFACE_API_KEY || '';
+    this.apiBase = process.env.HUGGINGFACE_API_BASE || 'https://router.huggingface.co/hf-inference/models';
   }
 
   private imageModels = [
@@ -31,6 +33,15 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
     return !!this.apiKey;
   }
 
+  async testConnection(): Promise<{ ok: boolean; endpoint: string; error?: string }> {
+    try {
+      const res = await axios.get('https://huggingface.co/api/models?limit=1', { timeout: 10000 });
+      return { ok: true, endpoint: 'huggingface.co', error: undefined };
+    } catch (e: any) {
+      return { ok: false, endpoint: 'huggingface.co', error: e.message };
+    }
+  }
+
   async generateImage(params: {
     prompt: string;
     model?: string;
@@ -41,60 +52,56 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
     const { prompt, model = 'black-forest-labs/FLUX.1-schnell', width = 1024, height = 1024 } = params;
 
     if (!this.apiKey) {
-      throw new Error('HuggingFace API key not configured. Set HUGGINGFACE_API_KEY environment variable.');
+      throw new Error('HUGGINGFACE_API_KEY is not set.');
     }
 
     const enhancedPrompt = this.enhancePrompt(prompt);
 
-    try {
-      const response = await axios.post(
-        `https://router.huggingface.co/hf-inference/models/${model}`,
-        {
-          inputs: enhancedPrompt,
-          parameters: {
-            width,
-            height,
-            num_inference_steps: this.getSteps(model),
-            guidance_scale: this.getGuidance(model),
-          },
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          responseType: 'arraybuffer',
-          timeout: 90000,
-        }
-      );
+    // Try multiple API base URLs
+    const endpoints = [
+      'https://router.huggingface.co/hf-inference/models',
+      'https://api-inference.huggingface.co/models',
+    ];
 
-      const base64 = Buffer.from(response.data).toString('base64');
-      const imageUrl = `data:image/png;base64,${base64}`;
-
-      return { imageUrl, model, provider: 'huggingface' };
-    } catch (error: any) {
-      const msg = error.response?.data?.error || error.message;
-      this.logger.error(`HuggingFace image generation failed (${model}): ${msg}`);
-
-      // If model is loading (cold start), wait and retry
-      if (error.response?.status === 503) {
-        this.logger.warn(`Model ${model} is loading, waiting 30s and retrying...`);
-        await new Promise(r => setTimeout(r, 30000));
-        const retryRes = await axios.post(
-          `https://router.huggingface.co/hf-inference/models/${model}`,
-          { inputs: enhancedPrompt, parameters: { width, height } },
+    let lastError: any;
+    for (const baseUrl of endpoints) {
+      try {
+        this.logger.log(`Trying endpoint: ${baseUrl}/${model}`);
+        const response = await axios.post(
+          `${baseUrl}/${model}`,
           {
-            headers: { 'Authorization': `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
+            inputs: enhancedPrompt,
+            parameters: {
+              width,
+              height,
+              num_inference_steps: this.getSteps(model),
+              guidance_scale: this.getGuidance(model),
+            },
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+            },
             responseType: 'arraybuffer',
-            timeout: 180000,
+            timeout: 90000,
           }
         );
-        const base64 = Buffer.from(retryRes.data).toString('base64');
-        return { imageUrl: `data:image/png;base64,${base64}`, model, provider: 'huggingface' };
-      }
 
-      throw error;
+        if (response.status === 200) {
+          const base64 = Buffer.from(response.data).toString('base64');
+          const imageUrl = `data:image/png;base64,${base64}`;
+          this.logger.log(`Image generated successfully with ${model} via ${baseUrl}`);
+          return { imageUrl, model, provider: 'huggingface' };
+        }
+      } catch (error: any) {
+        lastError = error;
+        this.logger.warn(`Endpoint ${baseUrl} failed for ${model}: ${error.message}`);
+        continue;
+      }
     }
+
+    throw lastError || new Error(`Failed to generate image with ${model}`);
   }
 
   async generateVideo(params: {
@@ -105,50 +112,45 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
     const { prompt, model = 'Wan-AI/Wan2.2-T2V-A14B' } = params;
 
     if (!this.apiKey) {
-      throw new Error('HuggingFace API key not configured. Set HUGGINGFACE_API_KEY environment variable.');
+      throw new Error('HUGGINGFACE_API_KEY is not set.');
     }
 
-    try {
-      const response = await axios.post(
-        `https://router.huggingface.co/hf-inference/models/${model}`,
-        { inputs: prompt },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          responseType: 'arraybuffer',
-          timeout: 180000,
-        }
-      );
+    const endpoints = [
+      'https://router.huggingface.co/hf-inference/models',
+      'https://api-inference.huggingface.co/models',
+    ];
 
-      const base64 = Buffer.from(response.data).toString('base64');
-      const videoUrl = `data:video/mp4;base64,${base64}`;
-
-      return { videoUrl, model, provider: 'huggingface' };
-    } catch (error: any) {
-      const msg = error.response?.data?.error || error.message;
-      this.logger.error(`HuggingFace video generation failed (${model}): ${msg}`);
-
-      // If model is loading, wait and retry
-      if (error.response?.status === 503) {
-        this.logger.warn(`Video model ${model} is loading, waiting 60s and retrying...`);
-        await new Promise(r => setTimeout(r, 60000));
-        const retryRes = await axios.post(
-          `https://router.huggingface.co/hf-inference/models/${model}`,
+    let lastError: any;
+    for (const baseUrl of endpoints) {
+      try {
+        this.logger.log(`Trying video endpoint: ${baseUrl}/${model}`);
+        const response = await axios.post(
+          `${baseUrl}/${model}`,
           { inputs: prompt },
           {
-            headers: { 'Authorization': `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
+            headers: {
+              'Authorization': `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+            },
             responseType: 'arraybuffer',
-            timeout: 300000,
+            timeout: 180000,
           }
         );
-        const base64 = Buffer.from(retryRes.data).toString('base64');
-        return { videoUrl: `data:video/mp4;base64,${base64}`, model, provider: 'huggingface' };
-      }
 
-      throw error;
+        if (response.status === 200) {
+          const base64 = Buffer.from(response.data).toString('base64');
+          const videoUrl = `data:video/mp4;base64,${base64}`;
+          this.logger.log(`Video generated successfully with ${model}`);
+          return { videoUrl, model, provider: 'huggingface' };
+        }
+      } catch (error: any) {
+        lastError = error;
+        this.logger.warn(`Video endpoint ${baseUrl} failed: ${error.message}`);
+        continue;
+      }
     }
+
+    throw lastError || new Error(`Failed to generate video with ${model}`);
   }
 
   async generate(params: {
@@ -171,13 +173,15 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
 
   private getSteps(model: string): number {
     if (model.includes('FLUX.1-schnell')) return 4;
-    if (model.includes('FLUX.2')) return 8;
+    if (model.includes('Krea2')) return 4;
     if (model.includes('Qwen')) return 30;
+    if (model.includes('Z-Image')) return 25;
     return 25;
   }
 
   private getGuidance(model: string): number {
     if (model.includes('FLUX')) return 0.0;
+    if (model.includes('Krea2')) return 0.0;
     if (model.includes('Qwen')) return 7.0;
     return 7.5;
   }
