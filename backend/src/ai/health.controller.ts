@@ -8,25 +8,36 @@ export class HealthController {
     const results: any = {};
     const apiKey = process.env.HUGGINGFACE_API_KEY;
 
-    // Test actual model inference on router.huggingface.co
-    if (apiKey) {
+    if (!apiKey) {
+      return { error: 'No HUGGINGFACE_API_KEY set' };
+    }
+
+    const modelsToTest = [
+      'stabilityai/stable-diffusion-xl-base-1.0',
+      'stabilityai/stable-diffusion-3-medium',
+      'black-forest-labs/FLUX.1-dev',
+      'runwayml/stable-diffusion-v1-5',
+      'prompthero/openjourney-v4',
+      'CompVis/stable-diffusion-v1-4',
+    ];
+
+    for (const model of modelsToTest) {
       try {
         const start = Date.now();
         const res = await axios.post(
-          'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell',
+          `https://router.huggingface.co/hf-inference/models/${model}`,
           { inputs: 'a blue circle on white background' },
           {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            timeout: 60000,
+            timeout: 30000,
           }
         );
-        results.routerModel = { status: 'success', ms: Date.now() - start, responseSize: res.data?.length || 0 };
+        results[model] = { status: 'WORKING', ms: Date.now() - start, size: res.data?.length || 0 };
+        break; // Found one that works, stop testing
       } catch (e: any) {
-        results.routerModel = { status: 'failed', error: e.response?.data?.error || e.message, code: e.response?.status };
+        results[model] = { status: 'failed', code: e.response?.status, error: e.response?.data?.error || e.message?.substring(0, 80) };
       }
     }
-
-    results.hasHFApiKey = !!apiKey;
 
     return results;
   }
