@@ -846,7 +846,7 @@ function VideoTab(props: MediaTabProps) {
               <AlertCircle className="w-5 h-5 text-white/40 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-white/50">
                 <div className="font-medium text-white/70 mb-1">AI Video Generation</div>
-                Videos are generated using HuggingFace Inference API with Wan 2.2 models. Generation may take 30-120 seconds.
+                Videos are generated using Together AI with Wan 2.2 models. Generation may take 30-120 seconds.
               </div>
             </div>
           </div>

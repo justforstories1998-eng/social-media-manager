@@ -4,13 +4,13 @@ import { VideoProvider } from './video-provider.interface';
 import axios from 'axios';
 
 @Injectable()
-export class HuggingFaceProvider implements ImageProvider, VideoProvider {
+export class TogetherProvider implements ImageProvider, VideoProvider {
   name = 'together';
-  private readonly logger = new Logger(HuggingFaceProvider.name);
+  private readonly logger = new Logger(TogetherProvider.name);
   private apiKey: string;
 
   constructor() {
-    this.apiKey = process.env.TOGETHER_API_KEY || process.env.HUGGINGFACE_API_KEY || '';
+    this.apiKey = process.env.TOGETHER_API_KEY || '';
   }
 
   private imageModels = [
@@ -86,7 +86,7 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
       throw new Error('TOGETHER_API_KEY is not set.');
     }
 
-    throw new Error('Video generation not available on Together AI free tier. Try HuggingFace Wan 2.2 models instead.');
+    throw new Error('Video generation not available on Together AI free tier.');
   }
 
   async generate(params: {

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProviderRegistry } from './providers/provider-registry';
-import { HuggingFaceProvider } from './providers/huggingface.provider';
+import { TogetherProvider } from './providers/together.provider';
 
 const FREE_OPENROUTER_MODELS = [
   { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', context: '1M tokens', description: 'Best free model — high quality reasoning and generation' },
@@ -28,9 +28,9 @@ export class AIService {
 
     this.providerRegistry = new ProviderRegistry();
 
-    const huggingface = new HuggingFaceProvider();
-    this.providerRegistry.registerImageProvider(huggingface);
-    this.providerRegistry.registerVideoProvider(huggingface);
+    const together = new TogetherProvider();
+    this.providerRegistry.registerImageProvider(together);
+    this.providerRegistry.registerVideoProvider(together);
   }
 
   async getAvailableModels() {
@@ -398,7 +398,7 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
   }
 
   async generateAdImage(prompt: string, width = 1024, height = 1024) {
-    const hfProvider = new HuggingFaceProvider();
+    const hfProvider = new TogetherProvider();
     if (!await hfProvider.isAvailable()) {
       throw new Error('TOGETHER_API_KEY is not set. Add it to Render env vars. Get one free at together.ai — $5 credit included.');
     }
@@ -424,7 +424,7 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
   }
 
   async generateImage(prompt: string, model = 'flux', width = 1024, height = 1024, seed?: number) {
-    const hfProvider = new HuggingFaceProvider();
+    const hfProvider = new TogetherProvider();
     if (!await hfProvider.isAvailable()) {
       throw new Error('TOGETHER_API_KEY is not set. Add it to Render env vars. Get one free at together.ai — $5 credit included.');
     }
@@ -529,9 +529,9 @@ Return ONLY a JSON array, no other text:
   }
 
   async generateVideo(prompt: string, model = 'stable-video', duration = 5) {
-    const hfProvider = new HuggingFaceProvider();
+    const hfProvider = new TogetherProvider();
     if (!await hfProvider.isAvailable()) {
-      throw new Error('Video generation requires HUGGINGFACE_API_KEY. Get one free at huggingface.co/settings/tokens');
+      throw new Error('Video generation requires TOGETHER_API_KEY. Get one free at together.ai');
     }
     const result = await hfProvider.generateVideo({ prompt, model: 'ali-vilab/text-to-video-ms-1.7b', duration });
     return { ...result, prompt, duration };
