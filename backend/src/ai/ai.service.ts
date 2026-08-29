@@ -403,7 +403,13 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
       throw new Error('HUGGINGFACE_API_KEY is not set. Add it to Render env vars. Get one free at huggingface.co/settings/tokens');
     }
 
-    const models = ['black-forest-labs/FLUX.1-schnell', 'stabilityai/stable-diffusion-xl-base-1.0'];
+    const models = [
+      'black-forest-labs/FLUX.1-schnell',
+      'Qwen/Qwen-Image-2512',
+      'lvladikov/Krea2-Turbo-Distill-4step-LoRA',
+      'Tongyi-MAI/Z-Image',
+      'stabilityai/stable-diffusion-xl-base-1.0',
+    ];
     let lastError: any;
 
     for (const m of models) {
@@ -425,7 +431,13 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
       throw new Error('HUGGINGFACE_API_KEY is not set. Add it to Render env vars. Get one free at huggingface.co/settings/tokens');
     }
 
-    const models = ['black-forest-labs/FLUX.1-schnell', 'stabilityai/stable-diffusion-xl-base-1.0'];
+    const models = [
+      'black-forest-labs/FLUX.1-schnell',
+      'Qwen/Qwen-Image-2512',
+      'lvladikov/Krea2-Turbo-Distill-4step-LoRA',
+      'Tongyi-MAI/Z-Image',
+      'stabilityai/stable-diffusion-xl-base-1.0',
+    ];
     let lastError: any;
 
     for (const m of models) {

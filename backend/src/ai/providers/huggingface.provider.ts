@@ -15,8 +15,10 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
 
   private imageModels = [
     { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast, high-quality image generation' },
+    { id: 'Qwen/Qwen-Image-2512', name: 'Qwen Image 2512', description: 'High-quality images with text rendering' },
+    { id: 'lvladikov/Krea2-Turbo-Distill-4step-LoRA', name: 'Krea2 Turbo', description: 'Fast turbo model, 4-step generation' },
+    { id: 'Tongyi-MAI/Z-Image', name: 'Z-Image', description: 'Tongyi creative image generation' },
     { id: 'stabilityai/stable-diffusion-xl-base-1.0', name: 'Stable Diffusion XL', description: 'Photorealistic, strong composition' },
-    { id: 'stabilityai/stable-diffusion-3-medium', name: 'SD3 Medium', description: 'Stable Diffusion 3 — latest architecture' },
   ];
 
   private videoModels = [
