@@ -42,7 +42,7 @@ export class HealthController {
         }
         results[name] = { status: 'WORKING', ms: Date.now() - start };
       } catch (e: any) {
-        results[name] = { status: 'failed', code: e.response?.status, error: (e.response?.data?.error || e.message)?.substring(0, 100) };
+        results[name] = { status: 'failed', code: e.response?.status, error: String(e.response?.data?.error || e.message || 'unknown').substring(0, 100) };
       }
     }
 
