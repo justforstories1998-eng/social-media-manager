@@ -8,14 +8,11 @@ import { HuggingFaceProvider } from './providers/huggingface.provider';
 
 const FREE_OPENROUTER_MODELS = [
   { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', context: '1M tokens', description: 'Best free model — high quality reasoning and generation' },
-  { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra', context: '1M tokens', description: 'Best for long-context reasoning' },
-  { id: 'google/gemma-4-31b-it:free', name: 'Gemma 4 31B', context: '262K tokens', description: 'General purpose, multimodal' },
+  { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1', context: '128K tokens', description: 'Poolside coding and reasoning model' },
+  { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra', context: '1M tokens', description: 'Long-context reasoning powerhouse' },
+  { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7', context: '262K tokens', description: 'Fast general purpose model' },
+  { id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', name: 'Nemotron Nano Omni', context: '128K tokens', description: 'Lightweight reasoning and multimodal' },
   { id: 'google/gemma-4-26b-a4b-it:free', name: 'Gemma 4 26B', context: '262K tokens', description: 'Efficient multimodal model' },
-  { id: 'inclusionai/ling-3.0-flash:free', name: 'Ling 3.0 Flash', context: '262K tokens', description: 'Fast general instruction work' },
-  { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super', context: '262K tokens', description: 'General and agent tasks' },
-  { id: 'openai/gpt-oss-20b:free', name: 'GPT-OSS 20B', context: '131K tokens', description: 'OpenAI open-source model' },
-  { id: 'nvidia/nemotron-nano-9b-v2:free', name: 'Nemotron Nano 9B', context: '128K tokens', description: 'Lightweight and fast' },
-  { id: 'openrouter/free', name: 'Auto (Free Router)', context: 'varies', description: 'Auto-selects best free model' },
 ];
 
 @Injectable()
