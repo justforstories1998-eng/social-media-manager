@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProviderRegistry } from './providers/provider-registry';
-import { PollinationsProvider } from './providers/pollinations.provider';
 import { HuggingFaceProvider } from './providers/huggingface.provider';
 
 const FREE_OPENROUTER_MODELS = [
@@ -28,9 +27,6 @@ export class AIService {
     this.openrouterKey = this.configService.get('OPENROUTER_API_KEY') || '';
 
     this.providerRegistry = new ProviderRegistry();
-    const pollinations = new PollinationsProvider();
-    this.providerRegistry.registerImageProvider(pollinations);
-    this.providerRegistry.registerVideoProvider(pollinations);
 
     const huggingface = new HuggingFaceProvider();
     this.providerRegistry.registerImageProvider(huggingface);
@@ -402,59 +398,27 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
   }
 
   async generateAdImage(prompt: string, width = 1024, height = 1024) {
-    // Try HuggingFace first
-    try {
-      const hfProvider = new HuggingFaceProvider();
-      if (await hfProvider.isAvailable()) {
-        const result = await hfProvider.generateImage({ prompt, width, height });
-        return { ...result, prompt };
-      }
-    } catch (error: any) {
-      this.logger.warn(`HuggingFace ad image failed, falling back to Pollinations: ${error.message}`);
+    const hfProvider = new HuggingFaceProvider();
+    if (!await hfProvider.isAvailable()) {
+      throw new Error('Image generation requires HUGGINGFACE_API_KEY. Get one free at huggingface.co/settings/tokens');
     }
-
-    // Fallback to Pollinations
-    try {
-      const provider = await this.providerRegistry.getImageProvider();
-      const result = await provider.generate({ prompt, width, height, model: 'flux' });
-      return { ...result, prompt };
-    } catch (error) {
-      this.logger.warn(`Image generation failed: ${error.message}`);
-      const encodedPrompt = encodeURIComponent(prompt);
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=flux&nologo=true`;
-      return { imageUrl, prompt, model: 'flux', provider: 'pollinations' };
-    }
+    const result = await hfProvider.generateImage({ prompt, width, height });
+    return { ...result, prompt };
   }
 
   async generateImage(prompt: string, model = 'flux', width = 1024, height = 1024, seed?: number) {
-    // Try HuggingFace first (better quality)
-    try {
-      const hfProvider = new HuggingFaceProvider();
-      if (await hfProvider.isAvailable()) {
-        const result = await hfProvider.generateImage({
-          prompt,
-          model: 'black-forest-labs/FLUX.1-schnell',
-          width,
-          height,
-          seed,
-        });
-        return { ...result, prompt, width, height, seed: seed || Math.floor(Math.random() * 1000000) };
-      }
-    } catch (error: any) {
-      this.logger.warn(`HuggingFace failed, falling back to Pollinations: ${error.message}`);
+    const hfProvider = new HuggingFaceProvider();
+    if (!await hfProvider.isAvailable()) {
+      throw new Error('Image generation requires HUGGINGFACE_API_KEY. Get one free at huggingface.co/settings/tokens');
     }
-
-    // Fallback to Pollinations
-    const provider = await this.providerRegistry.getImageProvider();
-    const result = await provider.generate({ prompt, model, width, height, seed });
-
-    return {
-      ...result,
+    const result = await hfProvider.generateImage({
       prompt,
+      model: 'black-forest-labs/FLUX.1-schnell',
       width,
       height,
-      seed: seed || Math.floor(Math.random() * 1000000),
-    };
+      seed,
+    });
+    return { ...result, prompt, width, height, seed: seed || Math.floor(Math.random() * 1000000) };
   }
 
   async generateRecommendations(userId: string, date?: string) {
@@ -535,25 +499,11 @@ Return ONLY a JSON array, no other text:
   }
 
   async generateVideo(prompt: string, model = 'stable-video', duration = 5) {
-    // Try HuggingFace first
-    try {
-      const hfProvider = new HuggingFaceProvider();
-      if (await hfProvider.isAvailable()) {
-        const result = await hfProvider.generateVideo({ prompt, model: 'ali-vilab/text-to-video-ms-1.7b', duration });
-        return { ...result, prompt, duration };
-      }
-    } catch (error: any) {
-      this.logger.warn(`HuggingFace video failed, falling back to Pollinations: ${error.message}`);
+    const hfProvider = new HuggingFaceProvider();
+    if (!await hfProvider.isAvailable()) {
+      throw new Error('Video generation requires HUGGINGFACE_API_KEY. Get one free at huggingface.co/settings/tokens');
     }
-
-    // Fallback to Pollinations
-    const provider = await this.providerRegistry.getVideoProvider();
-    const result = await provider.generateVideo({ prompt, model, duration });
-
-    return {
-      ...result,
-      prompt,
-      duration,
-    };
+    const result = await hfProvider.generateVideo({ prompt, model: 'ali-vilab/text-to-video-ms-1.7b', duration });
+    return { ...result, prompt, duration };
   }
 }

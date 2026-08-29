@@ -59,7 +59,7 @@ export class AIController {
       type: 'image',
       prompt: body.prompt,
       model: body.model,
-      provider: 'pollinations',
+      provider: 'huggingface',
       width: body.width,
       height: body.height,
       seed: body.seed,
@@ -95,7 +95,7 @@ export class AIController {
       type: 'video',
       prompt: body.prompt,
       model: body.model,
-      provider: 'pollinations',
+      provider: 'huggingface',
       duration: body.duration,
     });
 
