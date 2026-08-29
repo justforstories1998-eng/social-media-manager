@@ -58,10 +58,35 @@ export class AIService {
       });
 
       return { content: result, model: selectedModel, duration: Date.now() - startTime };
-    } catch (error) {
-      this.logger.error(`AI generation failed: ${error.message}`);
-      throw error;
+    } catch (error: any) {
+      this.logger.warn(`OpenRouter failed for generateContent, using local fallback: ${error.message}`);
+      return this.generateContentLocal(prompt, type, userId, startTime);
     }
+  }
+
+  private generateContentLocal(prompt: string, type: string, userId: string, startTime: number) {
+    const productMatch = prompt.match(/Generate 3 content ideas for\s+([^\s:]+)/i);
+    const productName = productMatch?.[1] || 'your product';
+
+    const ideas = `1. Product Spotlight - Share a stunning photo of ${productName} with a compelling story about why customers love it. Best for: Instagram Reels or Stories.
+
+2. Behind the Scenes - Show how ${productName} is made or packaged. People love seeing the process! Best for: TikTok or Instagram Reels.
+
+3. Customer Testimonial - Feature a real customer review or create a quote graphic. Social proof sells! Best for: Instagram Feed or Facebook.`;
+
+    this.prisma.aIHistory.create({
+      data: {
+        userId,
+        type,
+        prompt,
+        model: 'local-fallback',
+        output: { result: ideas },
+        tokensUsed: ideas.length,
+        durationMs: Date.now() - startTime,
+      },
+    }).catch(() => {});
+
+    return { content: ideas, model: 'local-fallback', duration: Date.now() - startTime };
   }
 
   async generateFullPost(prompt: string, platform: string, type: string, userId: string, model?: string) {
@@ -85,7 +110,6 @@ Please respond in this exact JSON format:
 
       let parsed;
       try {
-        // Try to extract JSON from the response
         const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
         parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(rawResponse);
       } catch {
@@ -116,9 +140,66 @@ Please respond in this exact JSON format:
         duration: Date.now() - startTime,
       };
     } catch (error: any) {
-      this.logger.error(`Full post generation failed: ${error.message}`);
-      throw new Error(`AI generation failed: ${error.message}. Make sure OPENROUTER_API_KEY is set in your environment.`);
+      this.logger.warn(`OpenRouter failed, using local fallback: ${error.message}`);
+      return this.generateFullPostLocal(prompt, platform, type, userId, startTime);
     }
+  }
+
+  private generateFullPostLocal(prompt: string, platform: string, type: string, userId: string, startTime: number) {
+    const productMatch = prompt.match(/Product:\s*([^,]+)/i);
+    const productName = productMatch?.[1]?.trim() || 'our product';
+    const categoryMatch = prompt.match(/Category:\s*([^,]+)/i);
+    const category = categoryMatch?.[1]?.trim() || '';
+    const descMatch = prompt.match(/Description:\s*(.+)/i);
+    const description = descMatch?.[1]?.trim() || '';
+
+    const captions: Record<string, string[]> = {
+      Instagram: [
+        `✨ Discover ${productName}${category ? ` — your perfect ${category.toLowerCase()}` : ''}! ${description ? description.slice(0, 80) : 'Elevate your everyday.'}\n\n🔥 Ready to level up? Tap the link in bio!\n\n#${productName.replace(/\s+/g, '')} #NewArrival #MustHave`,
+        `🚀 Introducing ${productName} — ${description ? description.slice(0, 60) : 'the game-changer you\'ve been waiting for'}!\n\n💫 Why you\'ll love it:\n→ Premium quality\n→ Designed for you\n→ Unbeatable value\n\n🛒 Shop now — link in bio!\n\n#${productName.replace(/\s+/g, '')} #Trending #ShopNow`,
+        `💫 ${productName} just dropped and we\'re obsessed!\n\n${description ? description.slice(0, 100) : 'Perfect for every occasion.'}\n\n👇 Drop a 🔥 if you need this!\n\n#${productName.replace(/\s+/g, '')} #Viral #Trending`,
+      ],
+      Twitter: [
+        `🚀 ${productName} is here${category ? ` — the ultimate ${category.toLowerCase()}` : ''}!\n\n${description ? description.slice(0, 100) : 'Game-changing quality at an unbeatable price.'}\n\n#${productName.replace(/\s+/g, '')} #Launch`,
+        `💡 Why everyone\'s talking about ${productName}:\n\n→ Premium quality\n→ Amazing value\n→ Perfect for you\n\nDon\'t miss out 👇`,
+      ],
+      LinkedIn: [
+        `Excited to share our latest offering: ${productName}${category ? ` in the ${category} space` : ''}.\n\n${description || 'Built with quality and innovation at its core.'}\n\nWe believe this product represents the future of ${category || 'the industry'}. Would love to hear your thoughts.\n\n#${productName.replace(/\s+/g, '')} #Innovation #Business`,
+      ],
+      Facebook: [
+        `🎉 Big news! ${productName} is now available!\n\n${description ? description.slice(0, 120) : 'We\'ve been working hard on this one and can\'t wait for you to try it.'}\n\n👉 Check it out and let us know what you think!\n\n#${productName.replace(/\s+/g, '')} #NewProduct #Launch`,
+      ],
+    };
+
+    const platformKey = platform in captions ? platform : 'Instagram';
+    const captionOptions = captions[platformKey];
+    const caption = captionOptions[Math.floor(Math.random() * captionOptions.length)];
+
+    const parsed = {
+      caption,
+      hashtags: [`#${productName.replace(/\s+/g, '')}`, '#Marketing', '#SocialMedia', '#Trending', '#NewProduct'],
+      imagePrompt: `Professional ${platform.toLowerCase()} post image for ${productName}${category ? ` in ${category}` : ''}. Modern aesthetic, clean design, vibrant colors, premium feel, high quality, 4k.`,
+      cta: 'Shop now or visit our page for more!',
+    };
+
+    this.prisma.aIHistory.create({
+      data: {
+        userId,
+        type: `post_${platform.toLowerCase()}`,
+        prompt,
+        model: 'local-fallback',
+        output: parsed,
+        tokensUsed: caption.length,
+        durationMs: Date.now() - startTime,
+      },
+    }).catch(() => {});
+
+    return {
+      ...parsed,
+      model: 'local-fallback',
+      platform,
+      duration: Date.now() - startTime,
+    };
   }
 
   async generateImagePrompt(prompt: string, userId: string, brandColors: string[] = [], model?: string) {
@@ -294,11 +375,14 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
       const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(rawResponse);
       return parsed.concepts || [];
     } catch (error) {
-      this.logger.error(`Ad concept generation failed: ${error.message}`);
+      this.logger.warn(`OpenRouter failed for ad concepts, using local fallback: ${error.message}`);
       return [
         { name: 'Lifestyle Ad', description: 'Product in a natural lifestyle setting', prompt: `${productName}, professional product photography, lifestyle setting, warm natural lighting, cinematic, 4k, high detail` },
         { name: 'Minimal Showcase', description: 'Clean minimal product display', prompt: `${productName}, minimal product photography, clean white background, soft shadows, studio lighting, premium feel` },
         { name: 'Social Media Creative', description: 'Engaging social media style', prompt: `${productName}, social media product photo, vibrant colors, modern aesthetic, Instagram style, high quality` },
+        { name: 'Seasonal Promo', description: 'Seasonal promotional style', prompt: `${productName}, seasonal promotional photo, festive atmosphere, warm tones, professional marketing, detailed` },
+        { name: 'Flat Lay', description: 'Top-down flat lay composition', prompt: `${productName}, flat lay product photography, top-down view, arranged items, clean background, editorial style` },
+        { name: 'Action Shot', description: 'Product in use', prompt: `${productName}, product in use, action shot, dynamic composition, real-world setting, authentic feel, high quality` },
       ];
     }
   }
@@ -372,7 +456,7 @@ For each idea, provide:
 Return ONLY a JSON array, no other text:
 [{"product":"name","contentType":"image","reason":"...","concept":"...","suggestedCaption":"...","platform":"Instagram","priority":"high"}]`;
 
-    const rawResponse = await this.callOpenRouter(prompt, 'openrouter/free');
+    const rawResponse = await this.callOpenRouter(prompt, 'openrouter/free').catch(() => '');
 
     let recommendations;
     try {
@@ -380,6 +464,18 @@ Return ONLY a JSON array, no other text:
       recommendations = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
     } catch {
       recommendations = [];
+    }
+
+    if (recommendations.length === 0 && products.length > 0) {
+      recommendations = products.slice(0, 3).map((p, i) => ({
+        product: p.name,
+        contentType: i % 2 === 0 ? 'image' : 'post',
+        reason: `${p.name} hasn't been featured recently. Great opportunity to showcase it.`,
+        concept: `Create a visually striking ${i % 2 === 0 ? 'image' : 'post'} highlighting ${p.name}'s key features.`,
+        suggestedCaption: `Discover ${p.name} — ${p.description?.slice(0, 60) || 'quality you can trust'}! 🚀`,
+        platform: 'Instagram',
+        priority: 'high',
+      }));
     }
 
     return {
