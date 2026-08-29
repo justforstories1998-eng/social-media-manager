@@ -4,6 +4,7 @@ import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProviderRegistry } from './providers/provider-registry';
 import { PollinationsProvider } from './providers/pollinations.provider';
+import { HuggingFaceProvider } from './providers/huggingface.provider';
 
 const FREE_OPENROUTER_MODELS = [
   { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', context: '1M tokens', description: 'Best free model — high quality reasoning and generation' },
@@ -33,6 +34,10 @@ export class AIService {
     const pollinations = new PollinationsProvider();
     this.providerRegistry.registerImageProvider(pollinations);
     this.providerRegistry.registerVideoProvider(pollinations);
+
+    const huggingface = new HuggingFaceProvider();
+    this.providerRegistry.registerImageProvider(huggingface);
+    this.providerRegistry.registerVideoProvider(huggingface);
   }
 
   async getAvailableModels() {
@@ -400,6 +405,18 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
   }
 
   async generateAdImage(prompt: string, width = 1024, height = 1024) {
+    // Try HuggingFace first
+    try {
+      const hfProvider = new HuggingFaceProvider();
+      if (await hfProvider.isAvailable()) {
+        const result = await hfProvider.generateImage({ prompt, width, height });
+        return { ...result, prompt };
+      }
+    } catch (error: any) {
+      this.logger.warn(`HuggingFace ad image failed, falling back to Pollinations: ${error.message}`);
+    }
+
+    // Fallback to Pollinations
     try {
       const provider = await this.providerRegistry.getImageProvider();
       const result = await provider.generate({ prompt, width, height, model: 'flux' });
@@ -413,6 +430,24 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
   }
 
   async generateImage(prompt: string, model = 'flux', width = 1024, height = 1024, seed?: number) {
+    // Try HuggingFace first (better quality)
+    try {
+      const hfProvider = new HuggingFaceProvider();
+      if (await hfProvider.isAvailable()) {
+        const result = await hfProvider.generateImage({
+          prompt,
+          model: 'black-forest-labs/FLUX.1-schnell',
+          width,
+          height,
+          seed,
+        });
+        return { ...result, prompt, width, height, seed: seed || Math.floor(Math.random() * 1000000) };
+      }
+    } catch (error: any) {
+      this.logger.warn(`HuggingFace failed, falling back to Pollinations: ${error.message}`);
+    }
+
+    // Fallback to Pollinations
     const provider = await this.providerRegistry.getImageProvider();
     const result = await provider.generate({ prompt, model, width, height, seed });
 
@@ -503,6 +538,18 @@ Return ONLY a JSON array, no other text:
   }
 
   async generateVideo(prompt: string, model = 'stable-video', duration = 5) {
+    // Try HuggingFace first
+    try {
+      const hfProvider = new HuggingFaceProvider();
+      if (await hfProvider.isAvailable()) {
+        const result = await hfProvider.generateVideo({ prompt, model: 'ali-vilab/text-to-video-ms-1.7b', duration });
+        return { ...result, prompt, duration };
+      }
+    } catch (error: any) {
+      this.logger.warn(`HuggingFace video failed, falling back to Pollinations: ${error.message}`);
+    }
+
+    // Fallback to Pollinations
     const provider = await this.providerRegistry.getVideoProvider();
     const result = await provider.generateVideo({ prompt, model, duration });
 

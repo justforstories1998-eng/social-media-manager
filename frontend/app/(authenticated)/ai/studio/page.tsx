@@ -846,8 +846,8 @@ function VideoTab(props: MediaTabProps) {
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-white/40 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-white/50">
-                <div className="font-medium text-white/70 mb-1">Free Video Generation</div>
-                Videos are generated using Pollinations.ai — completely free, no API key required. Generation may take 30-60 seconds.
+                <div className="font-medium text-white/70 mb-1">AI Video Generation</div>
+                Videos are generated using HuggingFace Inference API (with Pollinations fallback). Generation may take 30-60 seconds.
               </div>
             </div>
           </div>
