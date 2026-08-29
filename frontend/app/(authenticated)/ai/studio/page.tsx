@@ -35,9 +35,9 @@ const typeOptions = [
 ];
 
 const imageModels = [
-  { id: 'black-forest-labs/FLUX.1-schnell-Free', name: 'FLUX.1 Schnell', description: 'Fast, high-quality image generation (free)' },
-  { id: 'black-forest-labs/FLUX.1-dev', name: 'FLUX.1 Dev', description: 'High-quality FLUX development model' },
-  { id: 'stabilityai/stable-diffusion-xl-base-1.0', name: 'Stable Diffusion XL', description: 'Photorealistic, strong composition' },
+  { id: 'flux', name: 'FLUX', description: 'High-quality image generation' },
+  { id: 'flux-realism', name: 'FLUX Realism', description: 'Photorealistic images' },
+  { id: 'flux-anime', name: 'FLUX Anime', description: 'Anime-style generation' },
 ];
 
 const sizePresets = [
@@ -49,9 +49,7 @@ const sizePresets = [
 ];
 
 const videoModels = [
-  { id: 'Wan-AI/Wan2.2-T2V-A14B', name: 'Wan 2.2 Text-to-Video', description: 'Best free text-to-video generation' },
-  { id: 'Wan-AI/Wan2.2-TI2V-5B', name: 'Wan 2.2 Text+Image-to-Video', description: 'Text + image to video' },
-  { id: 'Wan-AI/Wan2.2-I2V-A14B', name: 'Wan 2.2 Image-to-Video', description: 'Image to video generation' },
+  { id: 'stable-video', name: 'Stable Video', description: 'Text-to-video generation' },
 ];
 
 const durationOptions = [
@@ -368,7 +366,7 @@ function ImageTab(props: MediaTabProps) {
   const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [prompt, setPrompt] = useState(urlPrompt);
-  const [model, setModel] = useState('black-forest-labs/FLUX.1-schnell-Free');
+  const [model, setModel] = useState('flux');
   const [size, setSize] = useState(0);
   const [seed, setSeed] = useState<number | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -664,7 +662,7 @@ function VideoTab(props: MediaTabProps) {
   const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [prompt, setPrompt] = useState(urlPrompt);
-  const [model, setModel] = useState('Wan-AI/Wan2.2-T2V-A14B');
+  const [model, setModel] = useState('stable-video');
   const [duration, setDuration] = useState(5);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -846,7 +844,7 @@ function VideoTab(props: MediaTabProps) {
               <AlertCircle className="w-5 h-5 text-white/40 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-white/50">
                 <div className="font-medium text-white/70 mb-1">AI Video Generation</div>
-                Videos are generated using Together AI with Wan 2.2 models. Generation may take 30-120 seconds.
+                Videos are generated using Pollinations.ai — completely free, no API key required. Generation may take 30-60 seconds.
               </div>
             </div>
           </div>

@@ -6,39 +6,20 @@ export class HealthController {
   @Get('image-api')
   async testImageApi() {
     const results: any = {};
-    const apiKey = process.env.TOGETHER_API_KEY;
 
-    if (!apiKey) {
-      return { error: 'No TOGETHER_API_KEY set. Get one free at together.ai' };
-    }
-
-    // Test Together AI
+    // Test Pollinations.ai — no API key needed
     try {
       const start = Date.now();
-      const res = await axios.post(
-        'https://api.together.xyz/v1/images/generations',
-        {
-          model: 'black-forest-labs/FLUX.1-schnell-Free',
-          prompt: 'a blue circle on white background',
-          width: 512,
-          height: 512,
-          n: 1,
-          response_format: 'b64_json',
-        },
-        {
-          headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-          timeout: 60000,
-        }
-      );
-      const size = res.data?.data?.[0]?.b64_json?.length || 0;
-      results.together = { status: 'WORKING', ms: Date.now() - start, imageSize: size };
+      const res = await axios.get('https://image.pollinations.ai/prompt/a%20blue%20circle%20on%20white%20background?model=flux&width=256&height=256&nologo=true', {
+        timeout: 30000,
+        responseType: 'arraybuffer',
+      });
+      results.pollinations = { status: 'WORKING', ms: Date.now() - start, imageSize: res.data?.length || 0 };
     } catch (e: any) {
-      results.together = { status: 'failed', code: e.response?.status, error: String(e.response?.data?.error?.message || e.message || 'unknown').substring(0, 150) };
+      results.pollinations = { status: 'failed', error: String(e.message || 'unknown').substring(0, 100) };
     }
 
-    results.hasApiKey = !!apiKey;
-    results.keyPrefix = apiKey?.substring(0, 8) || 'none';
-
+    results.note = 'No API key required — completely free';
     return results;
   }
 }

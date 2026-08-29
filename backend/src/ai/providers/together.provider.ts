@@ -5,26 +5,21 @@ import axios from 'axios';
 
 @Injectable()
 export class TogetherProvider implements ImageProvider, VideoProvider {
-  name = 'together';
+  name = 'pollinations';
   private readonly logger = new Logger(TogetherProvider.name);
-  private apiKey: string;
-
-  constructor() {
-    this.apiKey = process.env.TOGETHER_API_KEY || '';
-  }
 
   private imageModels = [
-    { id: 'black-forest-labs/FLUX.1-schnell-Free', name: 'FLUX.1 Schnell', description: 'Fast, high-quality image generation (free)' },
-    { id: 'black-forest-labs/FLUX.1-dev', name: 'FLUX.1 Dev', description: 'High-quality FLUX development model' },
-    { id: 'stabilityai/stable-diffusion-xl-base-1.0', name: 'Stable Diffusion XL', description: 'Photorealistic, strong composition' },
+    { id: 'flux', name: 'FLUX', description: 'High-quality image generation' },
+    { id: 'flux-realism', name: 'FLUX Realism', description: 'Photorealistic images' },
+    { id: 'flux-anime', name: 'FLUX Anime', description: 'Anime-style generation' },
   ];
 
   private videoModels = [
-    { id: 'Wan-AI/Wan2.2-T2V-A14B', name: 'Wan 2.2 Text-to-Video', description: 'Best free text-to-video generation' },
+    { id: 'stable-video', name: 'Stable Video', description: 'Text-to-video generation' },
   ];
 
   async isAvailable(): Promise<boolean> {
-    return !!this.apiKey;
+    return true; // Always available — no API key needed
   }
 
   async generateImage(params: {
@@ -34,45 +29,18 @@ export class TogetherProvider implements ImageProvider, VideoProvider {
     height?: number;
     seed?: number;
   }): Promise<{ imageUrl: string; model: string; provider: string }> {
-    const { prompt, model = 'black-forest-labs/FLUX.1-schnell-Free', width = 1024, height = 1024 } = params;
-
-    if (!this.apiKey) {
-      throw new Error('TOGETHER_API_KEY is not set. Get one free at together.ai — $5 credit included.');
-    }
+    const { prompt, model = 'flux', width = 1024, height = 1024, seed } = params;
 
     const enhancedPrompt = this.enhancePrompt(prompt);
+    const encodedPrompt = encodeURIComponent(enhancedPrompt);
+    const seedParam = seed ? `&seed=${seed}` : `&seed=${Math.floor(Math.random() * 1000000)}`;
 
-    try {
-      this.logger.log(`Generating image with Together AI: ${model}`);
-      const response = await axios.post(
-        'https://api.together.xyz/v1/images/generations',
-        {
-          model,
-          prompt: enhancedPrompt,
-          width,
-          height,
-          n: 1,
-          response_format: 'b64_json',
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          timeout: 90000,
-        }
-      );
+    // Use pollinations.ai — completely free, no API key
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${model}&width=${width}&height=${height}${seedParam}&nologo=true&enhance=true`;
 
-      const b64 = response.data.data[0].b64_json;
-      const imageUrl = `data:image/png;base64,${b64}`;
+    this.logger.log(`Generated image URL: ${imageUrl.substring(0, 80)}...`);
 
-      this.logger.log(`Image generated successfully with ${model}`);
-      return { imageUrl, model, provider: 'together' };
-    } catch (error: any) {
-      const msg = error.response?.data?.error?.message || error.message;
-      this.logger.error(`Together AI image generation failed (${model}): ${msg}`);
-      throw new Error(`Image generation failed: ${msg}`);
-    }
+    return { imageUrl, model, provider: 'pollinations' };
   }
 
   async generateVideo(params: {
@@ -80,13 +48,14 @@ export class TogetherProvider implements ImageProvider, VideoProvider {
     model?: string;
     duration?: number;
   }): Promise<{ videoUrl: string; model: string; provider: string }> {
-    const { prompt } = params;
+    const { prompt, model = 'stable-video', duration = 5 } = params;
 
-    if (!this.apiKey) {
-      throw new Error('TOGETHER_API_KEY is not set.');
-    }
+    const enhancedPrompt = this.enhancePrompt(prompt);
+    const encodedPrompt = encodeURIComponent(enhancedPrompt);
 
-    throw new Error('Video generation not available on Together AI free tier.');
+    const videoUrl = `https://video.pollinations.ai/prompt/${encodedPrompt}?model=${model}&duration=${duration}`;
+
+    return { videoUrl, model, provider: 'pollinations' };
   }
 
   async generate(params: {
@@ -108,9 +77,9 @@ export class TogetherProvider implements ImageProvider, VideoProvider {
   }
 
   private enhancePrompt(prompt: string): string {
-    const qualityModifiers = ['masterpiece', 'best quality', 'highly detailed', 'professional', 'sharp focus', '8k'];
+    const qualityModifiers = ['masterpiece', 'best quality', 'highly detailed', 'professional', 'sharp focus', '8k', 'photorealistic', 'studio lighting'];
     const hasQuality = qualityModifiers.some(m => prompt.toLowerCase().includes(m.toLowerCase()));
     if (hasQuality) return prompt;
-    return `${prompt}, masterpiece, best quality, highly detailed, professional, sharp focus, cinematic lighting, vivid colors`;
+    return `${prompt}, masterpiece, best quality, highly detailed, professional photography, sharp focus, 8k resolution, studio lighting, cinematic, vivid colors, product photography`;
   }
 }

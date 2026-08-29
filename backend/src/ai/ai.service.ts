@@ -398,21 +398,14 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
   }
 
   async generateAdImage(prompt: string, width = 1024, height = 1024) {
-    const hfProvider = new TogetherProvider();
-    if (!await hfProvider.isAvailable()) {
-      throw new Error('TOGETHER_API_KEY is not set. Add it to Render env vars. Get one free at together.ai — $5 credit included.');
-    }
+    const provider = await this.providerRegistry.getImageProvider();
 
-    const models = [
-      'black-forest-labs/FLUX.1-schnell-Free',
-      'black-forest-labs/FLUX.1-dev',
-      'stabilityai/stable-diffusion-xl-base-1.0',
-    ];
+    const models = ['flux', 'flux-realism'];
     let lastError: any;
 
     for (const m of models) {
       try {
-        const result = await hfProvider.generateImage({ prompt, model: m, width, height });
+        const result = await provider.generate({ prompt, model: m, width, height });
         return { ...result, prompt };
       } catch (error: any) {
         lastError = error;
@@ -420,26 +413,19 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
       }
     }
 
-    throw lastError || new Error('All image generation models failed');
+    throw lastError || new Error('Image generation failed');
   }
 
   async generateImage(prompt: string, model = 'flux', width = 1024, height = 1024, seed?: number) {
-    const hfProvider = new TogetherProvider();
-    if (!await hfProvider.isAvailable()) {
-      throw new Error('TOGETHER_API_KEY is not set. Add it to Render env vars. Get one free at together.ai — $5 credit included.');
-    }
+    const provider = await this.providerRegistry.getImageProvider();
 
-    const models = [
-      'black-forest-labs/FLUX.1-schnell-Free',
-      'black-forest-labs/FLUX.1-dev',
-      'stabilityai/stable-diffusion-xl-base-1.0',
-    ];
+    const models = ['flux', 'flux-realism'];
     let lastError: any;
 
     for (const m of models) {
       try {
-        this.logger.log(`Trying image model: ${m}`);
-        const result = await hfProvider.generateImage({ prompt, model: m, width, height, seed });
+        this.logger.log(`Generating image with ${m}`);
+        const result = await provider.generate({ prompt, model: m, width, height, seed });
         this.logger.log(`Image generated successfully with ${m}`);
         return { ...result, prompt, width, height, seed: seed || Math.floor(Math.random() * 1000000) };
       } catch (error: any) {
@@ -448,7 +434,7 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
       }
     }
 
-    throw lastError || new Error('All image generation models failed');
+    throw lastError || new Error('Image generation failed');
   }
 
   async generateRecommendations(userId: string, date?: string) {
@@ -529,11 +515,8 @@ Return ONLY a JSON array, no other text:
   }
 
   async generateVideo(prompt: string, model = 'stable-video', duration = 5) {
-    const hfProvider = new TogetherProvider();
-    if (!await hfProvider.isAvailable()) {
-      throw new Error('Video generation requires TOGETHER_API_KEY. Get one free at together.ai');
-    }
-    const result = await hfProvider.generateVideo({ prompt, model: 'ali-vilab/text-to-video-ms-1.7b', duration });
+    const provider = await this.providerRegistry.getVideoProvider();
+    const result = await provider.generateVideo({ prompt, model, duration });
     return { ...result, prompt, duration };
   }
 }
