@@ -46,7 +46,7 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
 
     try {
       const response = await axios.post(
-        `https://api-inference.huggingface.co/models/${model}`,
+        `https://router.huggingface.co/hf-inference/models/${model}`,
         {
           inputs: enhancedPrompt,
           parameters: {
@@ -79,7 +79,7 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
         this.logger.warn(`Model ${model} is loading, waiting 30s and retrying...`);
         await new Promise(r => setTimeout(r, 30000));
         const retryRes = await axios.post(
-          `https://api-inference.huggingface.co/models/${model}`,
+          `https://router.huggingface.co/hf-inference/models/${model}`,
           { inputs: enhancedPrompt, parameters: { width, height } },
           {
             headers: { 'Authorization': `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
@@ -108,7 +108,7 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
 
     try {
       const response = await axios.post(
-        `https://api-inference.huggingface.co/models/${model}`,
+        `https://router.huggingface.co/hf-inference/models/${model}`,
         { inputs: prompt },
         {
           headers: {
@@ -133,7 +133,7 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
         this.logger.warn(`Video model ${model} is loading, waiting 60s and retrying...`);
         await new Promise(r => setTimeout(r, 60000));
         const retryRes = await axios.post(
-          `https://api-inference.huggingface.co/models/${model}`,
+          `https://router.huggingface.co/hf-inference/models/${model}`,
           { inputs: prompt },
           {
             headers: { 'Authorization': `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
