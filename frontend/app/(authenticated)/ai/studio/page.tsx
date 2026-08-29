@@ -35,9 +35,8 @@ const typeOptions = [
 ];
 
 const imageModels = [
-  { id: 'Qwen/Qwen-Image-2512', name: 'Qwen Image 2512', description: 'Best overall — high-quality images, text in images' },
-  { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell', description: 'Best lightweight — fast, good quality' },
-  { id: 'black-forest-labs/FLUX.2-klein-9B', name: 'FLUX.2 Klein 9B', description: 'Best newer option — modern FLUX quality' },
+  { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast, high-quality image generation' },
+  { id: 'stabilityai/stable-diffusion-xl-base-1.0', name: 'Stable Diffusion XL', description: 'Photorealistic, strong composition' },
 ];
 
 const sizePresets = [
@@ -368,7 +367,7 @@ function ImageTab(props: MediaTabProps) {
   const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [prompt, setPrompt] = useState(urlPrompt);
-  const [model, setModel] = useState('Qwen/Qwen-Image-2512');
+  const [model, setModel] = useState('black-forest-labs/FLUX.1-schnell');
   const [size, setSize] = useState(0);
   const [seed, setSeed] = useState<number | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);

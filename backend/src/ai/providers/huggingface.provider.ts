@@ -14,9 +14,9 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
   }
 
   private imageModels = [
-    { id: 'Qwen/Qwen-Image-2512', name: 'Qwen Image 2512', description: 'Best overall — high-quality general images, text in images' },
-    { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell', description: 'Best lightweight — fast generation, good quality' },
-    { id: 'black-forest-labs/FLUX.2-klein-9B', name: 'FLUX.2 Klein 9B', description: 'Best newer option — modern FLUX quality, smaller model' },
+    { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast, high-quality image generation' },
+    { id: 'stabilityai/stable-diffusion-xl-base-1.0', name: 'Stable Diffusion XL', description: 'Photorealistic, strong composition' },
+    { id: 'stabilityai/stable-diffusion-3-medium', name: 'SD3 Medium', description: 'Stable Diffusion 3 — latest architecture' },
   ];
 
   private videoModels = [
@@ -36,7 +36,7 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
     height?: number;
     seed?: number;
   }): Promise<{ imageUrl: string; model: string; provider: string }> {
-    const { prompt, model = 'Qwen/Qwen-Image-2512', width = 1024, height = 1024 } = params;
+    const { prompt, model = 'black-forest-labs/FLUX.1-schnell', width = 1024, height = 1024 } = params;
 
     if (!this.apiKey) {
       throw new Error('HuggingFace API key not configured. Set HUGGINGFACE_API_KEY environment variable.');
