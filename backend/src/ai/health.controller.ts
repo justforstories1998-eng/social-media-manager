@@ -6,25 +6,27 @@ export class HealthController {
   @Get('image-api')
   async testImageApi() {
     const results: any = {};
+    const apiKey = process.env.HUGGINGFACE_API_KEY;
 
-    const urls = [
-      { name: 'huggingface.co', url: 'https://huggingface.co' },
-      { name: 'router.huggingface.co', url: 'https://router.huggingface.co' },
-      { name: 'api-inference.huggingface.co', url: 'https://api-inference.huggingface.co' },
-    ];
-
-    for (const { name, url } of urls) {
+    // Test actual model inference on router.huggingface.co
+    if (apiKey) {
       try {
         const start = Date.now();
-        await axios.get(url, { timeout: 10000 });
-        results[name] = { status: 'reachable', ms: Date.now() - start };
+        const res = await axios.post(
+          'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell',
+          { inputs: 'a blue circle on white background' },
+          {
+            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            timeout: 60000,
+          }
+        );
+        results.routerModel = { status: 'success', ms: Date.now() - start, responseSize: res.data?.length || 0 };
       } catch (e: any) {
-        results[name] = { status: 'failed', error: e.message };
+        results.routerModel = { status: 'failed', error: e.response?.data?.error || e.message, code: e.response?.status };
       }
     }
 
-    results.hasHFApiKey = !!(process.env.HUGGINGFACE_API_KEY);
-    results.hfKeyPrefix = process.env.HUGGINGFACE_API_KEY?.substring(0, 6) || 'none';
+    results.hasHFApiKey = !!apiKey;
 
     return results;
   }
