@@ -400,14 +400,12 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
   async generateAdImage(prompt: string, width = 1024, height = 1024) {
     const hfProvider = new HuggingFaceProvider();
     if (!await hfProvider.isAvailable()) {
-      throw new Error('HUGGINGFACE_API_KEY is not set. Add it to Render env vars. Get one free at huggingface.co/settings/tokens');
+      throw new Error('TOGETHER_API_KEY is not set. Add it to Render env vars. Get one free at together.ai — $5 credit included.');
     }
 
     const models = [
-      'black-forest-labs/FLUX.1-schnell',
-      'Qwen/Qwen-Image-2512',
-      'lvladikov/Krea2-Turbo-Distill-4step-LoRA',
-      'Tongyi-MAI/Z-Image',
+      'black-forest-labs/FLUX.1-schnell-Free',
+      'black-forest-labs/FLUX.1-dev',
       'stabilityai/stable-diffusion-xl-base-1.0',
     ];
     let lastError: any;
@@ -428,14 +426,12 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
   async generateImage(prompt: string, model = 'flux', width = 1024, height = 1024, seed?: number) {
     const hfProvider = new HuggingFaceProvider();
     if (!await hfProvider.isAvailable()) {
-      throw new Error('HUGGINGFACE_API_KEY is not set. Add it to Render env vars. Get one free at huggingface.co/settings/tokens');
+      throw new Error('TOGETHER_API_KEY is not set. Add it to Render env vars. Get one free at together.ai — $5 credit included.');
     }
 
     const models = [
-      'black-forest-labs/FLUX.1-schnell',
-      'Qwen/Qwen-Image-2512',
-      'lvladikov/Krea2-Turbo-Distill-4step-LoRA',
-      'Tongyi-MAI/Z-Image',
+      'black-forest-labs/FLUX.1-schnell-Free',
+      'black-forest-labs/FLUX.1-dev',
       'stabilityai/stable-diffusion-xl-base-1.0',
     ];
     let lastError: any;

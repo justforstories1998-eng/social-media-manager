@@ -35,10 +35,8 @@ const typeOptions = [
 ];
 
 const imageModels = [
-  { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast, high-quality image generation' },
-  { id: 'Qwen/Qwen-Image-2512', name: 'Qwen Image 2512', description: 'High-quality images with text rendering' },
-  { id: 'lvladikov/Krea2-Turbo-Distill-4step-LoRA', name: 'Krea2 Turbo', description: 'Fast turbo model, 4-step generation' },
-  { id: 'Tongyi-MAI/Z-Image', name: 'Z-Image', description: 'Tongyi creative image generation' },
+  { id: 'black-forest-labs/FLUX.1-schnell-Free', name: 'FLUX.1 Schnell', description: 'Fast, high-quality image generation (free)' },
+  { id: 'black-forest-labs/FLUX.1-dev', name: 'FLUX.1 Dev', description: 'High-quality FLUX development model' },
   { id: 'stabilityai/stable-diffusion-xl-base-1.0', name: 'Stable Diffusion XL', description: 'Photorealistic, strong composition' },
 ];
 
@@ -370,7 +368,7 @@ function ImageTab(props: MediaTabProps) {
   const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [prompt, setPrompt] = useState(urlPrompt);
-  const [model, setModel] = useState('black-forest-labs/FLUX.1-schnell');
+  const [model, setModel] = useState('black-forest-labs/FLUX.1-schnell-Free');
   const [size, setSize] = useState(0);
   const [seed, setSeed] = useState<number | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);

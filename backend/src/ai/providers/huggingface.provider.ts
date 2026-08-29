@@ -5,41 +5,26 @@ import axios from 'axios';
 
 @Injectable()
 export class HuggingFaceProvider implements ImageProvider, VideoProvider {
-  name = 'huggingface';
+  name = 'together';
   private readonly logger = new Logger(HuggingFaceProvider.name);
   private apiKey: string;
-  private apiBase: string;
 
   constructor() {
-    this.apiKey = process.env.HUGGINGFACE_API_KEY || '';
-    this.apiBase = process.env.HUGGINGFACE_API_BASE || 'https://router.huggingface.co/hf-inference/models';
+    this.apiKey = process.env.TOGETHER_API_KEY || process.env.HUGGINGFACE_API_KEY || '';
   }
 
   private imageModels = [
-    { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast, high-quality image generation' },
-    { id: 'Qwen/Qwen-Image-2512', name: 'Qwen Image 2512', description: 'High-quality images with text rendering' },
-    { id: 'lvladikov/Krea2-Turbo-Distill-4step-LoRA', name: 'Krea2 Turbo', description: 'Fast turbo model, 4-step generation' },
-    { id: 'Tongyi-MAI/Z-Image', name: 'Z-Image', description: 'Tongyi creative image generation' },
+    { id: 'black-forest-labs/FLUX.1-schnell-Free', name: 'FLUX.1 Schnell', description: 'Fast, high-quality image generation (free)' },
+    { id: 'black-forest-labs/FLUX.1-dev', name: 'FLUX.1 Dev', description: 'High-quality FLUX development model' },
     { id: 'stabilityai/stable-diffusion-xl-base-1.0', name: 'Stable Diffusion XL', description: 'Photorealistic, strong composition' },
   ];
 
   private videoModels = [
     { id: 'Wan-AI/Wan2.2-T2V-A14B', name: 'Wan 2.2 Text-to-Video', description: 'Best free text-to-video generation' },
-    { id: 'Wan-AI/Wan2.2-TI2V-5B', name: 'Wan 2.2 Text+Image-to-Video', description: 'Text + image to video' },
-    { id: 'Wan-AI/Wan2.2-I2V-A14B', name: 'Wan 2.2 Image-to-Video', description: 'Image to video generation' },
   ];
 
   async isAvailable(): Promise<boolean> {
     return !!this.apiKey;
-  }
-
-  async testConnection(): Promise<{ ok: boolean; endpoint: string; error?: string }> {
-    try {
-      const res = await axios.get('https://huggingface.co/api/models?limit=1', { timeout: 10000 });
-      return { ok: true, endpoint: 'huggingface.co', error: undefined };
-    } catch (e: any) {
-      return { ok: false, endpoint: 'huggingface.co', error: e.message };
-    }
   }
 
   async generateImage(params: {
@@ -49,59 +34,45 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
     height?: number;
     seed?: number;
   }): Promise<{ imageUrl: string; model: string; provider: string }> {
-    const { prompt, model = 'black-forest-labs/FLUX.1-schnell', width = 1024, height = 1024 } = params;
+    const { prompt, model = 'black-forest-labs/FLUX.1-schnell-Free', width = 1024, height = 1024 } = params;
 
     if (!this.apiKey) {
-      throw new Error('HUGGINGFACE_API_KEY is not set.');
+      throw new Error('TOGETHER_API_KEY is not set. Get one free at together.ai — $5 credit included.');
     }
 
     const enhancedPrompt = this.enhancePrompt(prompt);
 
-    // Try multiple API base URLs
-    const endpoints = [
-      'https://router.huggingface.co/hf-inference/models',
-      'https://api-inference.huggingface.co/models',
-    ];
-
-    let lastError: any;
-    for (const baseUrl of endpoints) {
-      try {
-        this.logger.log(`Trying endpoint: ${baseUrl}/${model}`);
-        const response = await axios.post(
-          `${baseUrl}/${model}`,
-          {
-            inputs: enhancedPrompt,
-            parameters: {
-              width,
-              height,
-              num_inference_steps: this.getSteps(model),
-              guidance_scale: this.getGuidance(model),
-            },
+    try {
+      this.logger.log(`Generating image with Together AI: ${model}`);
+      const response = await axios.post(
+        'https://api.together.xyz/v1/images/generations',
+        {
+          model,
+          prompt: enhancedPrompt,
+          width,
+          height,
+          n: 1,
+          response_format: 'b64_json',
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
           },
-          {
-            headers: {
-              'Authorization': `Bearer ${this.apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            responseType: 'arraybuffer',
-            timeout: 90000,
-          }
-        );
-
-        if (response.status === 200) {
-          const base64 = Buffer.from(response.data).toString('base64');
-          const imageUrl = `data:image/png;base64,${base64}`;
-          this.logger.log(`Image generated successfully with ${model} via ${baseUrl}`);
-          return { imageUrl, model, provider: 'huggingface' };
+          timeout: 90000,
         }
-      } catch (error: any) {
-        lastError = error;
-        this.logger.warn(`Endpoint ${baseUrl} failed for ${model}: ${error.message}`);
-        continue;
-      }
-    }
+      );
 
-    throw lastError || new Error(`Failed to generate image with ${model}`);
+      const b64 = response.data.data[0].b64_json;
+      const imageUrl = `data:image/png;base64,${b64}`;
+
+      this.logger.log(`Image generated successfully with ${model}`);
+      return { imageUrl, model, provider: 'together' };
+    } catch (error: any) {
+      const msg = error.response?.data?.error?.message || error.message;
+      this.logger.error(`Together AI image generation failed (${model}): ${msg}`);
+      throw new Error(`Image generation failed: ${msg}`);
+    }
   }
 
   async generateVideo(params: {
@@ -109,48 +80,13 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
     model?: string;
     duration?: number;
   }): Promise<{ videoUrl: string; model: string; provider: string }> {
-    const { prompt, model = 'Wan-AI/Wan2.2-T2V-A14B' } = params;
+    const { prompt } = params;
 
     if (!this.apiKey) {
-      throw new Error('HUGGINGFACE_API_KEY is not set.');
+      throw new Error('TOGETHER_API_KEY is not set.');
     }
 
-    const endpoints = [
-      'https://router.huggingface.co/hf-inference/models',
-      'https://api-inference.huggingface.co/models',
-    ];
-
-    let lastError: any;
-    for (const baseUrl of endpoints) {
-      try {
-        this.logger.log(`Trying video endpoint: ${baseUrl}/${model}`);
-        const response = await axios.post(
-          `${baseUrl}/${model}`,
-          { inputs: prompt },
-          {
-            headers: {
-              'Authorization': `Bearer ${this.apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            responseType: 'arraybuffer',
-            timeout: 180000,
-          }
-        );
-
-        if (response.status === 200) {
-          const base64 = Buffer.from(response.data).toString('base64');
-          const videoUrl = `data:video/mp4;base64,${base64}`;
-          this.logger.log(`Video generated successfully with ${model}`);
-          return { videoUrl, model, provider: 'huggingface' };
-        }
-      } catch (error: any) {
-        lastError = error;
-        this.logger.warn(`Video endpoint ${baseUrl} failed: ${error.message}`);
-        continue;
-      }
-    }
-
-    throw lastError || new Error(`Failed to generate video with ${model}`);
+    throw new Error('Video generation not available on Together AI free tier. Try HuggingFace Wan 2.2 models instead.');
   }
 
   async generate(params: {
@@ -169,21 +105,6 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
 
   getVideoModels(): Array<{ id: string; name: string; description: string }> {
     return this.videoModels;
-  }
-
-  private getSteps(model: string): number {
-    if (model.includes('FLUX.1-schnell')) return 4;
-    if (model.includes('Krea2')) return 4;
-    if (model.includes('Qwen')) return 30;
-    if (model.includes('Z-Image')) return 25;
-    return 25;
-  }
-
-  private getGuidance(model: string): number {
-    if (model.includes('FLUX')) return 0.0;
-    if (model.includes('Krea2')) return 0.0;
-    if (model.includes('Qwen')) return 7.0;
-    return 7.5;
   }
 
   private enhancePrompt(prompt: string): string {
