@@ -14,13 +14,15 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
   }
 
   private imageModels = [
-    { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast, high-quality image generation' },
-    { id: 'stabilityai/stable-diffusion-xl-base-1.0', name: 'SDXL', description: 'Stable Diffusion XL — photorealistic' },
-    { id: 'stabilityai/stable-diffusion-3-medium', name: 'SD3 Medium', description: 'Stable Diffusion 3 — latest architecture' },
+    { id: 'Qwen/Qwen-Image-2512', name: 'Qwen Image 2512', description: 'Best overall — high-quality general images, text in images' },
+    { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell', description: 'Best lightweight — fast generation, good quality' },
+    { id: 'black-forest-labs/FLUX.2-klein-9B', name: 'FLUX.2 Klein 9B', description: 'Best newer option — modern FLUX quality, smaller model' },
   ];
 
   private videoModels = [
-    { id: 'ali-vilab/text-to-video-ms-1.7b', name: 'Text-to-Video', description: 'Text-to-video generation' },
+    { id: 'Wan-AI/Wan2.2-T2V-A14B', name: 'Wan 2.2 Text-to-Video', description: 'Best free text-to-video generation' },
+    { id: 'Wan-AI/Wan2.2-TI2V-5B', name: 'Wan 2.2 Text+Image-to-Video', description: 'Text + image to video' },
+    { id: 'Wan-AI/Wan2.2-I2V-A14B', name: 'Wan 2.2 Image-to-Video', description: 'Image to video generation' },
   ];
 
   async isAvailable(): Promise<boolean> {
@@ -34,7 +36,7 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
     height?: number;
     seed?: number;
   }): Promise<{ imageUrl: string; model: string; provider: string }> {
-    const { prompt, model = 'black-forest-labs/FLUX.1-schnell', width = 1024, height = 1024 } = params;
+    const { prompt, model = 'Qwen/Qwen-Image-2512', width = 1024, height = 1024 } = params;
 
     if (!this.apiKey) {
       throw new Error('HuggingFace API key not configured. Set HUGGINGFACE_API_KEY environment variable.');
@@ -50,8 +52,8 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
           parameters: {
             width,
             height,
-            num_inference_steps: model.includes('FLUX') ? 4 : 30,
-            guidance_scale: model.includes('FLUX') ? 0.0 : 7.5,
+            num_inference_steps: this.getSteps(model),
+            guidance_scale: this.getGuidance(model),
           },
         },
         {
@@ -60,7 +62,7 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
             'Content-Type': 'application/json',
           },
           responseType: 'arraybuffer',
-          timeout: 60000,
+          timeout: 90000,
         }
       );
 
@@ -70,19 +72,19 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
       return { imageUrl, model, provider: 'huggingface' };
     } catch (error: any) {
       const msg = error.response?.data?.error || error.message;
-      this.logger.error(`HuggingFace image generation failed: ${msg}`);
+      this.logger.error(`HuggingFace image generation failed (${model}): ${msg}`);
 
-      // If model is loading, wait and retry once
+      // If model is loading (cold start), wait and retry
       if (error.response?.status === 503) {
-        this.logger.warn('Model is loading, waiting 20s and retrying...');
-        await new Promise(r => setTimeout(r, 20000));
+        this.logger.warn(`Model ${model} is loading, waiting 30s and retrying...`);
+        await new Promise(r => setTimeout(r, 30000));
         const retryRes = await axios.post(
           `https://api-inference.huggingface.co/models/${model}`,
           { inputs: enhancedPrompt, parameters: { width, height } },
           {
             headers: { 'Authorization': `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
             responseType: 'arraybuffer',
-            timeout: 120000,
+            timeout: 180000,
           }
         );
         const base64 = Buffer.from(retryRes.data).toString('base64');
@@ -98,29 +100,53 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
     model?: string;
     duration?: number;
   }): Promise<{ videoUrl: string; model: string; provider: string }> {
-    const { prompt, model = 'ali-vilab/text-to-video-ms-1.7b' } = params;
+    const { prompt, model = 'Wan-AI/Wan2.2-T2V-A14B' } = params;
 
     if (!this.apiKey) {
-      throw new Error('HuggingFace API key not configured.');
+      throw new Error('HuggingFace API key not configured. Set HUGGINGFACE_API_KEY environment variable.');
     }
 
-    const response = await axios.post(
-      `https://api-inference.huggingface.co/models/${model}`,
-      { inputs: prompt },
-      {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        responseType: 'arraybuffer',
-        timeout: 120000,
+    try {
+      const response = await axios.post(
+        `https://api-inference.huggingface.co/models/${model}`,
+        { inputs: prompt },
+        {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          responseType: 'arraybuffer',
+          timeout: 180000,
+        }
+      );
+
+      const base64 = Buffer.from(response.data).toString('base64');
+      const videoUrl = `data:video/mp4;base64,${base64}`;
+
+      return { videoUrl, model, provider: 'huggingface' };
+    } catch (error: any) {
+      const msg = error.response?.data?.error || error.message;
+      this.logger.error(`HuggingFace video generation failed (${model}): ${msg}`);
+
+      // If model is loading, wait and retry
+      if (error.response?.status === 503) {
+        this.logger.warn(`Video model ${model} is loading, waiting 60s and retrying...`);
+        await new Promise(r => setTimeout(r, 60000));
+        const retryRes = await axios.post(
+          `https://api-inference.huggingface.co/models/${model}`,
+          { inputs: prompt },
+          {
+            headers: { 'Authorization': `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
+            responseType: 'arraybuffer',
+            timeout: 300000,
+          }
+        );
+        const base64 = Buffer.from(retryRes.data).toString('base64');
+        return { videoUrl: `data:video/mp4;base64,${base64}`, model, provider: 'huggingface' };
       }
-    );
 
-    const base64 = Buffer.from(response.data).toString('base64');
-    const videoUrl = `data:video/mp4;base64,${base64}`;
-
-    return { videoUrl, model, provider: 'huggingface' };
+      throw error;
+    }
   }
 
   async generate(params: {
@@ -139,6 +165,19 @@ export class HuggingFaceProvider implements ImageProvider, VideoProvider {
 
   getVideoModels(): Array<{ id: string; name: string; description: string }> {
     return this.videoModels;
+  }
+
+  private getSteps(model: string): number {
+    if (model.includes('FLUX.1-schnell')) return 4;
+    if (model.includes('FLUX.2')) return 8;
+    if (model.includes('Qwen')) return 30;
+    return 25;
+  }
+
+  private getGuidance(model: string): number {
+    if (model.includes('FLUX')) return 0.0;
+    if (model.includes('Qwen')) return 7.0;
+    return 7.5;
   }
 
   private enhancePrompt(prompt: string): string {

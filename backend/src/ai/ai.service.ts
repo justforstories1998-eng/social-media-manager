@@ -413,7 +413,7 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
     }
     const result = await hfProvider.generateImage({
       prompt,
-      model: 'black-forest-labs/FLUX.1-schnell',
+      model: 'Qwen/Qwen-Image-2512',
       width,
       height,
       seed,
