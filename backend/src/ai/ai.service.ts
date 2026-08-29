@@ -232,32 +232,43 @@ Respond with only the final image prompt.`;
 
   private async callOpenRouter(prompt: string, model: string): Promise<string> {
     if (!this.openrouterKey) {
-      throw new Error('OpenRouter API key not configured. Set OPENROUTER_API_KEY environment variable.');
+      throw new Error('OpenRouter API key not configured');
     }
-    try {
-      const response = await axios.post(
-        'https://openrouter.ai/api/v1/chat/completions',
-        {
-          model,
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.7,
-          max_tokens: 1000,
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.openrouterKey}`,
-            'HTTP-Referer': 'https://wondermedia.vercel.app',
-            'X-Title': 'WonderMedia',
-            'Content-Type': 'application/json',
+    const delays = [0, 1000, 2000];
+    let lastError: any;
+    for (const delay of delays) {
+      if (delay > 0) await new Promise(r => setTimeout(r, delay));
+      try {
+        const response = await axios.post(
+          'https://openrouter.ai/api/v1/chat/completions',
+          {
+            model,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.7,
+            max_tokens: 1000,
           },
-          timeout: 30000,
+          {
+            headers: {
+              'Authorization': `Bearer ${this.openrouterKey}`,
+              'HTTP-Referer': 'https://wondermedia.vercel.app',
+              'X-Title': 'WonderMedia',
+              'Content-Type': 'application/json',
+            },
+            timeout: 30000,
+          }
+        );
+        return response.data.choices[0].message.content;
+      } catch (error: any) {
+        lastError = error;
+        const status = error.response?.status;
+        if (status === 429 || status === 402) {
+          this.logger.warn(`OpenRouter rate limited (${status}), retrying...`);
+          continue;
         }
-      );
-      return response.data.choices[0].message.content;
-    } catch (error: any) {
-      this.logger.error(`OpenRouter API error: ${error.response?.status} ${error.response?.data?.error?.message || error.message}`);
-      throw new Error(`AI generation failed: ${error.response?.data?.error?.message || error.message}`);
+        throw error;
+      }
     }
+    throw lastError;
   }
 
   private buildPrompt(userPrompt: string, type: string): string {
