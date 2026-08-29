@@ -35,11 +35,9 @@ const typeOptions = [
 ];
 
 const imageModels = [
-  { id: 'flux', name: 'FLUX', description: 'Fast, photorealistic, versatile' },
-  { id: 'flux-realism', name: 'FLUX Realism', description: 'Hyper-photographic faces and products' },
-  { id: 'flux-anime', name: 'FLUX Anime', description: 'Stylised anime / illustration' },
-  { id: 'sdxl', name: 'Stable Diffusion XL', description: 'Classic, strong on composition' },
-  { id: 'sd3', name: 'Stable Diffusion 3', description: 'Best text rendering inside images' },
+  { id: 'Qwen/Qwen-Image-2512', name: 'Qwen Image 2512', description: 'Best overall — high-quality images, text in images' },
+  { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell', description: 'Best lightweight — fast, good quality' },
+  { id: 'black-forest-labs/FLUX.2-klein-9B', name: 'FLUX.2 Klein 9B', description: 'Best newer option — modern FLUX quality' },
 ];
 
 const sizePresets = [
@@ -51,8 +49,9 @@ const sizePresets = [
 ];
 
 const videoModels = [
-  { id: 'stable-video', name: 'Stable Video', description: 'Fast, general purpose video generation' },
-  { id: 'AnimateDiff', name: 'AnimateDiff', description: 'Smooth motion, good for characters' },
+  { id: 'Wan-AI/Wan2.2-T2V-A14B', name: 'Wan 2.2 Text-to-Video', description: 'Best free text-to-video generation' },
+  { id: 'Wan-AI/Wan2.2-TI2V-5B', name: 'Wan 2.2 Text+Image-to-Video', description: 'Text + image to video' },
+  { id: 'Wan-AI/Wan2.2-I2V-A14B', name: 'Wan 2.2 Image-to-Video', description: 'Image to video generation' },
 ];
 
 const durationOptions = [
@@ -369,7 +368,7 @@ function ImageTab(props: MediaTabProps) {
   const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [prompt, setPrompt] = useState(urlPrompt);
-  const [model, setModel] = useState('flux');
+  const [model, setModel] = useState('Qwen/Qwen-Image-2512');
   const [size, setSize] = useState(0);
   const [seed, setSeed] = useState<number | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -665,7 +664,7 @@ function VideoTab(props: MediaTabProps) {
   const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [prompt, setPrompt] = useState(urlPrompt);
-  const [model, setModel] = useState('stable-video');
+  const [model, setModel] = useState('Wan-AI/Wan2.2-T2V-A14B');
   const [duration, setDuration] = useState(5);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -847,7 +846,7 @@ function VideoTab(props: MediaTabProps) {
               <AlertCircle className="w-5 h-5 text-white/40 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-white/50">
                 <div className="font-medium text-white/70 mb-1">AI Video Generation</div>
-                Videos are generated using HuggingFace Inference API (with Pollinations fallback). Generation may take 30-60 seconds.
+                Videos are generated using HuggingFace Inference API with Wan 2.2 models. Generation may take 30-120 seconds.
               </div>
             </div>
           </div>
