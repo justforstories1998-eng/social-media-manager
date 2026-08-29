@@ -400,25 +400,46 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
   async generateAdImage(prompt: string, width = 1024, height = 1024) {
     const hfProvider = new HuggingFaceProvider();
     if (!await hfProvider.isAvailable()) {
-      throw new Error('Image generation requires HUGGINGFACE_API_KEY. Get one free at huggingface.co/settings/tokens');
+      throw new Error('HUGGINGFACE_API_KEY is not set. Add it to Render env vars. Get one free at huggingface.co/settings/tokens');
     }
-    const result = await hfProvider.generateImage({ prompt, width, height });
-    return { ...result, prompt };
+
+    const models = ['Qwen/Qwen-Image-2512', 'black-forest-labs/FLUX.1-schnell'];
+    let lastError: any;
+
+    for (const m of models) {
+      try {
+        const result = await hfProvider.generateImage({ prompt, model: m, width, height });
+        return { ...result, prompt };
+      } catch (error: any) {
+        lastError = error;
+        this.logger.warn(`Ad image model ${m} failed: ${error.message}`);
+      }
+    }
+
+    throw lastError || new Error('All image generation models failed');
   }
 
   async generateImage(prompt: string, model = 'flux', width = 1024, height = 1024, seed?: number) {
     const hfProvider = new HuggingFaceProvider();
     if (!await hfProvider.isAvailable()) {
-      throw new Error('Image generation requires HUGGINGFACE_API_KEY. Get one free at huggingface.co/settings/tokens');
+      throw new Error('HUGGINGFACE_API_KEY is not set. Add it to Render env vars. Get one free at huggingface.co/settings/tokens');
     }
-    const result = await hfProvider.generateImage({
-      prompt,
-      model: 'Qwen/Qwen-Image-2512',
-      width,
-      height,
-      seed,
-    });
-    return { ...result, prompt, width, height, seed: seed || Math.floor(Math.random() * 1000000) };
+
+    // Try Qwen first, fall back to FLUX.1-schnell
+    const models = ['Qwen/Qwen-Image-2512', 'black-forest-labs/FLUX.1-schnell'];
+    let lastError: any;
+
+    for (const m of models) {
+      try {
+        const result = await hfProvider.generateImage({ prompt, model: m, width, height, seed });
+        return { ...result, prompt, width, height, seed: seed || Math.floor(Math.random() * 1000000) };
+      } catch (error: any) {
+        lastError = error;
+        this.logger.warn(`Model ${m} failed: ${error.message}, trying next...`);
+      }
+    }
+
+    throw lastError || new Error('All image generation models failed');
   }
 
   async generateRecommendations(userId: string, date?: string) {

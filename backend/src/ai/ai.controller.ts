@@ -54,18 +54,19 @@ export class AIController {
     @Request() req: any,
     @Body() body: { prompt: string; model?: string; width?: number; height?: number; seed?: number; productId?: string },
   ) {
-    const generation = await this.aiGenerationService.create(req.user.id, {
-      productId: body.productId,
-      type: 'image',
-      prompt: body.prompt,
-      model: body.model,
-      provider: 'huggingface',
-      width: body.width,
-      height: body.height,
-      seed: body.seed,
-    });
-
+    let generation;
     try {
+      generation = await this.aiGenerationService.create(req.user.id, {
+        productId: body.productId,
+        type: 'image',
+        prompt: body.prompt,
+        model: body.model,
+        provider: 'huggingface',
+        width: body.width,
+        height: body.height,
+        seed: body.seed,
+      });
+
       await this.aiGenerationService.update(generation.id, req.user.id, { status: 'processing' });
       const result = await this.aiService.generateImage(body.prompt, body.model, body.width, body.height, body.seed);
 
@@ -76,11 +77,13 @@ export class AIController {
       });
 
       return { generation, result };
-    } catch (error) {
-      await this.aiGenerationService.update(generation.id, req.user.id, {
-        status: 'failed',
-        error: error.message,
-      });
+    } catch (error: any) {
+      if (generation) {
+        await this.aiGenerationService.update(generation.id, req.user.id, {
+          status: 'failed',
+          error: error.message,
+        }).catch(() => {});
+      }
       throw error;
     }
   }
