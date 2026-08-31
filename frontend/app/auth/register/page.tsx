@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, User, Mail, Lock, ArrowRight, Sparkles, CheckCircle, Star, Zap, Calendar, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function WonderMediaRegister() {
@@ -55,17 +55,17 @@ export default function WonderMediaRegister() {
 
   if (showSuccess) {
     return (
-      <div className="min-h-screen bg-[#0b0f14] flex items-center justify-center px-4 sm:px-6 font-sans overflow-hidden">
+      <div className="min-h-screen bg-[#000000] flex items-center justify-center px-4 sm:px-6 font-sans overflow-hidden">
         <div className="fixed inset-0 z-0">
           <div
             className="absolute inset-0"
             style={{
               background: `
-                radial-gradient(ellipse 80% 60% at 16% 20%, rgba(45,212,191,.55) 0%, transparent 60%),
-                radial-gradient(ellipse 70% 55% at 86% 26%, rgba(232,121,249,.50) 0%, transparent 60%),
-                radial-gradient(ellipse 65% 50% at 64% 90%, rgba(45,212,191,.30) 0%, transparent 60%),
-                radial-gradient(ellipse 60% 45% at 30% 82%, rgba(232,121,249,.26) 0%, transparent 60%),
-                radial-gradient(ellipse 55% 40% at 78% 70%, rgba(94,234,212,.22) 0%, transparent 60%)
+                radial-gradient(ellipse 80% 60% at 16% 20%, rgba(124,58,237,.55) 0%, transparent 60%),
+                radial-gradient(ellipse 70% 55% at 86% 26%, rgba(236,72,153,.50) 0%, transparent 60%),
+                radial-gradient(ellipse 65% 50% at 64% 90%, rgba(124,58,237,.30) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 45% at 30% 82%, rgba(236,72,153,.26) 0%, transparent 60%),
+                radial-gradient(ellipse 55% 40% at 78% 70%, rgba(124,58,237,.22) 0%, transparent 60%)
               `,
               filter: 'blur(42px) saturate(155%)',
               animation: 'drift 22s ease-in-out infinite alternate',
@@ -83,17 +83,17 @@ export default function WonderMediaRegister() {
           }}
         >
           <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(45,212,191,.15)' }}>
-              <CheckCircle className="w-10 h-10 text-[#2dd4bf]" />
+            <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(124,58,237,.15)' }}>
+              <CheckCircle className="w-10 h-10 text-[#7c3aed]" />
             </div>
           </div>
           <div className="font-display text-2xl font-bold text-white mb-2">Account Created!</div>
-          <p className="text-slate-400 text-sm mb-6">Welcome to WonderMedia. Redirecting to your dashboard...</p>
+          <p className="text-white/50 text-sm mb-6">Welcome to WonderMedia. Redirecting to your dashboard...</p>
           <div className="flex justify-center">
             <div className="w-48 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,.1)' }}>
               <div
                 className="h-full rounded-full animate-[shrink_2s_linear]"
-                style={{ background: 'linear-gradient(90deg, #2dd4bf, #e879f9)' }}
+                style={{ background: 'linear-gradient(90deg, #7c3aed, #ec4899)' }}
               />
             </div>
           </div>
@@ -106,18 +106,18 @@ export default function WonderMediaRegister() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0f14] flex flex-col font-sans overflow-hidden">
+    <div className="min-h-screen bg-[#000000] flex flex-col font-sans overflow-hidden">
       {/* Aurora Background */}
       <div className="fixed inset-0 z-0">
         <div
           className="absolute inset-0"
           style={{
             background: `
-              radial-gradient(ellipse 80% 60% at 16% 20%, rgba(45,212,191,.55) 0%, transparent 60%),
-              radial-gradient(ellipse 70% 55% at 86% 26%, rgba(232,121,249,.50) 0%, transparent 60%),
-              radial-gradient(ellipse 65% 50% at 64% 90%, rgba(45,212,191,.30) 0%, transparent 60%),
-              radial-gradient(ellipse 60% 45% at 30% 82%, rgba(232,121,249,.26) 0%, transparent 60%),
-              radial-gradient(ellipse 55% 40% at 78% 70%, rgba(94,234,212,.22) 0%, transparent 60%)
+              radial-gradient(ellipse 80% 60% at 16% 20%, rgba(124,58,237,.55) 0%, transparent 60%),
+              radial-gradient(ellipse 70% 55% at 86% 26%, rgba(236,72,153,.50) 0%, transparent 60%),
+              radial-gradient(ellipse 65% 50% at 64% 90%, rgba(124,58,237,.30) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 45% at 30% 82%, rgba(236,72,153,.26) 0%, transparent 60%),
+              radial-gradient(ellipse 55% 40% at 78% 70%, rgba(124,58,237,.22) 0%, transparent 60%)
             `,
             filter: 'blur(42px) saturate(155%)',
             animation: 'drift 22s ease-in-out infinite alternate',
@@ -134,98 +134,52 @@ export default function WonderMediaRegister() {
       />
 
       {/* Nav */}
-      <nav className="fixed top-0 inset-x-0 z-50" style={{ background: 'rgba(11,15,20,.55)', backdropFilter: 'blur(16px) saturate(140%)', borderBottom: '1px solid rgba(255,255,255,.10)' }}>
-        <div className="mx-auto max-w-7xl px-6 lg:px-10 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(105deg, #2dd4bf, #5eead4 35%, #e879f9)' }}>
-              <Sparkles className="w-5 h-5 text-[#0b0f14]" />
-            </div>
-            <span className="font-display font-bold text-lg tracking-tight text-white">WonderMedia</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/auth/login" className="text-sm text-slate-300 hover:text-white transition-colors hidden sm:block">
-              Sign in
-            </Link>
-            <Link
-              href="/auth/register"
-              className="text-sm font-medium text-white px-4 py-2 rounded-full border border-white/15 hover:bg-white/10 transition-colors"
-            >
-              Start free
-            </Link>
-          </div>
-        </div>
+      <nav className="fixed top-0 inset-x-0 z-50 h-16 flex items-center px-6 lg:px-10" style={{ background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(16px) saturate(140%)', borderBottom: '1px solid rgba(255,255,255,.10)' }}>
+        <Link href="/" className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          Back to home
+        </Link>
       </nav>
 
-      {/* Hero */}
-      <main className="relative z-10 flex-1 flex items-center pt-28 pb-20 px-6">
-        <div className="mx-auto w-full max-w-6xl grid lg:grid-cols-2 gap-14 lg:gap-10 items-center">
+      {/* Main Content */}
+      <main className="relative z-10 flex-1 flex items-center justify-center pt-16 pb-10 px-6">
+        <div className="w-full max-w-5xl grid lg:grid-cols-2 gap-14 lg:gap-10 items-center">
           {/* LEFT — Marketing Pitch */}
-          <div className="max-w-lg mx-auto lg:mx-0 text-center lg:text-left">
-            {/* Trial Pill */}
-            <div className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 mb-8" style={{ background: 'rgba(45,212,191,.1)', border: '1px solid rgba(45,212,191,.2)' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2dd4bf] animate-pulse" />
-              <span className="text-xs font-medium text-[#2dd4bf]/90">14-day Pro trial &middot; no card</span>
+          <div className="max-w-md mx-auto lg:mx-0 text-center lg:text-left">
+            <div className="flex items-center gap-3 justify-center lg:justify-start mb-6">
+              <img src="/logo.jpg" alt="WonderMedia" className="w-11 h-11 rounded-2xl object-cover" />
+              <span className="font-semibold text-2xl tracking-tight">WonderMedia</span>
             </div>
 
-            {/* Headline */}
-            <h1 className="font-display font-bold text-white text-[2.6rem] leading-[1.05] sm:text-5xl lg:text-[3.4rem] tracking-tight">
+            <h1 className="font-display font-bold text-white text-[2.4rem] leading-[1.08] sm:text-5xl tracking-tight">
               Your social media on{' '}
-              <span
-                className="bg-clip-text text-transparent"
-                style={{ backgroundImage: 'linear-gradient(100deg, #5eead4, #2dd4bf 30%, #e879f9)' }}
-              >
+              <span className="bg-gradient-to-r from-[#7c3aed] via-[#ec4899] to-[#7c3aed] bg-clip-text text-transparent">
                 autopilot.
               </span>
             </h1>
 
-            {/* Lead Paragraph */}
-            <p className="mt-5 text-slate-400 text-base sm:text-lg leading-relaxed">
-              Create stunning posts, schedule weeks of content, and grow your audience with AI that knows your brand inside out. Join 57,000 creators already using WonderMedia.
+            <p className="mt-5 text-white/50 text-base sm:text-lg leading-relaxed">
+              Create stunning posts, schedule weeks of content, and grow your audience with AI that knows your brand inside out.
             </p>
 
-            {/* Benefits */}
             <div className="mt-8 space-y-3.5">
               {[
-                { icon: <Zap className="w-4 h-4" />, text: 'AI-generated posts, captions, and hashtags' },
-                { icon: <Calendar className="w-4 h-4" />, text: 'Smart scheduling across Instagram, Twitter, LinkedIn' },
-                { icon: <BarChart3 className="w-4 h-4" />, text: 'Performance analytics and growth insights' },
+                { text: 'AI-generated posts, captions, and hashtags' },
+                { text: 'Smart scheduling across all platforms' },
+                { text: 'Analytics and insights to grow your audience' },
               ].map((benefit, i) => (
-                <div key={i} className="flex items-center gap-3 text-sm text-slate-300">
-                  <CheckCircle className="w-4 h-4 text-[#2dd4bf] flex-shrink-0" />
+                <div key={i} className="flex items-center gap-3 text-sm text-white/70">
+                  <CheckCircle className="w-4 h-4 text-[#7c3aed] flex-shrink-0" />
                   <span>{benefit.text}</span>
                 </div>
               ))}
-            </div>
-
-            {/* Social Proof */}
-            <div className="mt-10 flex items-center gap-4 justify-center lg:justify-start">
-              <div className="flex -space-x-2.5">
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className="h-8 w-8 rounded-full ring-2 ring-[#0b0f14] flex items-center justify-center text-xs font-semibold text-white"
-                    style={{
-                      background: i === 1 ? 'linear-gradient(135deg, #2dd4bf, #2dd4bf)' :
-                                  i === 2 ? 'linear-gradient(135deg, #e879f9, #f472b6)' :
-                                  i === 3 ? 'linear-gradient(135deg, #38bdf8, #2dd4bf)' :
-                                  'linear-gradient(135deg, #f472b6, #e879f9)',
-                    }}
-                  >
-                    {['A', 'M', 'K', 'S'][i - 1]}
-                  </div>
-                ))}
-              </div>
-              <div className="text-xs text-slate-400">
-                <Star className="w-3.5 h-3.5 text-amber-300 inline mr-1" />
-                <span className="font-bold text-slate-300">4.9</span> from 2,300+ social media managers
-              </div>
             </div>
           </div>
 
           {/* RIGHT — Auth Card */}
           <div className="w-full max-w-md mx-auto">
             <div
-              className="relative rounded-3xl p-7 sm:p-9"
+              className="relative rounded-3xl p-8 sm:p-9"
               style={{
                 background: 'linear-gradient(155deg, rgba(255,255,255,.11), rgba(255,255,255,.025))',
                 backdropFilter: 'blur(26px) saturate(130%)',
@@ -237,7 +191,7 @@ export default function WonderMediaRegister() {
               <div
                 className="absolute inset-0 rounded-3xl pointer-events-none"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(45,212,191,.55), rgba(232,121,249,.45), transparent)',
+                  background: 'linear-gradient(135deg, rgba(124,58,237,.55), rgba(236,72,153,.45), transparent)',
                   WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
                   WebkitMaskComposite: 'xor',
                   maskComposite: 'exclude',
@@ -262,7 +216,7 @@ export default function WonderMediaRegister() {
                   <h2 className="font-display font-bold text-2xl sm:text-[1.7rem] text-white tracking-tight">
                     Create your account
                   </h2>
-                  <p className="text-sm text-slate-400 mt-1">Start building in under a minute.</p>
+                  <p className="text-sm text-white/50 mt-1">Start building in under a minute.</p>
                 </div>
 
                 {error && (
@@ -275,23 +229,22 @@ export default function WonderMediaRegister() {
                 <form className="space-y-4" onSubmit={handleSubmit}>
                   {/* Name */}
                   <div className="relative group">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#2dd4bf] transition-colors" />
                     <input
                       type="text"
                       value={form.name}
                       onChange={(e) => setForm({...form, name: e.target.value})}
-                      className="w-full rounded-xl h-12 pl-11 pr-4 text-sm text-slate-100 placeholder:text-slate-400/40 focus:outline-none transition-all"
+                      className="w-full rounded-xl h-12 px-4 text-sm text-white placeholder:text-white/30 focus:outline-none transition-all"
                       style={{
-                        background: 'rgba(255,255,255,.045)',
+                        background: 'rgba(255,255,255,.05)',
                         border: '1px solid rgba(255,255,255,.10)',
                       }}
                       onFocus={(e) => {
-                        e.currentTarget.style.background = 'rgba(45,212,191,.06)';
-                        e.currentTarget.style.borderColor = 'rgba(45,212,191,.65)';
-                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(45,212,191,.14), 0 0 28px rgba(45,212,191,.22)';
+                        e.currentTarget.style.background = 'rgba(124,58,237,.06)';
+                        e.currentTarget.style.borderColor = 'rgba(124,58,237,.65)';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(124,58,237,.14), 0 0 28px rgba(124,58,237,.22)';
                       }}
                       onBlur={(e) => {
-                        e.currentTarget.style.background = 'rgba(255,255,255,.045)';
+                        e.currentTarget.style.background = 'rgba(255,255,255,.05)';
                         e.currentTarget.style.borderColor = 'rgba(255,255,255,.10)';
                         e.currentTarget.style.boxShadow = 'none';
                       }}
@@ -302,23 +255,22 @@ export default function WonderMediaRegister() {
 
                   {/* Email */}
                   <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#2dd4bf] transition-colors" />
                     <input
                       type="email"
                       value={form.email}
                       onChange={(e) => setForm({...form, email: e.target.value})}
-                      className="w-full rounded-xl h-12 pl-11 pr-4 text-sm text-slate-100 placeholder:text-slate-400/40 focus:outline-none transition-all"
+                      className="w-full rounded-xl h-12 px-4 text-sm text-white placeholder:text-white/30 focus:outline-none transition-all"
                       style={{
-                        background: 'rgba(255,255,255,.045)',
+                        background: 'rgba(255,255,255,.05)',
                         border: '1px solid rgba(255,255,255,.10)',
                       }}
                       onFocus={(e) => {
-                        e.currentTarget.style.background = 'rgba(45,212,191,.06)';
-                        e.currentTarget.style.borderColor = 'rgba(45,212,191,.65)';
-                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(45,212,191,.14), 0 0 28px rgba(45,212,191,.22)';
+                        e.currentTarget.style.background = 'rgba(124,58,237,.06)';
+                        e.currentTarget.style.borderColor = 'rgba(124,58,237,.65)';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(124,58,237,.14), 0 0 28px rgba(124,58,237,.22)';
                       }}
                       onBlur={(e) => {
-                        e.currentTarget.style.background = 'rgba(255,255,255,.045)';
+                        e.currentTarget.style.background = 'rgba(255,255,255,.05)';
                         e.currentTarget.style.borderColor = 'rgba(255,255,255,.10)';
                         e.currentTarget.style.boxShadow = 'none';
                       }}
@@ -329,23 +281,22 @@ export default function WonderMediaRegister() {
 
                   {/* Password */}
                   <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#2dd4bf] transition-colors" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={form.password}
                       onChange={(e) => setForm({...form, password: e.target.value})}
-                      className="w-full rounded-xl h-12 pl-11 pr-16 text-sm text-slate-100 placeholder:text-slate-400/40 focus:outline-none transition-all"
+                      className="w-full rounded-xl h-12 px-4 pr-16 text-sm text-white placeholder:text-white/30 focus:outline-none transition-all"
                       style={{
-                        background: 'rgba(255,255,255,.045)',
+                        background: 'rgba(255,255,255,.05)',
                         border: '1px solid rgba(255,255,255,.10)',
                       }}
                       onFocus={(e) => {
-                        e.currentTarget.style.background = 'rgba(45,212,191,.06)';
-                        e.currentTarget.style.borderColor = 'rgba(45,212,191,.65)';
-                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(45,212,191,.14), 0 0 28px rgba(45,212,191,.22)';
+                        e.currentTarget.style.background = 'rgba(124,58,237,.06)';
+                        e.currentTarget.style.borderColor = 'rgba(124,58,237,.65)';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(124,58,237,.14), 0 0 28px rgba(124,58,237,.22)';
                       }}
                       onBlur={(e) => {
-                        e.currentTarget.style.background = 'rgba(255,255,255,.045)';
+                        e.currentTarget.style.background = 'rgba(255,255,255,.05)';
                         e.currentTarget.style.borderColor = 'rgba(255,255,255,.10)';
                         e.currentTarget.style.boxShadow = 'none';
                       }}
@@ -356,7 +307,7 @@ export default function WonderMediaRegister() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#2dd4bf] hover:text-[#e879f9] transition-colors"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#7c3aed] hover:text-[#ec4899] transition-colors"
                     >
                       {showPassword ? 'Hide' : 'Show'}
                     </button>
@@ -370,11 +321,11 @@ export default function WonderMediaRegister() {
                           key={i}
                           className="flex-1 h-1 rounded-full transition-all duration-300"
                           style={{
-                            background: i < passwordStrength ? '#2dd4bf' : 'rgba(255,255,255,.10)',
+                            background: i < passwordStrength ? '#7c3aed' : 'rgba(255,255,255,.10)',
                           }}
                         />
                       ))}
-                      <span className="text-xs text-slate-400 ml-2 min-w-[50px]">
+                      <span className="text-xs text-white/50 ml-2 min-w-[50px]">
                         {strengthLabels[passwordStrength - 1] || 'Weak'}
                       </span>
                     </div>
@@ -386,28 +337,27 @@ export default function WonderMediaRegister() {
                     disabled={loading}
                     className="w-full rounded-xl h-12 mt-2 font-semibold text-sm flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 hover:brightness-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                     style={{
-                      background: 'linear-gradient(105deg, #2dd4bf, #5eead4 35%, #e879f9)',
-                      color: '#0b0f14',
-                      boxShadow: '0 4px 20px rgba(45,212,191,.3), 0 4px 20px rgba(232,121,249,.2)',
+                      background: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)',
+                      color: '#ffffff',
+                      boxShadow: '0 4px 20px rgba(124,58,237,.4)',
                     }}
                   >
                     {loading ? 'Creating account...' : 'Create account'}
-                    {!loading && <ArrowRight className="w-4 h-4" />}
                   </button>
                 </form>
 
                 {/* Legal */}
-                <p className="text-center mt-5 text-xs text-slate-500">
+                <p className="text-center mt-5 text-xs text-white/40">
                   By signing up you agree to our{' '}
-                  <Link href="#" className="text-slate-300 hover:text-[#2dd4bf] underline transition-colors">Terms</Link>
+                  <Link href="#" className="text-white/60 hover:text-white underline transition-colors">Terms</Link>
                   {' '}and{' '}
-                  <Link href="#" className="text-slate-300 hover:text-[#2dd4bf] underline transition-colors">Privacy Policy</Link>.
+                  <Link href="#" className="text-white/60 hover:text-white underline transition-colors">Privacy Policy</Link>.
                 </p>
 
                 {/* Footer */}
-                <div className="text-center mt-5 text-sm text-slate-400">
+                <div className="text-center mt-5 text-sm text-white/50">
                   Already have an account?{' '}
-                  <Link href="/auth/login" className="font-semibold bg-clip-text text-transparent hover:opacity-80 transition-opacity" style={{ backgroundImage: 'linear-gradient(100deg, #5eead4, #2dd4bf 30%, #e879f9)' }}>
+                  <Link href="/auth/login" className="font-semibold bg-clip-text text-transparent hover:opacity-80 transition-opacity" style={{ backgroundImage: 'linear-gradient(135deg, #7c3aed, #ec4899)' }}>
                     Sign in
                   </Link>
                 </div>
@@ -416,29 +366,6 @@ export default function WonderMediaRegister() {
           </div>
         </div>
       </main>
-
-      {/* Trust Strip */}
-      <section className="relative z-10 border-t border-white/10" style={{ background: 'rgba(255,255,255,.015)' }}>
-        <div className="mx-auto max-w-6xl px-6 py-10">
-          <p className="text-center text-xs uppercase tracking-[0.25em] text-slate-500 mb-8">
-            Trusted by teams shipping fast
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 opacity-70">
-            {[
-              { name: 'ContentPro', icon: <Sparkles className="w-5 h-5" /> },
-              { name: 'SocialFlow', icon: <Zap className="w-5 h-5" /> },
-              { name: 'BrandSync', icon: <BarChart3 className="w-5 h-5" /> },
-              { name: 'PostCraft', icon: <Calendar className="w-5 h-5" /> },
-              { name: 'ReachHQ', icon: <Star className="w-5 h-5" /> },
-            ].map((brand) => (
-              <div key={brand.name} className="flex items-center gap-2 text-slate-300">
-                <span className="text-[#2dd4bf]">{brand.icon}</span>
-                <span className="font-display font-semibold text-lg">{brand.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Aurora Keyframes */}
       <style jsx global>{`
@@ -449,7 +376,7 @@ export default function WonderMediaRegister() {
         }
 
         body {
-          background: #0b0f14;
+          background: #000000;
         }
 
         .font-sans {
