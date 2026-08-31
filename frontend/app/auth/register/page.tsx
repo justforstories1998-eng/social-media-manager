@@ -346,14 +346,6 @@ export default function WonderMediaRegister() {
                   </button>
                 </form>
 
-                {/* Legal */}
-                <p className="text-center mt-5 text-xs text-white/40">
-                  By signing up you agree to our{' '}
-                  <Link href="#" className="text-white/60 hover:text-white underline transition-colors">Terms</Link>
-                  {' '}and{' '}
-                  <Link href="#" className="text-white/60 hover:text-white underline transition-colors">Privacy Policy</Link>.
-                </p>
-
                 {/* Footer */}
                 <div className="text-center mt-5 text-sm text-white/50">
                   Already have an account?{' '}
