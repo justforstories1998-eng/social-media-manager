@@ -1,294 +1,290 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
-import {
-  ArrowLeft, Package, TrendingUp, DollarSign, Percent, ShoppingCart,
-  Plus, Loader2, X, RefreshCw, AlertTriangle, Edit3,
-} from 'lucide-react';
-import { trackerApi, type TrackerProduct, type Sale, type StockMovement } from '@/lib/api';
-import { getUploadUrl } from '@/lib/api';
-import { toast } from 'sonner';
+import { ArrowLeft, Package, TrendingUp, DollarSign, ShoppingCart, Layers, AlertTriangle, Edit, Plus, Minus, Loader2 } from 'lucide-react';
+import { api, getUploadUrl, type TrackerProduct, type Sale, type StockMovement } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
 
-export default function TrackerDetailPage() {
-  const router = useRouter();
+export default function TrackerProductDetail() {
   const params = useParams();
   const id = params.id as string;
-
   const [product, setProduct] = useState<TrackerProduct | null>(null);
   const [sales, setSales] = useState<Sale[]>([]);
   const [stockHistory, setStockHistory] = useState<StockMovement[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'sales' | 'stock'>('sales');
+
+  // Modals
   const [showSaleModal, setShowSaleModal] = useState(false);
   const [showStockModal, setShowStockModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [saleForm, setSaleForm] = useState({ quantity: 1, unitPrice: 0, customerName: '', notes: '' });
+  const [stockForm, setStockForm] = useState({ quantity: 0, notes: '', purchasePrice: 0 });
+  const [editForm, setEditForm] = useState({ sellingPrice: 0, lowStockThreshold: 10, supplierName: '', notes: '' });
   const [submitting, setSubmitting] = useState(false);
-  const [saleForm, setSaleForm] = useState({ quantity: '1', unitPrice: '', customerName: '', notes: '' });
-  const [stockForm, setStockForm] = useState({ quantity: '', notes: '', purchasePrice: '' });
-  const [editForm, setEditForm] = useState({ sellingPrice: '', lowStockThreshold: '', supplierName: '', notes: '' });
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  useEffect(() => {
+    if (id) loadData();
+  }, [id]);
+
+  const loadData = async () => {
+    setLoading(true);
     try {
       const [prodRes, salesRes, stockRes] = await Promise.all([
-        trackerApi.getOne(id),
-        trackerApi.getSales(id),
-        trackerApi.getStockHistory(id),
+        api.get<TrackerProduct>(`/tracker/${id}`),
+        api.get<Sale[]>(`/tracker/${id}/sales`),
+        api.get<StockMovement[]>(`/tracker/${id}/stock`),
       ]);
       setProduct(prodRes.data);
       setSales(salesRes.data);
       setStockHistory(stockRes.data);
       setEditForm({
-        sellingPrice: String(prodRes.data.sellingPrice || ''),
-        lowStockThreshold: String(prodRes.data.lowStockThreshold || 10),
+        sellingPrice: prodRes.data.sellingPrice || 0,
+        lowStockThreshold: prodRes.data.lowStockThreshold || 10,
         supplierName: prodRes.data.supplierName || '',
         notes: prodRes.data.notes || '',
       });
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load product data');
+    } catch (err) {
+      console.error('Failed to load tracker product', err);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [id]);
-
-  useEffect(() => { loadData(); }, [loadData]);
+  };
 
   const handleRecordSale = async () => {
-    if (!product || !saleForm.quantity) return;
+    if (!product || submitting) return;
     setSubmitting(true);
     try {
-      await trackerApi.recordSale({
+      await api.post('/tracker/sale', {
         trackerProductId: product.id,
-        quantity: parseInt(saleForm.quantity),
-        unitPrice: parseFloat(saleForm.unitPrice) || product.sellingPrice || 0,
+        quantity: saleForm.quantity,
+        unitPrice: saleForm.unitPrice || product.sellingPrice || 0,
         customerName: saleForm.customerName || undefined,
         notes: saleForm.notes || undefined,
       });
-      toast.success('Sale recorded!');
       setShowSaleModal(false);
-      setSaleForm({ quantity: '1', unitPrice: '', customerName: '', notes: '' });
+      setSaleForm({ quantity: 1, unitPrice: 0, customerName: '', notes: '' });
       loadData();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to record sale');
+      alert(err.response?.data?.message || 'Failed to record sale');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleAddStock = async () => {
-    if (!product || !stockForm.quantity) return;
+    if (!product || submitting) return;
     setSubmitting(true);
     try {
-      await trackerApi.addStock({
+      await api.post('/tracker/stock', {
         trackerProductId: product.id,
-        quantity: parseInt(stockForm.quantity),
+        type: 'restock',
+        quantity: stockForm.quantity,
         notes: stockForm.notes || undefined,
-        purchasePrice: parseFloat(stockForm.purchasePrice) || undefined,
       });
-      toast.success('Stock added!');
+      if (stockForm.purchasePrice && stockForm.purchasePrice > 0) {
+        await api.put(`/tracker/${product.id}`, { purchasePrice: stockForm.purchasePrice });
+      }
       setShowStockModal(false);
-      setStockForm({ quantity: '', notes: '', purchasePrice: '' });
+      setStockForm({ quantity: 0, notes: '', purchasePrice: 0 });
       loadData();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to add stock');
+      alert(err.response?.data?.message || 'Failed to add stock');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleUpdateSettings = async () => {
-    if (!product) return;
+  const handleEditSettings = async () => {
+    if (!product || submitting) return;
     setSubmitting(true);
     try {
-      await trackerApi.update(product.id, {
-        sellingPrice: parseFloat(editForm.sellingPrice) || undefined,
-        lowStockThreshold: parseInt(editForm.lowStockThreshold) || 10,
-        supplierName: editForm.supplierName || undefined,
-        notes: editForm.notes || undefined,
-      } as any);
-      toast.success('Settings updated!');
+      await api.put(`/tracker/${product.id}`, editForm);
       setShowEditModal(false);
       loadData();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to update settings');
+      alert(err.response?.data?.message || 'Failed to update');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'in_stock': return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
-      case 'low_stock': return 'text-amber-400 bg-amber-400/10 border-amber-400/20';
-      case 'out_of_stock': return 'text-red-400 bg-red-400/10 border-red-400/20';
-      default: return 'text-white/50 bg-white/5 border-white/10';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'in_stock': return 'In Stock';
-      case 'low_stock': return 'Low Stock';
-      case 'out_of_stock': return 'Out of Stock';
-      default: return status;
-    }
-  };
-
-  const profitMargin = product && product.totalRevenue > 0
-    ? ((product.profit / product.totalRevenue) * 100).toFixed(1)
-    : '0.0';
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="floating-shell mx-auto ring-1 ring-white/10">
-        <div className="p-8 flex flex-col items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 text-[#7c3aed] animate-spin mb-4" />
-          <div className="text-white/50">Loading product data...</div>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 text-[#7c3aed] animate-spin" />
       </div>
     );
   }
 
-  if (error || !product) {
+  if (!product) {
     return (
-      <div className="floating-shell mx-auto ring-1 ring-white/10">
-        <div className="p-8 flex flex-col items-center justify-center min-h-[60vh]">
-          <AlertTriangle className="w-8 h-8 text-red-400 mb-4" />
-          <div className="text-white/70 mb-2">{error || 'Product not found'}</div>
-          <button onClick={() => router.push('/tracker')} className="mt-4 flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-sm text-white/70">
-            <ArrowLeft className="w-4 h-4" /> Back to Tracker
-          </button>
-        </div>
+      <div className="text-center py-20">
+        <Package className="w-12 h-12 text-white/20 mx-auto mb-4" />
+        <div className="text-white/50 text-lg">Product not found</div>
+        <Link href="/tracker" className="text-[#7c3aed] text-sm mt-4 inline-block hover:underline">Back to Tracker</Link>
       </div>
     );
   }
+
+  const p = product;
+  const profit = p.profit || 0;
+  const margin = p.totalRevenue > 0 ? ((profit / p.totalRevenue) * 100).toFixed(1) : '0';
+
+  const stats = [
+    { label: 'Current Stock', value: p.currentStock, icon: Layers, color: p.currentStock <= 0 ? '#ef4444' : p.currentStock <= (p.lowStockThreshold || 10) ? '#f59e0b' : '#7c3aed' },
+    { label: 'Units Sold', value: p.totalSold, icon: ShoppingCart, color: '#ec4899' },
+    { label: 'Revenue', value: `$${(p.totalRevenue || 0).toFixed(2)}`, icon: DollarSign, color: '#7c3aed' },
+    { label: 'Total Cost', value: `$${(p.totalCost || 0).toFixed(2)}`, icon: TrendingUp, color: '#ec4899' },
+    { label: 'Profit', value: `$${profit.toFixed(2)}`, icon: DollarSign, color: profit >= 0 ? '#10b981' : '#ef4444' },
+    { label: 'Margin', value: `${margin}%`, icon: TrendingUp, color: parseFloat(margin) >= 0 ? '#10b981' : '#ef4444' },
+  ];
 
   return (
-    <div className="floating-shell mx-auto ring-1 ring-white/10">
-      <div className="px-4 sm:px-8 h-20 flex items-center justify-between border-b border-white/10">
-        <button onClick={() => router.push('/tracker')} className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm">
-          <ArrowLeft className="w-4 h-4" /> Back to Tracker
-        </button>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowEditModal(true)} className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-sm">
-            <Edit3 className="w-4 h-4" /> <span className="hidden sm:inline">Edit</span>
-          </button>
-          <button onClick={() => { setSaleForm({ ...saleForm, unitPrice: String(product.sellingPrice || '') }); setShowSaleModal(true); }} className="neon-button flex items-center gap-2 text-sm">
-            <ShoppingCart className="w-4 h-4" /> <span className="hidden sm:inline">Record Sale</span>
-          </button>
-          <button onClick={() => setShowStockModal(true)} className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-sm">
-            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Add Stock</span>
-          </button>
-        </div>
-      </div>
+    <div className="max-w-6xl mx-auto">
+      {/* Back */}
+      <Link href="/tracker" className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors mb-6">
+        <ArrowLeft className="w-4 h-4" /> Back to Tracker
+      </Link>
 
-      <div className="px-4 sm:px-8 pt-8 pb-6 flex flex-col sm:flex-row items-start gap-6">
-        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-white/5 flex items-center justify-center flex-shrink-0">
-          {product.product.images?.[0] || product.product.imageUrl ? (
-            <img src={getUploadUrl(product.product.images?.[0] || product.product.imageUrl || '')} alt={product.product.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="text-4xl">{product.product.emoji || '📦'}</div>
-          )}
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="text-3xl sm:text-4xl font-semibold tracking-[-1px]">{product.product.name}</div>
-            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(product.status)}`}>
-              {getStatusLabel(product.status)}
-            </span>
+      {/* Product Header */}
+      <div className="glass p-6 sm:p-8 rounded-[2rem] border border-white/10 mb-6">
+        <div className="flex flex-col sm:flex-row gap-6 items-start">
+          {/* Image */}
+          <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl overflow-hidden bg-white/5 shrink-0">
+            {p.product?.images?.[0] ? (
+              <img src={getUploadUrl(p.product.images[0])} alt={p.product.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-3xl">{p.product?.emoji || '📦'}</div>
+            )}
           </div>
-          <div className="text-white/50 text-sm">{product.product.category}{product.sku ? ` • SKU: ${product.sku}` : ''}</div>
-          {product.supplierName && <div className="text-white/40 text-xs mt-1">Supplier: {product.supplierName}</div>}
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="font-semibold text-xl sm:text-2xl text-white tracking-tight">{p.product?.name || 'Unknown Product'}</h1>
+                <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-white/50">
+                  {p.sku && <span className="px-2 py-0.5 rounded bg-white/5 text-xs">SKU: {p.sku}</span>}
+                  {p.product?.category && <span className="px-2 py-0.5 rounded bg-white/5 text-xs">{p.product.category}</span>}
+                </div>
+              </div>
+
+              {/* Status Badge */}
+              <span
+                className="px-3 py-1 rounded-full text-xs font-medium shrink-0"
+                style={{
+                  background: p.status === 'in_stock' ? 'rgba(16,185,129,.15)' : p.status === 'low_stock' ? 'rgba(245,158,11,.15)' : 'rgba(239,68,68,.15)',
+                  color: p.status === 'in_stock' ? '#10b981' : p.status === 'low_stock' ? '#f59e0b' : '#ef4444',
+                }}
+              >
+                {p.status === 'in_stock' ? 'In Stock' : p.status === 'low_stock' ? 'Low Stock' : 'Out of Stock'}
+              </span>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="mt-4 text-sm text-white/50">
+              <span>Selling: ${p.sellingPrice || 0}</span>
+              <span className="mx-2">·</span>
+              <span>Purchase: ${p.purchasePrice || 0}</span>
+              {p.supplierName && <><span className="mx-2">·</span><span>Supplier: {p.supplierName}</span></>}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              <button
+                onClick={() => { setSaleForm({ ...saleForm, unitPrice: p.sellingPrice || 0 }); setShowSaleModal(true); }}
+                className="px-4 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors"
+                style={{ background: 'rgba(124,58,237,.15)', color: '#7c3aed' }}
+              >
+                <ShoppingCart className="w-3.5 h-3.5" /> Record Sale
+              </button>
+              <button
+                onClick={() => setShowStockModal(true)}
+                className="px-4 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors"
+                style={{ background: 'rgba(16,185,129,.15)', color: '#10b981' }}
+              >
+                <Plus className="w-3.5 h-3.5" /> Add Stock
+              </button>
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="px-4 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors"
+                style={{ background: 'rgba(255,255,255,.06)', color: 'rgba(255,255,255,.6)' }}
+              >
+                <Edit className="w-3.5 h-3.5" /> Settings
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="px-4 sm:px-8 pb-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {[
-          { label: 'CURRENT STOCK', value: product.currentStock, color: product.status === 'out_of_stock' ? 'text-red-400' : '' },
-          { label: 'UNITS SOLD', value: product.totalSold, color: '' },
-          { label: 'TOTAL REVENUE', value: `$${product.totalRevenue.toLocaleString()}`, color: '' },
-          { label: 'TOTAL COST', value: `$${product.totalCost.toLocaleString()}`, color: '' },
-          { label: 'PROFIT', value: `$${product.profit.toLocaleString()}`, color: product.profit >= 0 ? 'text-emerald-400' : 'text-red-400' },
-          { label: 'PROFIT MARGIN', value: `${profitMargin}%`, color: parseFloat(profitMargin) >= 0 ? 'text-emerald-400' : 'text-red-400' },
-        ].map((stat, i) => (
-          <div key={i} className="glass p-4 rounded-2xl border border-white/10">
-            <div className="text-[10px] font-mono tracking-[1.5px] text-white/50 mb-2">{stat.label}</div>
-            <div className={`text-xl sm:text-2xl font-semibold tracking-tight ${stat.color}`}>{stat.value}</div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        {stats.map((s) => (
+          <div key={s.label} className="glass p-4 rounded-2xl border border-white/10">
+            <s.icon className="w-4 h-4 mb-2" style={{ color: s.color }} />
+            <div className="text-lg font-semibold text-white">{s.value}</div>
+            <div className="text-[11px] text-white/40 mt-0.5">{s.label}</div>
           </div>
         ))}
       </div>
 
-      <div className="px-4 sm:px-8 pb-8">
-        <div className="glass rounded-2xl border border-white/10 overflow-hidden">
-          <div className="p-5 border-b border-white/10">
-            <div className="font-mono text-xs tracking-[2px] text-white/50">SALES HISTORY</div>
-          </div>
-          {sales.length === 0 ? (
-            <div className="p-8 text-center text-white/40 text-sm">No sales recorded yet.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left p-4 font-mono text-[10px] tracking-[1.5px] text-white/50">DATE</th>
-                    <th className="text-right p-4 font-mono text-[10px] tracking-[1.5px] text-white/50">QTY</th>
-                    <th className="text-right p-4 font-mono text-[10px] tracking-[1.5px] text-white/50 hidden sm:table-cell">UNIT PRICE</th>
-                    <th className="text-right p-4 font-mono text-[10px] tracking-[1.5px] text-white/50">TOTAL</th>
-                    <th className="text-left p-4 font-mono text-[10px] tracking-[1.5px] text-white/50 hidden md:table-cell">CUSTOMER</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sales.map((sale) => (
-                    <tr key={sale.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                      <td className="p-4 text-white/60">{new Date(sale.saleDate).toLocaleDateString()}</td>
-                      <td className="p-4 text-right font-medium">{sale.quantity}</td>
-                      <td className="p-4 text-right text-white/60 hidden sm:table-cell">${sale.unitPrice.toFixed(2)}</td>
-                      <td className="p-4 text-right font-medium">${sale.totalPrice.toLocaleString()}</td>
-                      <td className="p-4 text-white/50 hidden md:table-cell">{sale.customerName || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-1 mb-4 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,.04)' }}>
+        {(['sales', 'stock'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            style={{
+              background: activeTab === tab ? 'rgba(124,58,237,.15)' : 'transparent',
+              color: activeTab === tab ? '#7c3aed' : 'rgba(255,255,255,.5)',
+            }}
+          >
+            {tab === 'sales' ? `Sales History (${sales.length})` : `Stock Movements (${stockHistory.length})`}
+          </button>
+        ))}
       </div>
 
-      <div className="px-4 sm:px-8 pb-12">
+      {/* Sales History */}
+      {activeTab === 'sales' && (
         <div className="glass rounded-2xl border border-white/10 overflow-hidden">
-          <div className="p-5 border-b border-white/10">
-            <div className="font-mono text-xs tracking-[2px] text-white/50">STOCK MOVEMENTS</div>
-          </div>
-          {stockHistory.length === 0 ? (
-            <div className="p-8 text-center text-white/40 text-sm">No stock movements recorded.</div>
+          {sales.length === 0 ? (
+            <div className="py-12 text-center text-white/30 text-sm">No sales recorded yet</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="text-left p-4 font-mono text-[10px] tracking-[1.5px] text-white/50">DATE</th>
-                    <th className="text-left p-4 font-mono text-[10px] tracking-[1.5px] text-white/50">TYPE</th>
-                    <th className="text-right p-4 font-mono text-[10px] tracking-[1.5px] text-white/50">QUANTITY</th>
-                    <th className="text-left p-4 font-mono text-[10px] tracking-[1.5px] text-white/50 hidden md:table-cell">NOTES</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium text-xs">Date</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium text-xs">Qty</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium text-xs">Unit Price</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium text-xs">Total</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium text-xs">Customer</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium text-xs">Type</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {stockHistory.map((movement) => (
-                    <tr key={movement.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                      <td className="p-4 text-white/60">{new Date(movement.createdAt).toLocaleDateString()}</td>
-                      <td className="p-4">
-                        <span className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-medium border ${
-                          movement.type === 'sale' ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20'
-                        }`}>
-                          {movement.type === 'sale' ? 'Sale' : 'Added'}
+                  {sales.map((s) => (
+                    <tr key={s.id} className="border-b border-white/5 hover:bg-white/[.02]">
+                      <td className="px-4 py-3 text-white/70">{new Date(s.saleDate).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-white/70">{s.quantity}</td>
+                      <td className="px-4 py-3 text-white/70">${Number(s.unitPrice).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-white font-medium">${Number(s.totalPrice).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-white/50">{s.customerName || '—'}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full"
+                          style={{
+                            background: s.isReturn ? 'rgba(239,68,68,.15)' : 'rgba(124,58,237,.15)',
+                            color: s.isReturn ? '#ef4444' : '#7c3aed',
+                          }}
+                        >
+                          {s.isReturn ? 'Return' : 'Sale'}
                         </span>
                       </td>
-                      <td className={`p-4 text-right font-medium ${movement.type === 'sale' ? 'text-red-400' : 'text-emerald-400'}`}>
-                        {movement.type === 'sale' ? '-' : '+'}{movement.quantity}
-                      </td>
-                      <td className="p-4 text-white/50 hidden md:table-cell">{movement.notes || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -296,182 +292,141 @@ export default function TrackerDetailPage() {
             </div>
           )}
         </div>
-      </div>
+      )}
 
+      {/* Stock History */}
+      {activeTab === 'stock' && (
+        <div className="glass rounded-2xl border border-white/10 overflow-hidden">
+          {stockHistory.length === 0 ? (
+            <div className="py-12 text-center text-white/30 text-sm">No stock movements yet</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="text-left px-4 py-3 text-white/40 font-medium text-xs">Date</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium text-xs">Type</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium text-xs">Quantity</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium text-xs">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stockHistory.map((m) => (
+                    <tr key={m.id} className="border-b border-white/5 hover:bg-white/[.02]">
+                      <td className="px-4 py-3 text-white/70">{new Date(m.createdAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full capitalize"
+                          style={{
+                            background: m.quantity > 0 ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.15)',
+                            color: m.quantity > 0 ? '#10b981' : '#ef4444',
+                          }}
+                        >
+                          {m.type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-medium" style={{ color: m.quantity > 0 ? '#10b981' : '#ef4444' }}>
+                        {m.quantity > 0 ? '+' : ''}{m.quantity}
+                      </td>
+                      <td className="px-4 py-3 text-white/50">{m.notes || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Record Sale Modal */}
       {showSaleModal && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowSaleModal(false)}>
-          <div className="bg-[#0c0c0c] p-6 sm:p-8 rounded-[2rem] max-w-md w-full max-h-[90vh] overflow-y-auto border border-white/10" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,.7)' }}>
+          <div className="glass w-full max-w-md p-6 rounded-2xl border border-white/10">
+            <h3 className="font-semibold text-lg mb-4">Record Sale — {p.product?.name}</h3>
+            <div className="space-y-3">
               <div>
-                <div className="font-mono text-xs tracking-[3px] text-white/50">RECORD SALE</div>
-                <div className="text-2xl font-semibold tracking-tight mt-1">{product.product.name}</div>
-              </div>
-              <button onClick={() => setShowSaleModal(false)} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">QUANTITY</label>
-                <input
-                  value={saleForm.quantity}
-                  onChange={e => setSaleForm({ ...saleForm, quantity: e.target.value })}
-                  type="number"
-                  min="1"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors text-sm"
-                />
+                <label className="text-xs text-white/50 mb-1 block">Quantity</label>
+                <input type="number" min={1} value={saleForm.quantity} onChange={(e) => setSaleForm({ ...saleForm, quantity: parseInt(e.target.value) || 1 })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm" />
               </div>
               <div>
-                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">UNIT PRICE ($)</label>
-                <input
-                  value={saleForm.unitPrice}
-                  onChange={e => setSaleForm({ ...saleForm, unitPrice: e.target.value })}
-                  type="number"
-                  step="0.01"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors text-sm"
-                />
+                <label className="text-xs text-white/50 mb-1 block">Unit Price ($)</label>
+                <input type="number" step={0.01} min={0} value={saleForm.unitPrice} onChange={(e) => setSaleForm({ ...saleForm, unitPrice: parseFloat(e.target.value) || 0 })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm" />
               </div>
               <div>
-                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">CUSTOMER NAME</label>
-                <input
-                  value={saleForm.customerName}
-                  onChange={e => setSaleForm({ ...saleForm, customerName: e.target.value })}
-                  placeholder="Optional"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors text-sm"
-                />
+                <label className="text-xs text-white/50 mb-1 block">Customer Name (optional)</label>
+                <input type="text" value={saleForm.customerName} onChange={(e) => setSaleForm({ ...saleForm, customerName: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm" placeholder="Customer name" />
               </div>
               <div>
-                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">NOTES</label>
-                <textarea
-                  value={saleForm.notes}
-                  onChange={e => setSaleForm({ ...saleForm, notes: e.target.value })}
-                  placeholder="Optional"
-                  className="w-full h-20 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors text-sm resize-none"
-                />
+                <label className="text-xs text-white/50 mb-1 block">Notes (optional)</label>
+                <input type="text" value={saleForm.notes} onChange={(e) => setSaleForm({ ...saleForm, notes: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm" placeholder="Notes" />
               </div>
             </div>
-            <div className="flex gap-3 mt-8">
-              <button onClick={() => setShowSaleModal(false)} className="flex-1 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors text-sm">Cancel</button>
-              <button
-                onClick={handleRecordSale}
-                disabled={submitting || !saleForm.quantity}
-                className="neon-button flex-1"
-              >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Record Sale'}
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setShowSaleModal(false)} className="flex-1 py-2.5 rounded-xl text-sm border border-white/10 hover:bg-white/5 transition-colors">Cancel</button>
+              <button onClick={handleRecordSale} disabled={submitting || saleForm.quantity < 1} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #7c3aed, #ec4899)' }}>
+                {submitting ? 'Recording...' : 'Record Sale'}
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Add Stock Modal */}
       {showStockModal && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowStockModal(false)}>
-          <div className="bg-[#0c0c0c] p-6 sm:p-8 rounded-[2rem] max-w-md w-full max-h-[90vh] overflow-y-auto border border-white/10" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,.7)' }}>
+          <div className="glass w-full max-w-md p-6 rounded-2xl border border-white/10">
+            <h3 className="font-semibold text-lg mb-4">Add Stock — {p.product?.name}</h3>
+            <div className="space-y-3">
               <div>
-                <div className="font-mono text-xs tracking-[3px] text-white/50">ADD STOCK</div>
-                <div className="text-2xl font-semibold tracking-tight mt-1">{product.product.name}</div>
-              </div>
-              <button onClick={() => setShowStockModal(false)} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">QUANTITY</label>
-                <input
-                  value={stockForm.quantity}
-                  onChange={e => setStockForm({ ...stockForm, quantity: e.target.value })}
-                  type="number"
-                  min="1"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors text-sm"
-                />
+                <label className="text-xs text-white/50 mb-1 block">Quantity to Add</label>
+                <input type="number" min={1} value={stockForm.quantity} onChange={(e) => setStockForm({ ...stockForm, quantity: parseInt(e.target.value) || 0 })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm" />
               </div>
               <div>
-                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">PURCHASE PRICE ($)</label>
-                <input
-                  value={stockForm.purchasePrice}
-                  onChange={e => setStockForm({ ...stockForm, purchasePrice: e.target.value })}
-                  type="number"
-                  step="0.01"
-                  placeholder="Optional"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors text-sm"
-                />
+                <label className="text-xs text-white/50 mb-1 block">Purchase Price per Unit ($)</label>
+                <input type="number" step={0.01} min={0} value={stockForm.purchasePrice} onChange={(e) => setStockForm({ ...stockForm, purchasePrice: parseFloat(e.target.value) || 0 })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm" />
               </div>
               <div>
-                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">NOTES</label>
-                <textarea
-                  value={stockForm.notes}
-                  onChange={e => setStockForm({ ...stockForm, notes: e.target.value })}
-                  placeholder="Optional"
-                  className="w-full h-20 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors text-sm resize-none"
-                />
+                <label className="text-xs text-white/50 mb-1 block">Notes (optional)</label>
+                <input type="text" value={stockForm.notes} onChange={(e) => setStockForm({ ...stockForm, notes: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm" placeholder="Notes" />
               </div>
             </div>
-            <div className="flex gap-3 mt-8">
-              <button onClick={() => setShowStockModal(false)} className="flex-1 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors text-sm">Cancel</button>
-              <button
-                onClick={handleAddStock}
-                disabled={submitting || !stockForm.quantity}
-                className="neon-button flex-1"
-              >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Add Stock'}
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setShowStockModal(false)} className="flex-1 py-2.5 rounded-xl text-sm border border-white/10 hover:bg-white/5 transition-colors">Cancel</button>
+              <button onClick={handleAddStock} disabled={submitting || stockForm.quantity < 1} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
+                {submitting ? 'Adding...' : 'Add Stock'}
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Edit Settings Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => setShowEditModal(false)}>
-          <div className="bg-[#0c0c0c] p-6 sm:p-8 rounded-[2rem] max-w-md w-full max-h-[90vh] overflow-y-auto border border-white/10" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,.7)' }}>
+          <div className="glass w-full max-w-md p-6 rounded-2xl border border-white/10">
+            <h3 className="font-semibold text-lg mb-4">Tracker Settings — {p.product?.name}</h3>
+            <div className="space-y-3">
               <div>
-                <div className="font-mono text-xs tracking-[3px] text-white/50">TRACKER SETTINGS</div>
-                <div className="text-2xl font-semibold tracking-tight mt-1">{product.product.name}</div>
-              </div>
-              <button onClick={() => setShowEditModal(false)} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">SELLING PRICE ($)</label>
-                <input
-                  value={editForm.sellingPrice}
-                  onChange={e => setEditForm({ ...editForm, sellingPrice: e.target.value })}
-                  type="number"
-                  step="0.01"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors text-sm"
-                />
+                <label className="text-xs text-white/50 mb-1 block">Selling Price ($)</label>
+                <input type="number" step={0.01} min={0} value={editForm.sellingPrice} onChange={(e) => setEditForm({ ...editForm, sellingPrice: parseFloat(e.target.value) || 0 })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm" />
               </div>
               <div>
-                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">LOW STOCK THRESHOLD</label>
-                <input
-                  value={editForm.lowStockThreshold}
-                  onChange={e => setEditForm({ ...editForm, lowStockThreshold: e.target.value })}
-                  type="number"
-                  min="0"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors text-sm"
-                />
+                <label className="text-xs text-white/50 mb-1 block">Low Stock Threshold</label>
+                <input type="number" min={0} value={editForm.lowStockThreshold} onChange={(e) => setEditForm({ ...editForm, lowStockThreshold: parseInt(e.target.value) || 0 })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm" />
               </div>
               <div>
-                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">SUPPLIER NAME</label>
-                <input
-                  value={editForm.supplierName}
-                  onChange={e => setEditForm({ ...editForm, supplierName: e.target.value })}
-                  placeholder="Optional"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors text-sm"
-                />
+                <label className="text-xs text-white/50 mb-1 block">Supplier Name</label>
+                <input type="text" value={editForm.supplierName} onChange={(e) => setEditForm({ ...editForm, supplierName: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm" placeholder="Supplier name" />
               </div>
               <div>
-                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">NOTES</label>
-                <textarea
-                  value={editForm.notes}
-                  onChange={e => setEditForm({ ...editForm, notes: e.target.value })}
-                  placeholder="Optional"
-                  className="w-full h-20 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors text-sm resize-none"
-                />
+                <label className="text-xs text-white/50 mb-1 block">Notes</label>
+                <input type="text" value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm" placeholder="Notes" />
               </div>
             </div>
-            <div className="flex gap-3 mt-8">
-              <button onClick={() => setShowEditModal(false)} className="flex-1 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors text-sm">Cancel</button>
-              <button onClick={handleUpdateSettings} disabled={submitting} className="neon-button flex-1">
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Save Changes'}
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setShowEditModal(false)} className="flex-1 py-2.5 rounded-xl text-sm border border-white/10 hover:bg-white/5 transition-colors">Cancel</button>
+              <button onClick={handleEditSettings} disabled={submitting} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #7c3aed, #ec4899)' }}>
+                {submitting ? 'Saving...' : 'Save Settings'}
               </button>
             </div>
           </div>
