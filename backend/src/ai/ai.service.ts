@@ -397,16 +397,30 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
     }
   }
 
-  async generateAdImage(prompt: string, width = 1024, height = 1024) {
+  async generateAdImage(prompt: string, width = 1024, height = 1024, productData?: { name: string; description?: string; category?: string; imageUrl?: string; features?: string[] }) {
     const provider = await this.providerRegistry.getImageProvider();
+
+    let enrichedPrompt = prompt;
+    if (productData) {
+      const productContext = [
+        `PRODUCT REFERENCE: The exact product to feature is "${productData.name}"`,
+        productData.category ? `Category: ${productData.category}` : '',
+        productData.description ? `Description: ${productData.description}` : '',
+        productData.features?.length ? `Key features: ${productData.features.join(', ')}` : '',
+        productData.imageUrl ? `Product image reference: ${productData.imageUrl}` : '',
+        'IMPORTANT: The generated ad MUST show this exact product with accurate colors, shape, branding, and design. The product appearance must match the reference exactly.',
+        `Ad concept: ${prompt}`,
+      ].filter(Boolean).join('\n');
+      enrichedPrompt = productContext;
+    }
 
     const models = ['flux', 'flux-realism'];
     let lastError: any;
 
     for (const m of models) {
       try {
-        const result = await provider.generate({ prompt, model: m, width, height });
-        return { ...result, prompt };
+        const result = await provider.generate({ prompt: enrichedPrompt, model: m, width, height });
+        return { ...result, prompt: enrichedPrompt };
       } catch (error: any) {
         lastError = error;
         this.logger.warn(`Ad image model ${m} failed: ${error.message}`);
@@ -416,18 +430,33 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
     throw lastError || new Error('Image generation failed');
   }
 
-  async generateImage(prompt: string, model = 'flux', width = 1024, height = 1024, seed?: number) {
+  async generateImage(prompt: string, model = 'flux', width = 1024, height = 1024, seed?: number, productData?: { name: string; description?: string; category?: string; imageUrl?: string; features?: string[] }) {
     const provider = await this.providerRegistry.getImageProvider();
+
+    let enrichedPrompt = prompt;
+    if (productData) {
+      const productContext = [
+        `PRODUCT REFERENCE: The exact product to feature is "${productData.name}"`,
+        productData.category ? `Category: ${productData.category}` : '',
+        productData.description ? `Description: ${productData.description}` : '',
+        productData.features?.length ? `Key features: ${productData.features.join(', ')}` : '',
+        productData.imageUrl ? `Product image reference: ${productData.imageUrl}` : '',
+        'IMPORTANT: The generated image MUST show this exact product with accurate colors, shape, branding, and design. The product appearance must match the reference exactly.',
+        `Scene: ${prompt}`,
+      ].filter(Boolean).join('\n');
+      enrichedPrompt = productContext;
+    }
+
+    this.logger.log(`Generating image with prompt: ${enrichedPrompt.substring(0, 100)}...`);
 
     const models = ['flux', 'flux-realism'];
     let lastError: any;
 
     for (const m of models) {
       try {
-        this.logger.log(`Generating image with ${m}`);
-        const result = await provider.generate({ prompt, model: m, width, height, seed });
+        const result = await provider.generate({ prompt: enrichedPrompt, model: m, width, height, seed });
         this.logger.log(`Image generated successfully with ${m}`);
-        return { ...result, prompt, width, height, seed: seed || Math.floor(Math.random() * 1000000) };
+        return { ...result, prompt: enrichedPrompt, width, height, seed: seed || Math.floor(Math.random() * 1000000) };
       } catch (error: any) {
         lastError = error;
         this.logger.warn(`Model ${m} failed: ${error.message}`);
@@ -514,9 +543,23 @@ Return ONLY a JSON array, no other text:
     };
   }
 
-  async generateVideo(prompt: string, model = 'stable-video', duration = 5) {
+  async generateVideo(prompt: string, model = 'stable-video', duration = 5, productData?: { name: string; description?: string; category?: string; imageUrl?: string; features?: string[] }) {
     const provider = await this.providerRegistry.getVideoProvider();
-    const result = await provider.generateVideo({ prompt, model, duration });
-    return { ...result, prompt, duration };
+
+    let enrichedPrompt = prompt;
+    if (productData) {
+      const productContext = [
+        `PRODUCT REFERENCE: The exact product to feature is "${productData.name}"`,
+        productData.category ? `Category: ${productData.category}` : '',
+        productData.description ? `Description: ${productData.description}` : '',
+        productData.imageUrl ? `Product image reference: ${productData.imageUrl}` : '',
+        'IMPORTANT: The generated video MUST show this exact product with accurate colors, shape, branding, and design.',
+        `Scene: ${prompt}`,
+      ].filter(Boolean).join('\n');
+      enrichedPrompt = productContext;
+    }
+
+    const result = await provider.generateVideo({ prompt: enrichedPrompt, model, duration });
+    return { ...result, prompt: enrichedPrompt, duration };
   }
 }

@@ -2,6 +2,7 @@ import { Controller, Post, Body, UseGuards, Request, Get } from '@nestjs/common'
 import { AIService } from './ai.service';
 import { AIGenerationService } from '../ai-generation/ai-generation.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('ai')
@@ -12,6 +13,7 @@ export class AIController {
   constructor(
     private aiService: AIService,
     private aiGenerationService: AIGenerationService,
+    private prisma: PrismaService,
   ) {}
 
   @Post('generate')
@@ -45,8 +47,23 @@ export class AIController {
   }
 
   @Post('generate-ad-image')
-  async generateAdImage(@Body() body: { prompt: string; width?: number; height?: number }) {
-    return this.aiService.generateAdImage(body.prompt, body.width, body.height);
+  async generateAdImage(@Body() body: { prompt: string; width?: number; height?: number; productId?: string }) {
+    let productData: any = undefined;
+    if (body.productId) {
+      const product = await this.prisma.product.findFirst({
+        where: { id: body.productId },
+      });
+      if (product) {
+        productData = {
+          name: product.name,
+          description: product.description || undefined,
+          category: product.category || undefined,
+          imageUrl: product.images?.[0] || undefined,
+          features: product.features || [],
+        };
+      }
+    }
+    return this.aiService.generateAdImage(body.prompt, body.width, body.height, productData);
   }
 
   @Post('generate-image')
@@ -56,6 +73,22 @@ export class AIController {
   ) {
     let generation;
     try {
+      let productData: any = undefined;
+      if (body.productId) {
+        const product = await this.prisma.product.findFirst({
+          where: { id: body.productId, userId: req.user.id },
+        });
+        if (product) {
+          productData = {
+            name: product.name,
+            description: product.description || undefined,
+            category: product.category || undefined,
+            imageUrl: product.images?.[0] || undefined,
+            features: product.features || [],
+          };
+        }
+      }
+
       generation = await this.aiGenerationService.create(req.user.id, {
         productId: body.productId,
         type: 'image',
@@ -68,7 +101,7 @@ export class AIController {
       });
 
       await this.aiGenerationService.update(generation.id, req.user.id, { status: 'processing' });
-      const result = await this.aiService.generateImage(body.prompt, body.model, body.width, body.height, body.seed);
+      const result = await this.aiService.generateImage(body.prompt, body.model, body.width, body.height, body.seed, productData);
 
       await this.aiGenerationService.update(generation.id, req.user.id, {
         status: 'completed',
@@ -93,9 +126,25 @@ export class AIController {
     @Request() req: any,
     @Body() body: { prompt: string; model?: string; duration?: number; productId?: string },
   ) {
-    const generation = await this.aiGenerationService.create(req.user.id, {
-      productId: body.productId,
-      type: 'video',
+    let productData: any = undefined;
+    if (body.productId) {
+      const product = await this.prisma.product.findFirst({
+        where: { id: body.productId, userId: req.user.id },
+      });
+      if (product) {
+          productData = {
+            name: product.name,
+            description: product.description || undefined,
+            category: product.category || undefined,
+            imageUrl: product.images?.[0] || undefined,
+            features: product.features || [],
+          };
+        }
+      }
+
+      const generation = await this.aiGenerationService.create(req.user.id, {
+        productId: body.productId,
+        type: 'video',
       prompt: body.prompt,
       model: body.model,
       provider: 'together',
@@ -104,7 +153,7 @@ export class AIController {
 
     try {
       await this.aiGenerationService.update(generation.id, req.user.id, { status: 'processing' });
-      const result = await this.aiService.generateVideo(body.prompt, body.model, body.duration);
+      const result = await this.aiService.generateVideo(body.prompt, body.model, body.duration, productData);
 
       await this.aiGenerationService.update(generation.id, req.user.id, {
         status: 'completed',
