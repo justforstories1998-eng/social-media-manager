@@ -6,8 +6,8 @@
 
   --color-bg-base: #000000;
   --color-bg-shell: #0c0c0c;
-  --color-accent-violet: #7c3aed;
-  --color-accent-pink: #ec4899;
+  --color-accent-teal: #2dd4bf;
+  --color-accent-magenta: #e879f9;
 
   --color-text-primary: #f5f5f5;
   --color-text-secondary: #a1a1aa;
@@ -49,19 +49,19 @@ html, body {
 }
 
 .glass:hover {
-  border-color: rgba(124, 58, 237, 0.35);
+  border-color: rgba(45, 212, 191, 0.35);
 }
 
 /* Neon Button */
 .neon-button {
-  background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
-  color: white;
+  background: linear-gradient(135deg, #2dd4bf 0%, #e879f9 100%);
+  color: #0b0f14;
   font-weight: 700;
-  border-radius: 9999px;
-  padding: 1rem 2.25rem;
+  border-radius: 12px;
+  padding: 0.75rem 2.25rem;
   font-size: 15px;
   letter-spacing: -0.01em;
-  box-shadow: 0 0 40px rgba(124, 58, 237, 0.45);
+  box-shadow: 0 4px 20px rgba(45, 212, 191, 0.3), 0 4px 20px rgba(232, 121, 249, 0.2);
   transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
   border: none;
   cursor: pointer;
@@ -73,7 +73,7 @@ html, body {
 
 .neon-button:hover {
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 0 60px rgba(124, 58, 237, 0.65);
+  box-shadow: 0 6px 30px rgba(45, 212, 191, 0.45), 0 6px 30px rgba(232, 121, 249, 0.35);
 }
 
 .neon-button:disabled {
@@ -119,8 +119,8 @@ section[id] {
 /* Grid & Noise */
 .grid-bg {
   background-image:
-    linear-gradient(rgba(124, 58, 237, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124, 58, 237, 0.06) 1px, transparent 1px);
+    linear-gradient(rgba(45, 212, 191, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(45, 212, 191, 0.06) 1px, transparent 1px);
   background-size: 60px 60px;
 }
 
@@ -150,14 +150,14 @@ section[id] {
 
 .bento-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(124, 58, 237, 0.4);
+  border-color: rgba(45, 212, 191, 0.4);
 }
 
 /* Contrast Section */
 .contrast-section {
-  background: #f5f5f5;
-  color: #000000;
-  border-radius: 4rem 4rem 0 0;
+  background: #0b0f14;
+  color: #ffffff;
+  border-radius: 0;
 }
 
 /* Footer */
@@ -173,7 +173,7 @@ section[id] {
 
 /* Dashboard Styles */
 .dashboard-nav {
-  background: rgba(12, 12, 12, 0.95);
+  background: rgba(11, 15, 20, 0.95);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
@@ -188,13 +188,13 @@ section[id] {
 
 /* AI Cursor */
 .ai-cursor {
-  background: #7c3aed;
-  color: white;
+  background: #2dd4bf;
+  color: #0b0f14;
   font-size: 11px;
   padding: 2px 10px;
   border-radius: 9999px;
   font-family: var(--font-mono);
-  box-shadow: 0 0 20px rgba(124, 58, 237, 0.5);
+  box-shadow: 0 0 20px rgba(45, 212, 191, 0.5);
 }
 
 /* Form Inputs */
@@ -222,8 +222,8 @@ select option:hover {
 }
 
 select option:checked {
-  background: #7c3aed;
-  color: white;
+  background: #2dd4bf;
+  color: #0b0f14;
 }
 
 input:not([type="color"]):not([type="range"]):not([type="checkbox"]):not([type="radio"])::placeholder,
@@ -234,9 +234,9 @@ textarea::placeholder {
 input:not([type="color"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]):focus,
 textarea:focus,
 select:focus {
-  border-color: #7c3aed;
+  border-color: #2dd4bf;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.15);
 }
 
 /* Table Styles */
@@ -273,18 +273,18 @@ td {
 }
 
 .status-published {
-  background: rgba(52, 211, 153, 0.1);
-  color: #34d399;
+  background: rgba(45, 212, 191, 0.1);
+  color: #2dd4bf;
 }
 
 .status-scheduled {
-  background: rgba(124, 58, 237, 0.1);
-  color: #7c3aed;
+  background: rgba(45, 212, 191, 0.1);
+  color: #2dd4bf;
 }
 
 .status-approved {
-  background: rgba(52, 211, 153, 0.1);
-  color: #34d399;
+  background: rgba(45, 212, 191, 0.1);
+  color: #2dd4bf;
 }
 
 .status-draft {
@@ -293,19 +293,19 @@ td {
 }
 
 .status-ready {
-  background: rgba(124, 58, 237, 0.1);
-  color: #7c3aed;
+  background: rgba(45, 212, 191, 0.1);
+  color: #2dd4bf;
 }
 
 /* Health Status */
 .health-healthy {
-  background: rgba(52, 211, 153, 0.1);
-  color: #34d399;
+  background: rgba(45, 212, 191, 0.1);
+  color: #2dd4bf;
 }
 
 .health-connected {
-  background: rgba(52, 211, 153, 0.1);
-  color: #34d399;
+  background: rgba(45, 212, 191, 0.1);
+  color: #2dd4bf;
 }
 
 /* Scrollbar */
