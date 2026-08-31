@@ -16,7 +16,7 @@ export const globalTourConfig: TourConfig = {
     { target: 'nav-dashboard', title: 'Dashboard', description: 'Your home base. See performance at a glance, track engagement, and monitor your content pipeline.' },
     { target: 'nav-posts', title: 'Posts', description: 'Create, edit, and schedule your social media content. AI helps write captions and suggests the best times to post.' },
     { target: 'nav-products', title: 'Products', description: 'Manage your product catalog. AI uses product information to generate better content and images.' },
-    { target: 'nav-ai', title: 'AI Studio', description: 'Generate images, videos, and content ideas with AI. Create combo offers from multiple products.' },
+    { target: 'nav-ai', title: 'AI Studio', description: 'Generate images and content ideas with AI. Create combo offers from multiple products.' },
     { target: 'nav-calendar', title: 'Calendar', description: 'Visualize your content schedule. See planned posts, content gaps, and AI recommendations for each day.' },
   ],
 };
@@ -46,7 +46,7 @@ export const moduleTourConfigs: Record<string, TourConfig> = {
     steps: [
       { target: 'add-product', title: 'Add Product', description: 'Add products to your catalog. The more detail you provide, the better AI can use them for content.' },
       { target: 'product-card', title: 'Product Info', description: 'Each product card shows key details — name, description, price, images, and category.' },
-      { target: 'product-actions', title: 'Content Actions', description: 'Generate posts, images, videos, or content ideas directly from any product with one click.' },
+      { target: 'product-actions', title: 'Content Actions', description: 'Generate posts, images, or content ideas directly from any product with one click.' },
       { target: 'combo-offer', title: 'Combo Offers', description: 'Select multiple products to create bundle offers. AI generates promotional images featuring all products together.' },
     ],
   },
@@ -63,13 +63,10 @@ export const moduleTourConfigs: Record<string, TourConfig> = {
     module: 'aiStudio',
     steps: [
       { target: 'content-prompt', title: 'Content Tab', description: 'Generate social media captions, hashtags, and text content. Select a platform and content type, then let AI write for you.' },
-      { target: 'product-selector', title: 'Product Context', description: 'Select a product to give AI context. The product\'s details help generate more relevant, branded images and videos.' },
+      { target: 'product-selector', title: 'Product Context', description: 'Select a product to give AI context. The product\'s details help generate more relevant, branded images.' },
       { target: 'prompt-input', title: 'Image Prompt', description: 'AI generates a detailed prompt from your product info, or write your own. Edit freely before generating.' },
       { target: 'style-options', title: 'Style & Settings', description: 'Choose visual style, dimensions, and model. Different styles suit different products and platforms.' },
       { target: 'result-actions', title: 'Generated Result', description: 'Download your image, attach it to a post, or view the source traceability. Regenerate with different settings anytime.' },
-      { target: 'video-prompt', title: 'Video Prompt', description: 'Describe the video you want. AI can suggest prompts based on your product details.' },
-      { target: 'video-settings', title: 'Duration & Model', description: 'Set video duration and choose an AI model. Shorter videos generate faster.' },
-      { target: 'video-result', title: 'Video Result', description: 'Preview and download your generated video. Attach it to a post or regenerate with different settings.' },
     ],
   },
 };

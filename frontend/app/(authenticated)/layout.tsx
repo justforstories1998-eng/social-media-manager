@@ -4,6 +4,7 @@ import React from 'react';
 import AuthGuard from '@/components/AuthGuard';
 import Sidebar from '@/components/Sidebar';
 import { TourProvider } from '@/components/tour/TourProvider';
+import ChatBot from '@/components/ChatBot';
 
 export default function AuthenticatedLayout({
   children,
@@ -20,6 +21,7 @@ export default function AuthenticatedLayout({
               {children}
             </div>
           </main>
+          <ChatBot />
         </div>
       </TourProvider>
     </AuthGuard>

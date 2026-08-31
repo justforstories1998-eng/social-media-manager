@@ -121,59 +121,14 @@ export class AIController {
     }
   }
 
-  @Post('generate-video')
-  async generateVideo(
-    @Request() req: any,
-    @Body() body: { prompt: string; model?: string; duration?: number; productId?: string },
-  ) {
-    let productData: any = undefined;
-    if (body.productId) {
-      const product = await this.prisma.product.findFirst({
-        where: { id: body.productId, userId: req.user.id },
-      });
-      if (product) {
-          productData = {
-            name: product.name,
-            description: product.description || undefined,
-            category: product.category || undefined,
-            imageUrl: product.images?.[0] || undefined,
-            features: product.features || [],
-          };
-        }
-      }
-
-      const generation = await this.aiGenerationService.create(req.user.id, {
-        productId: body.productId,
-        type: 'video',
-      prompt: body.prompt,
-      model: body.model,
-      provider: 'together',
-      duration: body.duration,
-    });
-
-    try {
-      await this.aiGenerationService.update(generation.id, req.user.id, { status: 'processing' });
-      const result = await this.aiService.generateVideo(body.prompt, body.model, body.duration, productData);
-
-      await this.aiGenerationService.update(generation.id, req.user.id, {
-        status: 'completed',
-        outputUrl: result.videoUrl,
-        outputData: result,
-      });
-
-      return { generation, result };
-    } catch (error) {
-      await this.aiGenerationService.update(generation.id, req.user.id, {
-        status: 'failed',
-        error: error.message,
-      });
-      throw error;
-    }
-  }
-
   @Get('models')
   async getAvailableModels() {
     return this.aiService.getAvailableModels();
+  }
+
+  @Post('chat')
+  async chat(@Request() req, @Body() body: { message: string; history?: Array<{ role: string; content: string }> }) {
+    return this.aiService.chat(body.message, req.user.id, body.history);
   }
 
 }

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Zap, Shield, Globe, Image, Video, Sparkles, Calendar, BarChart3, Package, Layers } from 'lucide-react';
+import { ArrowRight, Zap, Shield, Globe, Image, Sparkles, Calendar, BarChart3, Package, Layers } from 'lucide-react';
 
 export default function WonderMediaLanding() {
   return (
@@ -51,7 +51,7 @@ export default function WonderMediaLanding() {
         <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-10 items-center">
           <div className="lg:col-span-7">
             <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-white/5 text-xs tracking-[2px] mb-6 sm:mb-8 border border-white/10">
-              <span className="font-mono">NEW</span> • AI IMAGE & VIDEO GENERATION
+              <span className="font-mono">NEW</span> • AI IMAGE GENERATION
             </div>
 
             <h1 className="hero-title tracking-[-0.07em] leading-none">
@@ -63,7 +63,7 @@ export default function WonderMediaLanding() {
             </h1>
 
             <p className="mt-6 max-w-md text-lg sm:text-xl text-white/60">
-              Generate posts, images, and videos with AI. Schedule across every platform. Track analytics — all from one beautiful dashboard.
+              Generate posts and images with AI. Schedule across every platform. Track analytics — all from one beautiful dashboard.
             </p>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-8 sm:mt-10">
@@ -139,14 +139,13 @@ export default function WonderMediaLanding() {
             {/* Large 2x2 AI Content Generator */}
             <div className="lg:col-span-2 lg:row-span-2 bento-card glass p-6 sm:p-8 border border-white/10">
               <div className="font-mono text-xs tracking-[2px] mb-4 text-white/50">AI CONTENT GENERATOR</div>
-              <div className="text-2xl sm:text-4xl font-semibold tracking-tight mb-4">Generate posts,<br />images, and videos.</div>
+              <div className="text-2xl sm:text-4xl font-semibold tracking-tight mb-4">Generate posts<br />and stunning images.</div>
               <div className="text-white/60 text-sm sm:text-base">Full post packages with captions, hashtags, and AI-generated visuals. Product-aware generation that understands your brand.</div>
               
-              <div className="mt-8 grid grid-cols-3 gap-3">
+              <div className="mt-8 grid grid-cols-2 gap-3">
                 {[
                   { icon: <Sparkles className="w-5 h-5" />, label: 'Captions', color: '#7c3aed' },
                   { icon: <Image className="w-5 h-5" />, label: 'Images', color: '#ec4899' },
-                  { icon: <Video className="w-5 h-5" />, label: 'Videos', color: '#7c3aed' },
                 ].map((item) => (
                   <div key={item.label} className="glass rounded-2xl p-3 text-center border border-white/10">
                     <div className="mx-auto mb-2" style={{ color: item.color }}>{item.icon}</div>
@@ -242,7 +241,7 @@ export default function WonderMediaLanding() {
 
           <div className="mt-16 space-y-8 text-lg text-black/80">
             {[
-              { num: "01", title: "Free AI Powered", desc: "6 free models for text, image, and video generation. No API keys, no subscriptions." },
+              { num: "01", title: "Free AI Powered", desc: "6 free models for text and image generation. No API keys, no subscriptions." },
               { num: "02", title: "Glassmorphism UI", desc: "A modern interface that feels premium and futuristic." },
               { num: "03", title: "Enterprise Security", desc: "OWASP compliant with Argon2, JWT, and full audit trails." },
             ].map((item, index) => (

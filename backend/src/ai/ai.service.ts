@@ -30,7 +30,6 @@ export class AIService {
 
     const together = new TogetherProvider();
     this.providerRegistry.registerImageProvider(together);
-    this.providerRegistry.registerVideoProvider(together);
   }
 
   async getAvailableModels() {
@@ -543,23 +542,143 @@ Return ONLY a JSON array, no other text:
     };
   }
 
-  async generateVideo(prompt: string, model = 'stable-video', duration = 5, productData?: { name: string; description?: string; category?: string; imageUrl?: string; features?: string[] }) {
-    const provider = await this.providerRegistry.getVideoProvider();
+  async chat(message: string, userId: string, history: Array<{ role: string; content: string }> = []) {
+    const systemPrompt = `You are WonderMedia AI Assistant — a helpful chatbot built into the WonderMedia application. You ONLY answer questions about the WonderMedia app. You must NEVER answer questions about external topics, general knowledge, unrelated websites, or services outside WonderMedia.
 
-    let enrichedPrompt = prompt;
-    if (productData) {
-      const productContext = [
-        `PRODUCT REFERENCE: The exact product to feature is "${productData.name}"`,
-        productData.category ? `Category: ${productData.category}` : '',
-        productData.description ? `Description: ${productData.description}` : '',
-        productData.imageUrl ? `Product image reference: ${productData.imageUrl}` : '',
-        'IMPORTANT: The generated video MUST show this exact product with accurate colors, shape, branding, and design.',
-        `Scene: ${prompt}`,
-      ].filter(Boolean).join('\n');
-      enrichedPrompt = productContext;
+WONDERMEDIA FEATURES & CAPABILITIES:
+- Dashboard: Shows today's posts, scheduled posts, weekly reach, engagement rate, AI usage, recent activity
+- Posts: Create, edit, delete, approve, schedule, duplicate, and publish social media posts. Posts go through DRAFT → PENDING_APPROVAL → APPROVED → SCHEDULED → PUBLISHED workflow
+- Products: Add products with name, description, features, benefits, SKU, category, tags, price, images. Products can be linked to posts and used for AI content generation
+- AI Studio: Generate content (captions, hashtags, video scripts), images (FLUX, FLUX Realism, FLUX Anime models), with product-aware generation. Choose from 6 free AI models
+- Calendar: View scheduled posts, detect holidays/occasions, generate AI content for specific dates, see content gaps
+- Analytics: Track reach, engagement, impressions per platform. Export reports as CSV, PDF, Excel
+- Tracker: Track sales, inventory, stock levels, profit per product. Record sales, add stock, view transaction history. Dashboard with total products, stock, revenue, profit
+- Combo Offers: Bundle multiple products with AI-generated concepts and images
+- Exports: Export analytics, posts, products, or full database as CSV, Excel, PDF, JSON, DOCX
+- Notifications: In-app notifications with real-time delivery via WebSocket
+- Settings: Business profile (name, industry, brand colors, voice, hashtags), Telegram approval bot configuration
+- Admin: User management, system health (admin only)
+
+NAVIGATION:
+- Sidebar (desktop): Dashboard, Posts, Products, Tracker, Calendar, Analytics, AI Studio, Notifications, Exports, Telegram, Settings
+- Mobile bottom nav: Dashboard, Posts, Products, Tracker, Calendar, Analytics, AI Studio, Notifications
+- AI Studio has Content and Image tabs
+
+AI MODELS AVAILABLE: MiniMax M3, Laguna S 2.1, Nemotron 3 Ultra, MiniMax M2.7, Nemotron Nano Omni, Gemma 4 26B
+
+IMAGE GENERATION: Uses Pollinations.ai (free, no API key). Models: FLUX, FLUX Realism, FLUX Anime. Product-aware generation enriches prompts with product details.
+
+SOCIAL PLATFORMS: Instagram, Facebook, LinkedIn, X/Twitter, TikTok, Pinterest
+
+WORKFLOW:
+1. Add Products with images and details
+2. Use AI Studio to generate content/images for products
+3. Posts go through approval workflow
+4. Schedule posts on the Calendar
+5. Track sales and inventory in the Tracker
+6. View analytics and export reports
+
+RULES:
+- Only answer questions about WonderMedia features, navigation, settings, and workflows
+- If asked about external topics, respond: "I can only assist with questions about the WonderMedia application. Please ask me about features, navigation, or how to use the app."
+- Keep answers concise and helpful
+- Guide users to the correct page/feature when they ask how to do something
+- Never make up features that don't exist`;
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...history.slice(-10), // Keep last 10 messages for context
+      { role: 'user', content: message },
+    ];
+
+    try {
+      const result = await this.callOpenRouterChat(messages);
+      return { response: result, model: 'minimax/minimax-m3:free' };
+    } catch (error: any) {
+      this.logger.warn(`Chat OpenRouter failed, using local fallback: ${error.message}`);
+      return { response: this.getChatFallback(message), model: 'local-fallback' };
+    }
+  }
+
+  private async callOpenRouterChat(messages: Array<{ role: string; content: string }>): Promise<string> {
+    if (!this.openrouterKey) {
+      throw new Error('OpenRouter API key not configured');
     }
 
-    const result = await provider.generateVideo({ prompt: enrichedPrompt, model, duration });
-    return { ...result, prompt: enrichedPrompt, duration };
+    const response = await axios.post(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        model: 'minimax/minimax-m3:free',
+        messages,
+        temperature: 0.7,
+        max_tokens: 500,
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${this.openrouterKey}`,
+          'HTTP-Referer': 'https://wondermedia.vercel.app',
+          'X-Title': 'WonderMedia',
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000,
+      }
+    );
+
+    return response.data.choices[0].message.content;
   }
+
+  private getChatFallback(message: string): string {
+    const lower = message.toLowerCase();
+
+    if (lower.includes('how do i') || lower.includes('how to') || lower.includes('how can')) {
+      if (lower.includes('post') || lower.includes('content') || lower.includes('caption')) {
+        return 'To create a post: Go to **Posts** → Click **Create Post**. You can also use **AI Studio** to generate content with AI. Posts go through an approval workflow: Draft → Pending Approval → Approved → Scheduled → Published.';
+      }
+      if (lower.includes('product')) {
+        return 'To add a product: Go to **Products** → Click **Add Product**. Fill in the name, description, category, price, and upload images. Products can then be used in AI content generation.';
+      }
+      if (lower.includes('image') || lower.includes('picture') || lower.includes('photo')) {
+        return 'To generate AI images: Go to **AI Studio** → **Image tab**. Select a product (optional), choose a model (FLUX, FLUX Realism, or FLUX Anime), enter a prompt, and click Generate. Images use Pollinations.ai (free, no API key needed).';
+      }
+      if (lower.includes('schedule') || lower.includes('calendar')) {
+        return 'To schedule posts: First approve a post, then go to **Calendar** and click on a date to schedule it. You can also see holidays and occasions with AI-generated content suggestions.';
+      }
+      if (lower.includes('track') || lower.includes('sale') || lower.includes('inventory') || lower.includes('stock')) {
+        return 'To track sales & inventory: Go to **Tracker**. Click **Sync** to import products, then record sales, add stock, and monitor profit. The dashboard shows total stock, revenue, and profit at a glance.';
+      }
+      if (lower.includes('export')) {
+        return 'To export data: Go to **Exports**. You can export analytics, posts, products, or the full database as CSV, Excel, PDF, JSON, or DOCX.';
+      }
+      if (lower.includes('analytic') || lower.includes('reach') || lower.includes('engagement')) {
+        return 'To view analytics: Go to **Analytics**. You can see per-platform reach, engagement rates, impressions, and export reports. Track performance over time.';
+      }
+    }
+
+    if (lower.includes('what is') || lower.includes('what are') || lower.includes('what does')) {
+      if (lower.includes('tracker')) {
+        return 'The **Tracker** module is your sales & inventory management system. It automatically syncs with your Products and lets you record sales, add stock, track profit, view transaction history, and get low-stock alerts.';
+      }
+      if (lower.includes('ai studio') || lower.includes('aistudio')) {
+        return '**AI Studio** is your creative workspace with two tabs: **Content** (generate captions, hashtags, video scripts) and **Image** (generate product images with FLUX models). It supports product-aware generation.';
+      }
+      if (lower.includes('combo')) {
+        return '**Combo Offers** let you bundle multiple products together. Select 2+ products, and AI will generate a combo concept with target audience, discount suggestion, and a bundle image.';
+      }
+    }
+
+    if (lower.includes('feature') || lower.includes('what can')) {
+      return 'WonderMedia includes: Dashboard, Posts (create/approve/schedule), Products, Tracker (sales & inventory), Calendar, Analytics, AI Studio (content & image generation), Combo Offers, Exports, Notifications, and Telegram approval. All powered by 6 free AI models.';
+    }
+
+    if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey')) {
+      return "Hello! I'm the WonderMedia AI Assistant. I can help you with questions about the app's features, navigation, and workflows. What would you like to know?";
+    }
+
+    if (lower.includes('thank')) {
+      return "You're welcome! Feel free to ask if you have any other questions about WonderMedia.";
+    }
+
+    return "I can only assist with questions about the WonderMedia application. Please ask me about features, navigation, or how to use the app. For example:\n\n• \"How do I create a post?\"\n• \"How do I generate AI images?\"\n• \"What is the Tracker?\"\n• \"How do I schedule content?\"";
+  }
+
 }

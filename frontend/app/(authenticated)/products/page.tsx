@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Sparkles, Download, X, Loader2, Brain, Image, Film, Lightbulb, ChevronDown, AlertCircle, RefreshCw, Package, Check, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Sparkles, Download, X, Loader2, Brain, Image, Lightbulb, ChevronDown, AlertCircle, RefreshCw, Package, Check, AlertTriangle } from 'lucide-react';
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from '@/hooks/useProducts';
 import api, { getUploadUrl, type AdConcept, type AdImageResponse, type ComboAnalysis } from '@/lib/api';
 import { toast } from 'sonner';
@@ -555,12 +555,7 @@ export default function ProductsPage() {
                       >
                         <Image className="w-3.5 h-3.5" /> Generate Image → Post
                       </button>
-                      <button
-                        onClick={() => { setQuickContentOpen(null); router.push(`/ai/studio?tab=video&productId=${product.id}&prompt=${encodeURIComponent(product.name + ' ' + (product.description || product.category || ''))}`); }}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors text-left"
-                      >
-                        <Film className="w-3.5 h-3.5" /> Generate Video → Post
-                      </button>
+
                       <button
                         onClick={() => { setQuickContentOpen(null); handleGenerateContentIdeas(product); }}
                         className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors text-left"

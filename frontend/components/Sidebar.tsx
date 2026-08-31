@@ -16,6 +16,7 @@ import {
   LogOut,
   Shield,
   MessageCircle,
+  Activity,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -23,6 +24,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, tour: 'nav-dashboard' },
   { href: '/posts', label: 'Posts', icon: FileText, tour: 'nav-posts' },
   { href: '/products', label: 'Products', icon: Package, tour: 'nav-products' },
+  { href: '/tracker', label: 'Tracker', icon: Activity, tour: 'nav-tracker' },
   { href: '/calendar', label: 'Calendar', icon: Calendar, tour: 'nav-calendar' },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, tour: 'nav-analytics' },
   { href: '/ai/studio', label: 'AI Studio', icon: Sparkles, tour: 'nav-ai' },

@@ -1,10 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ImageProvider } from './image-provider.interface';
-import { VideoProvider } from './video-provider.interface';
 import axios from 'axios';
 
 @Injectable()
-export class TogetherProvider implements ImageProvider, VideoProvider {
+export class TogetherProvider implements ImageProvider {
   name = 'pollinations';
   private readonly logger = new Logger(TogetherProvider.name);
 
@@ -12,10 +11,6 @@ export class TogetherProvider implements ImageProvider, VideoProvider {
     { id: 'flux', name: 'FLUX', description: 'High-quality image generation' },
     { id: 'flux-realism', name: 'FLUX Realism', description: 'Photorealistic images' },
     { id: 'flux-anime', name: 'FLUX Anime', description: 'Anime-style generation' },
-  ];
-
-  private videoModels = [
-    { id: 'stable-video', name: 'Stable Video', description: 'Text-to-video generation' },
   ];
 
   async isAvailable(): Promise<boolean> {
@@ -43,21 +38,6 @@ export class TogetherProvider implements ImageProvider, VideoProvider {
     return { imageUrl, model, provider: 'pollinations' };
   }
 
-  async generateVideo(params: {
-    prompt: string;
-    model?: string;
-    duration?: number;
-  }): Promise<{ videoUrl: string; model: string; provider: string }> {
-    const { prompt, model = 'stable-video', duration = 5 } = params;
-
-    const enhancedPrompt = this.enhancePrompt(prompt);
-    const encodedPrompt = encodeURIComponent(enhancedPrompt);
-
-    const videoUrl = `https://video.pollinations.ai/prompt/${encodedPrompt}?model=${model}&duration=${duration}`;
-
-    return { videoUrl, model, provider: 'pollinations' };
-  }
-
   async generate(params: {
     prompt: string;
     model?: string;
@@ -70,10 +50,6 @@ export class TogetherProvider implements ImageProvider, VideoProvider {
 
   getModels(): Array<{ id: string; name: string; description: string }> {
     return this.imageModels;
-  }
-
-  getVideoModels(): Array<{ id: string; name: string; description: string }> {
-    return this.videoModels;
   }
 
   private enhancePrompt(prompt: string): string {

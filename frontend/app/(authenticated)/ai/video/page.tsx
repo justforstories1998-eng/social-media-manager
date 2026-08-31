@@ -3,6 +3,6 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 export default function AIVideoRedirect() {
   const router = useRouter();
-  useEffect(() => { router.replace('/ai/studio?tab=video'); }, [router]);
+  useEffect(() => { router.replace('/ai/studio?tab=image'); }, [router]);
   return null;
 }

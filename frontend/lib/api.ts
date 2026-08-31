@@ -270,14 +270,6 @@ export interface GenerateImageResponse {
   provider: string;
 }
 
-export interface GenerateVideoResponse {
-  videoUrl: string;
-  prompt: string;
-  model: string;
-  duration: number;
-  provider: string;
-}
-
 export interface ComboOffer {
   id: string;
   name: string;
@@ -312,3 +304,92 @@ export interface ComboAnalysis {
   sellingAngle: string;
   ideas: Array<{ name: string; description: string }>;
 }
+
+export interface TrackerProduct {
+  id: string;
+  userId: string;
+  productId: string;
+  sku: string | null;
+  lowStockThreshold: number;
+  purchasePrice: number | null;
+  sellingPrice: number | null;
+  reorderQuantity: number | null;
+  supplierName: string | null;
+  supplierContact: string | null;
+  notes: string | null;
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
+  product: Product;
+  currentStock: number;
+  totalSold: number;
+  totalRevenue: number;
+  totalCost: number;
+  profit: number;
+  status: string;
+}
+
+export interface Sale {
+  id: string;
+  trackerProductId: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  saleDate: string;
+  customerName: string | null;
+  notes: string | null;
+  isReturn: boolean;
+  returnReason: string | null;
+  transactionId: string | null;
+  createdAt: string;
+  trackerProduct: TrackerProduct;
+}
+
+export interface StockMovement {
+  id: string;
+  trackerProductId: string;
+  type: string;
+  quantity: number;
+  notes: string | null;
+  referenceId: string | null;
+  createdAt: string;
+  trackerProduct: TrackerProduct;
+}
+
+export interface TrackerDashboard {
+  totalProducts: number;
+  totalStock: number;
+  totalUnitsSold: number;
+  totalSalesRevenue: number;
+  totalInventoryValue: number;
+  estimatedProfit: number;
+  lowStockItems: number;
+  outOfStockItems: number;
+}
+
+export const trackerApi = {
+  sync: () => api.get<TrackerProduct[]>('/tracker/sync'),
+  list: (params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get<TrackerProduct[]>(`/tracker${query}`);
+  },
+  dashboard: () => api.get<TrackerDashboard>('/tracker/dashboard'),
+  getOne: (id: string) => api.get<TrackerProduct>(`/tracker/${id}`),
+  update: (id: string, data: Partial<TrackerProduct>) => api.put(`/tracker/${id}`, data),
+  recordSale: (data: any) => api.post('/tracker/sale', data),
+  addStock: (data: any) => api.post('/tracker/stock', data),
+  getSales: (id: string, params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get<Sale[]>(`/tracker/${id}/sales${query}`);
+  },
+  getStockHistory: (id: string) => api.get<StockMovement[]>(`/tracker/${id}/stock`),
+  getStats: (id: string) => api.get<any>(`/tracker/${id}/stats`),
+  getTransactions: (params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get<any[]>(`/tracker/transactions/all${query}`);
+  },
+  exportCsv: (params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get(`/tracker/export/csv${query}`, { responseType: 'blob' as any });
+  },
+};

@@ -44,6 +44,9 @@ model User {
   roles           UserRole[]
   media           Media[]
   comboOffers     ComboOffer[]
+  trackerProducts TrackerProduct[]
+  sales           Sale[]
+  stockMovements  StockMovement[]
 
   @@index([email])
   @@index([createdAt])
@@ -175,6 +178,7 @@ model Product {
   posts       Post[]
   aiGenerations AIGeneration[]
   comboOffers   ComboOfferProduct[]
+  trackerProduct TrackerProduct?
 
   @@index([userId])
   @@index([category])
@@ -508,6 +512,77 @@ model ComboOfferProduct {
 
   @@id([comboOfferId, productId])
   @@index([productId])
+}
+
+// ==================== TRACKER (SALES & INVENTORY) ====================
+
+model TrackerProduct {
+  id              String   @id @default(cuid())
+  userId          String
+  productId       String   @unique // Links to Product model
+  sku             String?
+  lowStockThreshold Int    @default(10)
+  purchasePrice   Decimal? @db.Decimal(10,2)
+  sellingPrice    Decimal? @db.Decimal(10,2)
+  reorderQuantity Int?
+  supplierName    String?
+  supplierContact String?
+  notes           String?
+  isArchived      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product      Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sales        Sale[]
+  stockMovements StockMovement[]
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+model Sale {
+  id              String   @id @default(cuid())
+  userId          String
+  trackerProductId String
+  quantity        Int
+  unitPrice       Decimal @db.Decimal(10,2)
+  totalPrice      Decimal @db.Decimal(10,2)
+  saleDate        DateTime @default(now())
+  customerName    String?
+  notes           String?
+  isReturn        Boolean  @default(false)
+  returnReason    String?
+  transactionId   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trackerProduct TrackerProduct @relation(fields: [trackerProductId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([trackerProductId])
+  @@index([saleDate])
+}
+
+model StockMovement {
+  id              String   @id @default(cuid())
+  userId          String
+  trackerProductId String
+  type            String   // sale, restock, adjustment, return, initial
+  quantity        Int      // Positive for additions, negative for removals
+  notes           String?
+  referenceId     String?  // Links to Sale.id if type is 'sale' or 'return'
+  createdAt       DateTime @default(now())
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trackerProduct TrackerProduct @relation(fields: [trackerProductId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([trackerProductId])
+  @@index([createdAt])
+  @@index([type])
 }
 
 enum PostStatus {
