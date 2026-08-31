@@ -476,7 +476,7 @@ export default function TrackerPage() {
             <div className="space-y-4">
               {!selectedProduct && (
                 <select
-                  value={selectedProduct?.id || ''}
+                  value=""
                   onChange={e => {
                     const tp = products.find(p => p.id === e.target.value);
                     if (tp) { setSelectedProduct(tp); setSaleForm({ ...saleForm, unitPrice: String(tp.sellingPrice || '') }); }
@@ -555,7 +555,7 @@ export default function TrackerPage() {
             <div className="space-y-4">
               {!selectedProduct && (
                 <select
-                  value={selectedProduct?.id || ''}
+                  value=""
                   onChange={e => {
                     const tp = products.find(p => p.id === e.target.value);
                     if (tp) setSelectedProduct(tp);
