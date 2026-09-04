@@ -226,7 +226,7 @@ export default function WonderMediaLanding() {
             {[
               { step: "01", title: "Install & Configure", desc: "Clone the repo, run docker-compose up, and configure your brand settings in the dashboard.", icon: Zap },
               { step: "02", title: "Connect Platforms", desc: "Link your social media accounts and Telegram bot for approval workflows.", icon: Globe },
-              { step: "03", title: "Generate & Publish", desc: "Let AI create content, images, and videos — review in Telegram, then publish.", icon: Shield },
+              { step: "03", title: "Generate & Publish", desc: "Let AI create content and product advertisements — review in Telegram, then publish.", icon: Shield },
             ].map((item, index) => (
               <div key={index} className="text-center">
                 <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-black text-white flex items-center justify-center">

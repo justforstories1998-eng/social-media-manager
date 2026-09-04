@@ -1,12 +1,45 @@
 export interface ImageProvider {
   name: string;
   isAvailable(): Promise<boolean>;
-  generate(params: {
+
+  generateTextToImage(params: {
     prompt: string;
-    model?: string;
     width?: number;
     height?: number;
+    numberOfImages?: number;
     seed?: number;
-  }): Promise<{ imageUrl: string; model: string; provider: string }>;
-  getModels(): Array<{ id: string; name: string; description: string }>;
+  }): Promise<GeneratedImageResult>;
+
+  generateWithProduct(params: {
+    prompt: string;
+    productImage: string;
+    width?: number;
+    height?: number;
+    numberOfImages?: number;
+    seed?: number;
+  }): Promise<GeneratedImageResult>;
+
+  generateWithBackgroundRemoval(params: {
+    prompt: string;
+    productImage: string;
+    width?: number;
+    height?: number;
+    numberOfImages?: number;
+    seed?: number;
+  }): Promise<GeneratedImageResult>;
+
+  getModels(): Array<{ id: string; name: string; description: string; capabilities: string[] }>;
+  getSupportedAspectRatios(): string[];
+}
+
+export interface GeneratedImageResult {
+  success: boolean;
+  model: string;
+  provider: string;
+  images: Array<{
+    imageUrl: string;
+    mimeType: string;
+    width: number;
+    height: number;
+  }>;
 }

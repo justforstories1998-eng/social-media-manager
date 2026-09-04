@@ -15,11 +15,10 @@ export class ProviderRegistry {
     for (const p of this.imageProviders) {
       if (await p.isAvailable()) return p;
     }
-    throw new Error('No image provider available');
+    throw new Error('No image provider available. Configure NVIDIA_API_KEY, NVIDIA_MODEL, and NVIDIA_API_BASE_URL.');
   }
 
   getAllImageProviders(): ImageProvider[] {
     return this.imageProviders;
   }
-
 }

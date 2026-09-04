@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProviderRegistry } from './providers/provider-registry';
-import { TogetherProvider } from './providers/together.provider';
+import { NvidiaProvider } from './providers/nvidia.provider';
 
 const FREE_OPENROUTER_MODELS = [
   { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', context: '1M tokens', description: 'Best free model — high quality reasoning and generation' },
@@ -28,8 +28,8 @@ export class AIService {
 
     this.providerRegistry = new ProviderRegistry();
 
-    const together = new TogetherProvider();
-    this.providerRegistry.registerImageProvider(together);
+    const nvidia = new NvidiaProvider(this.configService);
+    this.providerRegistry.registerImageProvider(nvidia);
   }
 
   async getAvailableModels() {
@@ -413,23 +413,30 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
       enrichedPrompt = productContext;
     }
 
-    const models = ['flux', 'flux-realism'];
-    let lastError: any;
-
-    for (const m of models) {
-      try {
-        const result = await provider.generate({ prompt: enrichedPrompt, model: m, width, height });
-        return { ...result, prompt: enrichedPrompt };
-      } catch (error: any) {
-        lastError = error;
-        this.logger.warn(`Ad image model ${m} failed: ${error.message}`);
+    try {
+      let result;
+      if (productData?.imageUrl) {
+        result = await provider.generateWithProduct({
+          prompt: enrichedPrompt,
+          productImage: productData.imageUrl,
+          width,
+          height,
+        });
+      } else {
+        result = await provider.generateTextToImage({
+          prompt: enrichedPrompt,
+          width,
+          height,
+        });
       }
+      return { imageUrl: result.images[0]?.imageUrl || '', model: result.model, provider: result.provider, prompt: enrichedPrompt };
+    } catch (error: any) {
+      this.logger.error(`NVIDIA ad image generation failed: ${error.message}`);
+      throw error;
     }
-
-    throw lastError || new Error('Image generation failed');
   }
 
-  async generateImage(prompt: string, model = 'flux', width = 1024, height = 1024, seed?: number, productData?: { name: string; description?: string; category?: string; imageUrl?: string; features?: string[] }) {
+  async generateImage(prompt: string, model = 'nvidia', width = 1024, height = 1024, seed?: number, productData?: { name: string; description?: string; category?: string; imageUrl?: string; features?: string[] }) {
     const provider = await this.providerRegistry.getImageProvider();
 
     let enrichedPrompt = prompt;
@@ -446,23 +453,32 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
       enrichedPrompt = productContext;
     }
 
-    this.logger.log(`Generating image with prompt: ${enrichedPrompt.substring(0, 100)}...`);
+    this.logger.log(`Generating image with NVIDIA, prompt: ${enrichedPrompt.substring(0, 100)}...`);
 
-    const models = ['flux', 'flux-realism'];
-    let lastError: any;
-
-    for (const m of models) {
-      try {
-        const result = await provider.generate({ prompt: enrichedPrompt, model: m, width, height, seed });
-        this.logger.log(`Image generated successfully with ${m}`);
-        return { ...result, prompt: enrichedPrompt, width, height, seed: seed || Math.floor(Math.random() * 1000000) };
-      } catch (error: any) {
-        lastError = error;
-        this.logger.warn(`Model ${m} failed: ${error.message}`);
+    try {
+      let result;
+      if (productData?.imageUrl) {
+        result = await provider.generateWithProduct({
+          prompt: enrichedPrompt,
+          productImage: productData.imageUrl,
+          width,
+          height,
+          seed,
+        });
+      } else {
+        result = await provider.generateTextToImage({
+          prompt: enrichedPrompt,
+          width,
+          height,
+          seed,
+        });
       }
+      this.logger.log(`Image generated successfully with NVIDIA`);
+      return { imageUrl: result.images[0]?.imageUrl || '', model: result.model, provider: result.provider, prompt: enrichedPrompt, width, height, seed: seed || Math.floor(Math.random() * 1000000) };
+    } catch (error: any) {
+      this.logger.error(`NVIDIA image generation failed: ${error.message}`);
+      throw error;
     }
-
-    throw lastError || new Error('Image generation failed');
   }
 
   async generateRecommendations(userId: string, date?: string) {
@@ -549,7 +565,7 @@ WONDERMEDIA FEATURES & CAPABILITIES:
 - Dashboard: Shows today's posts, scheduled posts, weekly reach, engagement rate, AI usage, recent activity
 - Posts: Create, edit, delete, approve, schedule, duplicate, and publish social media posts. Posts go through DRAFT → PENDING_APPROVAL → APPROVED → SCHEDULED → PUBLISHED workflow
 - Products: Add products with name, description, features, benefits, SKU, category, tags, price, images. Products can be linked to posts and used for AI content generation
-- AI Studio: Generate content (captions, hashtags, video scripts), images (FLUX, FLUX Realism, FLUX Anime models), with product-aware generation. Choose from 6 free AI models
+- AI Studio: Generate content (captions, hashtags, video scripts), images (NVIDIA AI models), with product-aware generation. Choose from 6 free AI models
 - Calendar: View scheduled posts, detect holidays/occasions, generate AI content for specific dates, see content gaps
 - Analytics: Track reach, engagement, impressions per platform. Export reports as CSV, PDF, Excel
 - Tracker: Track sales, inventory, stock levels, profit per product. Record sales, add stock, view transaction history. Dashboard with total products, stock, revenue, profit
@@ -566,7 +582,7 @@ NAVIGATION:
 
 AI MODELS AVAILABLE: MiniMax M3, Laguna S 2.1, Nemotron 3 Ultra, MiniMax M2.7, Nemotron Nano Omni, Gemma 4 26B
 
-IMAGE GENERATION: Uses Pollinations.ai (free, no API key). Models: FLUX, FLUX Realism, FLUX Anime. Product-aware generation enriches prompts with product details.
+IMAGE GENERATION: Uses NVIDIA AI models for professional product advertisements. Supports text-to-image and product image + prompt modes. Generates high-quality commercial ad compositions.
 
 SOCIAL PLATFORMS: Instagram, Facebook, LinkedIn, X/Twitter, TikTok, Pinterest
 
@@ -638,7 +654,7 @@ RULES:
         return 'To add a product: Go to **Products** → Click **Add Product**. Fill in the name, description, category, price, and upload images. Products can then be used in AI content generation.';
       }
       if (lower.includes('image') || lower.includes('picture') || lower.includes('photo')) {
-        return 'To generate AI images: Go to **AI Studio** → **Image tab**. Select a product (optional), choose a model (FLUX, FLUX Realism, or FLUX Anime), enter a prompt, and click Generate. Images use Pollinations.ai (free, no API key needed).';
+        return 'To generate AI images: Go to **AI Studio** → **Image tab**. Select a product (optional), enter a prompt, and click Generate. Uses NVIDIA AI models to create professional product advertisements.';
       }
       if (lower.includes('schedule') || lower.includes('calendar')) {
         return 'To schedule posts: First approve a post, then go to **Calendar** and click on a date to schedule it. You can also see holidays and occasions with AI-generated content suggestions.';

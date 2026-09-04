@@ -94,7 +94,7 @@ export class AIController {
         type: 'image',
         prompt: body.prompt,
         model: body.model,
-        provider: 'together',
+        provider: 'nvidia',
         width: body.width,
         height: body.height,
         seed: body.seed,

@@ -35,9 +35,7 @@ const typeOptions = [
 ];
 
 const imageModels = [
-  { id: 'flux', name: 'FLUX', description: 'High-quality image generation' },
-  { id: 'flux-realism', name: 'FLUX Realism', description: 'Photorealistic images' },
-  { id: 'flux-anime', name: 'FLUX Anime', description: 'Anime-style generation' },
+  { id: 'nvidia', name: 'NVIDIA AI', description: 'Professional product advertisement generation' },
 ];
 
 const sizePresets = [
@@ -345,7 +343,7 @@ function ImageTab(props: MediaTabProps) {
   const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [prompt, setPrompt] = useState(urlPrompt);
-  const [model, setModel] = useState('flux');
+  const [model, setModel] = useState('nvidia');
   const [size, setSize] = useState(0);
   const [seed, setSeed] = useState<number | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);
