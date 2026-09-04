@@ -7,7 +7,7 @@ import {
   XCircle, Search, Download, Plus, Loader2, X, RefreshCw, BarChart3,
   ShoppingCart, ArrowUpDown, Grid3X3, List, Activity, ChevronDown,
 } from 'lucide-react';
-import { trackerApi, type TrackerProduct, type TrackerDashboard, type Sale } from '@/lib/api';
+import { trackerApi, type TrackerProduct, type TrackerDashboard, type Sale, formatCurrency } from '@/lib/api';
 import { toast } from 'sonner';
 import { getUploadUrl } from '@/lib/api';
 
@@ -90,8 +90,9 @@ export default function TrackerPage() {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      await trackerApi.sync();
-      toast.success('Products synced!');
+      const res = await trackerApi.sync();
+      const count = res.data.length;
+      toast.success(`Synced ${count} product${count !== 1 ? 's' : ''}`);
       loadData();
     } catch {
       toast.error('Sync failed');
@@ -181,9 +182,9 @@ export default function TrackerPage() {
     { label: 'TOTAL PRODUCTS', value: dashboard.totalProducts, icon: Package, color: 'text-[#7c3aed]' },
     { label: 'TOTAL STOCK', value: dashboard.totalStock, icon: Layers, color: 'text-[#ec4899]' },
     { label: 'UNITS SOLD', value: dashboard.totalUnitsSold, icon: TrendingUp, color: 'text-emerald-400' },
-    { label: 'SALES REVENUE', value: `$${dashboard.totalSalesRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-[#7c3aed]' },
-    { label: 'INVENTORY VALUE', value: `$${dashboard.totalInventoryValue.toLocaleString()}`, icon: Wallet, color: 'text-[#ec4899]' },
-    { label: 'EST. PROFIT', value: `$${dashboard.estimatedProfit.toLocaleString()}`, icon: PiggyBank, color: 'text-emerald-400' },
+    { label: 'SALES REVENUE', value: formatCurrency(dashboard.totalSalesRevenue), icon: DollarSign, color: 'text-[#7c3aed]' },
+    { label: 'INVENTORY VALUE', value: formatCurrency(dashboard.totalInventoryValue), icon: Wallet, color: 'text-[#ec4899]' },
+    { label: 'EST. PROFIT', value: formatCurrency(dashboard.estimatedProfit), icon: PiggyBank, color: 'text-emerald-400' },
     { label: 'LOW STOCK', value: dashboard.lowStockItems, icon: AlertTriangle, color: 'text-amber-400' },
     { label: 'OUT OF STOCK', value: dashboard.outOfStockItems, icon: XCircle, color: 'text-red-400' },
   ] : [];
@@ -371,9 +372,9 @@ export default function TrackerPage() {
                     <td className="p-4 text-white/50 hidden lg:table-cell">{tp.product.category}</td>
                     <td className="p-4 text-right font-medium">{tp.currentStock}</td>
                     <td className="p-4 text-right text-white/60 hidden sm:table-cell">{tp.totalSold}</td>
-                    <td className="p-4 text-right text-white/60 hidden lg:table-cell">${tp.totalRevenue.toLocaleString()}</td>
+                    <td className="p-4 text-right text-white/60 hidden lg:table-cell">{formatCurrency(tp.totalRevenue, tp.currency)}</td>
                     <td className={`p-4 text-right hidden lg:table-cell font-medium ${tp.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      ${tp.profit.toLocaleString()}
+                      {formatCurrency(tp.profit, tp.currency)}
                     </td>
                     <td className="p-4 text-center">
                       <span className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-medium border ${getStatusColor(tp.status)}`}>
@@ -436,11 +437,11 @@ export default function TrackerPage() {
                   </div>
                   <div className="p-3 rounded-xl bg-white/5">
                     <div className="text-[10px] font-mono text-white/40">REVENUE</div>
-                    <div className="text-lg font-semibold">${tp.totalRevenue.toLocaleString()}</div>
+                    <div className="text-lg font-semibold">{formatCurrency(tp.totalRevenue, tp.currency)}</div>
                   </div>
                   <div className="p-3 rounded-xl bg-white/5">
                     <div className="text-[10px] font-mono text-white/40">PROFIT</div>
-                    <div className={`text-lg font-semibold ${tp.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>${tp.profit.toLocaleString()}</div>
+                    <div className={`text-lg font-semibold ${tp.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatCurrency(tp.profit, tp.currency)}</div>
                   </div>
                 </div>
                 <div className="flex gap-2 mt-4" onClick={e => e.stopPropagation()}>
@@ -500,7 +501,7 @@ export default function TrackerPage() {
                 />
               </div>
               <div>
-                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">UNIT PRICE ($)</label>
+                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">UNIT PRICE</label>
                 <input
                   value={saleForm.unitPrice}
                   onChange={e => setSaleForm({ ...saleForm, unitPrice: e.target.value })}
@@ -579,7 +580,7 @@ export default function TrackerPage() {
                 />
               </div>
               <div>
-                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">PURCHASE PRICE ($)</label>
+                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">PURCHASE PRICE</label>
                 <input
                   value={stockForm.purchasePrice}
                   onChange={e => setStockForm({ ...stockForm, purchasePrice: e.target.value })}

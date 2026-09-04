@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, IsDateString, IsIn } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsDateString, IsIn, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateStockMovementDto {
@@ -24,4 +24,10 @@ export class CreateStockMovementDto {
   @IsOptional()
   @IsString()
   referenceId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  purchasePrice?: number;
 }

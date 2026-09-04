@@ -88,6 +88,16 @@ export class TrackerController {
     return this.trackerService.addStock(req.user.id, dto);
   }
 
+  @Post('sync/single')
+  async syncSingle(@Request() req: any, @Body() body: { productId: string }) {
+    return this.trackerService.syncSingle(req.user.id, body.productId);
+  }
+
+  @Post(':id/archive')
+  async archiveProduct(@Request() req: any, @Param('id') id: string) {
+    return this.trackerService.archiveProduct(req.user.id, id);
+  }
+
   @Get(':id/sales')
   async getSalesHistory(
     @Request() req: any,

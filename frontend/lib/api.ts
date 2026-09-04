@@ -15,6 +15,16 @@ export function getUploadUrl(path: string): string {
   return path;
 }
 
+const currencySymbols: Record<string, string> = {
+  USD: '$', EUR: '€', GBP: '£', INR: '₹', JPY: '¥', AUD: 'A$', CAD: 'C$',
+};
+
+export function formatCurrency(amount: number, currency?: string | null): string {
+  const cur = currency || 'USD';
+  const sym = currencySymbols[cur] || '$';
+  return `${sym}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('access_token');
@@ -326,6 +336,7 @@ export interface TrackerProduct {
   totalRevenue: number;
   totalCost: number;
   profit: number;
+  currency: string;
   status: string;
 }
 
@@ -367,8 +378,9 @@ export interface TrackerDashboard {
   outOfStockItems: number;
 }
 
-export const trackerApi = {
+  export const trackerApi = {
   sync: () => api.get<TrackerProduct[]>('/tracker/sync'),
+  syncSingle: (productId: string) => api.post<TrackerProduct>('/tracker/sync/single', { productId }),
   list: (params?: Record<string, string>) => {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
     return api.get<TrackerProduct[]>(`/tracker${query}`);
@@ -376,6 +388,7 @@ export const trackerApi = {
   dashboard: () => api.get<TrackerDashboard>('/tracker/dashboard'),
   getOne: (id: string) => api.get<TrackerProduct>(`/tracker/${id}`),
   update: (id: string, data: Partial<TrackerProduct>) => api.put(`/tracker/${id}`, data),
+  archive: (id: string) => api.post(`/tracker/${id}/archive`),
   recordSale: (data: any) => api.post('/tracker/sale', data),
   addStock: (data: any) => api.post('/tracker/stock', data),
   getSales: (id: string, params?: Record<string, string>) => {

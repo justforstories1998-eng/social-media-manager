@@ -105,9 +105,11 @@ export class TrackerService {
       return {
         ...tp,
         currentStock,
-        unitsSold: netSales,
-        revenue,
-        estimatedProfit,
+        totalSold: netSales,
+        totalRevenue: revenue,
+        totalCost: purchasePrice * netSales,
+        profit: estimatedProfit,
+        currency: tp.product.currency || 'USD',
         status,
       };
     });
@@ -126,10 +128,10 @@ export class TrackerService {
           filtered = enrichedProducts.filter((p) => p.status === 'out_of_stock');
           break;
         case 'best_sellers':
-          filtered = [...enrichedProducts].sort((a, b) => b.unitsSold - a.unitsSold);
+          filtered = [...enrichedProducts].sort((a, b) => b.totalSold - a.totalSold);
           break;
         case 'slow_moving':
-          filtered = enrichedProducts.filter((p) => p.unitsSold < 5);
+          filtered = enrichedProducts.filter((p) => p.totalSold < 5);
           break;
       }
     }
@@ -183,9 +185,11 @@ export class TrackerService {
     return {
       ...trackerProduct,
       currentStock,
-      unitsSold: netSales,
-      revenue,
-      estimatedProfit,
+      totalSold: netSales,
+      totalRevenue: revenue,
+      totalCost: purchasePrice * netSales,
+      profit: estimatedProfit,
+      currency: trackerProduct.product.currency || 'USD',
       status,
     };
   }
@@ -302,6 +306,13 @@ export class TrackerService {
       throw new NotFoundException('Tracker product not found');
     }
 
+    if (dto.purchasePrice && dto.purchasePrice > 0) {
+      await this.prisma.trackerProduct.update({
+        where: { id: dto.trackerProductId },
+        data: { purchasePrice: dto.purchasePrice },
+      });
+    }
+
     return this.prisma.stockMovement.create({
       data: {
         userId,
@@ -311,6 +322,49 @@ export class TrackerService {
         notes: dto.notes,
         referenceId: dto.referenceId,
       },
+    });
+  }
+
+  async syncSingle(userId: string, productId: string) {
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, userId },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    const existing = await this.prisma.trackerProduct.findFirst({
+      where: { userId, productId },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    return this.prisma.trackerProduct.create({
+      data: {
+        userId,
+        productId: product.id,
+        sku: product.sku || null,
+        sellingPrice: product.price || null,
+        purchasePrice: null,
+      },
+    });
+  }
+
+  async archiveProduct(userId: string, id: string) {
+    const trackerProduct = await this.prisma.trackerProduct.findFirst({
+      where: { id, userId },
+    });
+
+    if (!trackerProduct) {
+      throw new NotFoundException('Tracker product not found');
+    }
+
+    return this.prisma.trackerProduct.update({
+      where: { id },
+      data: { isArchived: true },
     });
   }
 
