@@ -9,6 +9,11 @@ export class UpdateTrackerProductDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsNumber()
   @Min(0)
   lowStockThreshold?: number;

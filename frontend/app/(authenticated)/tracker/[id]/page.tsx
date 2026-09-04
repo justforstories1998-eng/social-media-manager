@@ -22,7 +22,7 @@ export default function TrackerProductDetail() {
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [saleForm, setSaleForm] = useState({ quantity: 1, unitPrice: 0, customerName: '', notes: '' });
   const [stockForm, setStockForm] = useState({ quantity: 0, notes: '', purchasePrice: 0 });
-  const [editForm, setEditForm] = useState({ sellingPrice: 0, purchasePrice: 0, lowStockThreshold: 10, supplierName: '', supplierContact: '', notes: '' });
+  const [editForm, setEditForm] = useState({ sellingPrice: 0, purchasePrice: 0, currency: 'USD', lowStockThreshold: 10, supplierName: '', supplierContact: '', notes: '' });
   const [submitting, setSubmitting] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -40,6 +40,7 @@ export default function TrackerProductDetail() {
       setEditForm({
         sellingPrice: prodRes.data.sellingPrice || 0,
         purchasePrice: prodRes.data.purchasePrice || 0,
+        currency: prodRes.data.currency || 'USD',
         lowStockThreshold: prodRes.data.lowStockThreshold || 10,
         supplierName: prodRes.data.supplierName || '',
         supplierContact: prodRes.data.supplierContact || '',
@@ -438,9 +439,23 @@ export default function TrackerProductDetail() {
                   <input type="number" step={0.01} min={0} value={editForm.purchasePrice} onChange={(e) => setEditForm({ ...editForm, purchasePrice: parseFloat(e.target.value) || 0 })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm" />
                 </div>
               </div>
-              <div>
-                <label className="text-xs text-white/50 mb-1 block">Low Stock Threshold</label>
-                <input type="number" min={0} value={editForm.lowStockThreshold} onChange={(e) => setEditForm({ ...editForm, lowStockThreshold: parseInt(e.target.value) || 0 })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-white/50 mb-1 block">Currency</label>
+                  <select value={editForm.currency} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm">
+                    <option value="USD">$ USD</option>
+                    <option value="EUR">€ EUR</option>
+                    <option value="GBP">£ GBP</option>
+                    <option value="INR">₹ INR</option>
+                    <option value="JPY">¥ JPY</option>
+                    <option value="AUD">A$ AUD</option>
+                    <option value="CAD">C$ CAD</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-white/50 mb-1 block">Low Stock Threshold</label>
+                  <input type="number" min={0} value={editForm.lowStockThreshold} onChange={(e) => setEditForm({ ...editForm, lowStockThreshold: parseInt(e.target.value) || 0 })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm" />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

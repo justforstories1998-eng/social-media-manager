@@ -82,24 +82,57 @@ export default function ProductsPage() {
   const [comboError, setComboError] = useState<string | null>(null);
   const [generationStep, setGenerationStep] = useState(0);
   const [trackedProductIds, setTrackedProductIds] = useState<Set<string>>(new Set());
+  const [trackerProductMap, setTrackerProductMap] = useState<Map<string, string>>(new Map());
   const [trackingProduct, setTrackingProduct] = useState<string | null>(null);
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [stockProduct, setStockProduct] = useState<any>(null);
+  const [stockForm, setStockForm] = useState({ quantity: '', purchasePrice: '', notes: '' });
+  const [stockSubmitting, setStockSubmitting] = useState(false);
 
   useEffect(() => {
     trackerApi.list().then(res => {
-      setTrackedProductIds(new Set(res.data.map(tp => tp.productId)));
+      const map = new Map<string, string>();
+      res.data.forEach(tp => map.set(tp.productId, tp.id));
+      setTrackedProductIds(new Set(map.keys()));
+      setTrackerProductMap(map);
     }).catch(() => {});
   }, []);
 
   const handleTrackProduct = async (productId: string) => {
     setTrackingProduct(productId);
     try {
-      await trackerApi.syncSingle(productId);
+      const res = await trackerApi.syncSingle(productId);
       setTrackedProductIds(prev => new Set([...prev, productId]));
+      setTrackerProductMap(prev => new Map([...prev, [productId, res.data.id]]));
       toast.success('Product added to tracker!');
     } catch {
       toast.error('Failed to add to tracker');
     } finally {
       setTrackingProduct(null);
+    }
+  };
+
+  const handleAddStockFromProduct = async () => {
+    if (!stockProduct || !stockForm.quantity) return;
+    const trackerId = trackerProductMap.get(stockProduct.id);
+    if (!trackerId) return;
+    setStockSubmitting(true);
+    try {
+      await trackerApi.addStock({
+        trackerProductId: trackerId,
+        type: 'restock',
+        quantity: parseInt(stockForm.quantity),
+        notes: stockForm.notes || undefined,
+        purchasePrice: parseFloat(stockForm.purchasePrice) || undefined,
+      });
+      toast.success('Stock added!');
+      setShowStockModal(false);
+      setStockProduct(null);
+      setStockForm({ quantity: '', purchasePrice: '', notes: '' });
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to add stock');
+    } finally {
+      setStockSubmitting(false);
     }
   };
 
@@ -578,6 +611,14 @@ export default function ProductsPage() {
                     <><Activity className="w-3 h-3" /> Track</>
                   )}
                 </button>
+                {trackedProductIds.has(product.id) && (
+                  <button
+                    onClick={() => { setStockProduct(product); setStockForm({ quantity: '', purchasePrice: String(product.price || ''), notes: '' }); setShowStockModal(true); }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#7c3aed]/15 text-[#7c3aed] text-[11px] font-medium hover:bg-[#7c3aed]/25 transition-colors"
+                  >
+                    <Plus className="w-3 h-3" /> Add Stock
+                  </button>
+                )}
                 <div className="relative flex-1">
                   <button
                     onClick={() => setQuickContentOpen(quickContentOpen === product.id ? null : product.id)}
@@ -1175,6 +1216,64 @@ export default function ProductsPage() {
             className="max-w-full max-h-[90vh] object-contain rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           />
+        </div>
+      )}
+
+      {/* Add Stock Modal */}
+      {showStockModal && stockProduct && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 sm:p-6" onClick={() => { setShowStockModal(false); setStockProduct(null); }}>
+          <div className="bg-[#0c0c0c] p-6 sm:p-8 rounded-[2rem] max-w-md w-full max-h-[90vh] overflow-y-auto border border-white/10" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <div className="font-mono text-xs tracking-[3px] text-white/50">ADD STOCK</div>
+                <div className="text-2xl font-semibold tracking-tight mt-1">{stockProduct.name}</div>
+              </div>
+              <button onClick={() => { setShowStockModal(false); setStockProduct(null); }} className="p-2 rounded-full hover:bg-white/10"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">QUANTITY</label>
+                <input
+                  value={stockForm.quantity}
+                  onChange={e => setStockForm({ ...stockForm, quantity: e.target.value })}
+                  type="number"
+                  min="1"
+                  placeholder="Number of units"
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors text-sm"
+                />
+              </div>
+              <div>
+                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">PURCHASE PRICE ({stockProduct.currency || 'USD'})</label>
+                <input
+                  value={stockForm.purchasePrice}
+                  onChange={e => setStockForm({ ...stockForm, purchasePrice: e.target.value })}
+                  type="number"
+                  step="0.01"
+                  placeholder="Cost per unit"
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors text-sm"
+                />
+              </div>
+              <div>
+                <label className="font-mono text-xs tracking-[2px] text-white/50 block mb-2">NOTES</label>
+                <textarea
+                  value={stockForm.notes}
+                  onChange={e => setStockForm({ ...stockForm, notes: e.target.value })}
+                  placeholder="Optional notes"
+                  className="w-full h-20 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7c3aed] focus:outline-none transition-colors text-sm resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => { setShowStockModal(false); setStockProduct(null); }} className="flex-1 py-3 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-sm">Cancel</button>
+              <button
+                onClick={handleAddStockFromProduct}
+                disabled={stockSubmitting || !stockForm.quantity}
+                className="neon-button flex-1"
+              >
+                {stockSubmitting ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Add Stock'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

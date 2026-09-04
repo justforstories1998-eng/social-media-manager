@@ -109,7 +109,7 @@ export class TrackerService {
         totalRevenue: revenue,
         totalCost: purchasePrice * netSales,
         profit: estimatedProfit,
-        currency: tp.product.currency || 'USD',
+        currency: tp.currency || tp.product.currency || 'USD',
         status,
       };
     });
@@ -189,7 +189,7 @@ export class TrackerService {
       totalRevenue: revenue,
       totalCost: purchasePrice * netSales,
       profit: estimatedProfit,
-      currency: trackerProduct.product.currency || 'USD',
+      currency: trackerProduct.currency || trackerProduct.product.currency || 'USD',
       status,
     };
   }

@@ -521,6 +521,7 @@ model TrackerProduct {
   userId          String
   productId       String   @unique // Links to Product model
   sku             String?
+  currency        String?
   lowStockThreshold Int    @default(10)
   purchasePrice   Decimal? @db.Decimal(10,2)
   sellingPrice    Decimal? @db.Decimal(10,2)
