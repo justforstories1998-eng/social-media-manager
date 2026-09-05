@@ -87,7 +87,7 @@ Do not generate watermarks, random text, fake branding, or unrelated objects.`;
         this.logger.log(`OpenAI endpoint success: ${response.status}`);
         return response.data;
       } catch (openaiError: any) {
-        this.logger.warn(`OpenAI endpoint failed (${openaiError.response?.status}): ${openaiError.message}`);
+        this.logger.warn(`OpenAI endpoint failed (${openaiError.response?.status}): ${JSON.stringify(openaiError.response?.data || openaiError.message).substring(0, 300)}`);
       }
 
       // Fallback to NIM endpoint
@@ -109,7 +109,8 @@ Do not generate watermarks, random text, fake branding, or unrelated objects.`;
         this.logger.error(`NIM endpoint ${status}: ${JSON.stringify(errData || nimError.message).substring(0, 500)}`);
 
         if (status === 401 || status === 403) {
-          throw new Error('Invalid NVIDIA API key. Get a key at https://build.nvidia.com');
+          const detail = errData?.detail || errData?.message || errData?.error || JSON.stringify(errData);
+          throw new Error(`NVIDIA auth failed (${status}): ${detail}. Your key may need to accept model terms at https://build.nvidia.com`);
         }
         if (status === 422) {
           throw new Error(`Invalid parameters: ${errData?.detail || errData?.message || 'Check request body'}`);
