@@ -4,9 +4,9 @@ import { ImageProvider, GeneratedImageResult } from './image-provider.interface'
 import axios from 'axios';
 
 const NVIDIA_MODELS = [
-  { id: 'black-forest-labs/flux.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast, 4 steps, 1024x1024 only', capabilities: ['text-to-image'], steps: 4, cfgScale: 0, maxSize: 1024 },
-  { id: 'black-forest-labs/flux.1-dev', name: 'FLUX.1 Dev', description: 'High quality, 20 steps', capabilities: ['text-to-image', 'image-to-image'], steps: 20, cfgScale: 3.5, maxSize: 1440 },
-  { id: 'black-forest-labs/flux.2-klein-4b', name: 'FLUX.2 Klein 4B', description: 'Efficient, 8 steps', capabilities: ['text-to-image'], steps: 8, cfgScale: 3.5, maxSize: 1440 },
+  { id: 'black-forest-labs/flux.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast (4 steps), 1024x1024 only', capabilities: ['text-to-image'], steps: 4, cfgScale: 0, maxSize: 1024 },
+  { id: 'black-forest-labs/flux.1-dev', name: 'FLUX.1 Dev', description: 'Highest quality (20 steps)', capabilities: ['text-to-image', 'image-to-image'], steps: 20, cfgScale: 3.5, maxSize: 1440 },
+  { id: 'black-forest-labs/flux.2-klein-4b', name: 'FLUX.2 Klein 4B', description: 'Efficient (8 steps)', capabilities: ['text-to-image'], steps: 8, cfgScale: 3.5, maxSize: 1440 },
 ];
 
 @Injectable()
@@ -31,20 +31,8 @@ export class NvidiaProvider implements ImageProvider {
     return true;
   }
 
-  private getHeaders() {
-    return {
-      'Authorization': `Bearer ${this.apiKey}`,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
-  }
-
   private resolveModel(model?: string): string {
     if (model && NVIDIA_MODELS.some(m => m.id === model)) return model;
-    if (model) {
-      const match = NVIDIA_MODELS.find(m => m.id.includes(model) || m.name.toLowerCase().includes(model.toLowerCase()));
-      if (match) return match.id;
-    }
     return this.defaultModel;
   }
 
@@ -60,83 +48,109 @@ Preserve the product's identity, shape, proportions, colours, materials, distinc
 Do not replace the product with another product.
 Do not redesign the product.
 Do not alter its fundamental shape.
-Do not create duplicate products.
-Do not distort the product.
 
 Creative direction:
 
 ${userPrompt}
 
-Create a premium commercial advertising composition.
+Create a premium commercial advertising composition with professional lighting, realistic materials, cinematic colour grading and strong visual hierarchy.
 
-Use professional advertising photography, realistic lighting, realistic materials, realistic shadows, cinematic colour grading and strong visual hierarchy.
-
-Make the supplied product the primary subject.
-
-Create an environment and background that support the product and the user's creative direction.
-
-Leave appropriate negative space for promotional text where requested.
-
-Do not generate watermarks.
-Do not generate random text.
-Do not generate fake branding.
-Do not generate unrelated products or objects.`;
+Do not generate watermarks, random text, fake branding, or unrelated objects.`;
   }
 
-  private async callNvidiaApi(modelId: string, data: any): Promise<any> {
-    const url = `${this.baseUrl}/genai/${modelId}`;
-    this.logger.log(`Calling NVIDIA API: ${url}`);
-    this.logger.log(`Request: ${JSON.stringify({ ...data, prompt: data.prompt?.substring(0, 80) + '...' })}`);
+  private async callNvidiaWithRetry(modelId: string, data: any, retries = 2): Promise<any> {
+    // Try OpenAI-compatible endpoint first (more reliable on hosted API)
+    const openaiUrl = `${this.baseUrl}/images/generations`;
+    const nimUrl = `${this.baseUrl}/genai/${modelId}`;
 
-    try {
-      const response = await axios.post(url, data, {
-        headers: this.getHeaders(),
-        timeout: 180000,
-      });
-      this.logger.log(`NVIDIA API response status: ${response.status}, keys: ${Object.keys(response.data || {}).join(', ')}`);
-      return response.data;
-    } catch (error: any) {
-      const status = error.response?.status;
-      const errData = error.response?.data;
-      this.logger.error(`NVIDIA API ${status}: ${JSON.stringify(errData || error.message).substring(0, 800)}`);
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      // Try OpenAI-compatible endpoint
+      try {
+        this.logger.log(`Attempt ${attempt + 1}: POST ${openaiUrl}`);
+        const openaiData = {
+          model: modelId,
+          prompt: data.prompt,
+          n: 1,
+          response_format: 'b64_json',
+          size: '1024x1024',
+          seed: data.seed || 0,
+          steps: data.steps,
+        };
+        const response = await axios.post(openaiUrl, openaiData, {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          timeout: 180000,
+        });
+        this.logger.log(`OpenAI endpoint success: ${response.status}`);
+        return response.data;
+      } catch (openaiError: any) {
+        this.logger.warn(`OpenAI endpoint failed (${openaiError.response?.status}): ${openaiError.message}`);
+      }
 
-      if (status === 401 || status === 403) {
-        throw new Error('Invalid NVIDIA API key. Get a key at https://build.nvidia.com');
+      // Fallback to NIM endpoint
+      try {
+        this.logger.log(`Attempt ${attempt + 1}: POST ${nimUrl}`);
+        const response = await axios.post(nimUrl, data, {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          timeout: 180000,
+        });
+        this.logger.log(`NIM endpoint success: ${response.status}`);
+        return response.data;
+      } catch (nimError: any) {
+        const status = nimError.response?.status;
+        const errData = nimError.response?.data;
+        this.logger.error(`NIM endpoint ${status}: ${JSON.stringify(errData || nimError.message).substring(0, 500)}`);
+
+        if (status === 401 || status === 403) {
+          throw new Error('Invalid NVIDIA API key. Get a key at https://build.nvidia.com');
+        }
+        if (status === 422) {
+          throw new Error(`Invalid parameters: ${errData?.detail || errData?.message || 'Check request body'}`);
+        }
+        if (status === 429) {
+          if (attempt < retries) {
+            await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
+            continue;
+          }
+          throw new Error('Rate limited. Try again in a few seconds.');
+        }
+        if (status === 503) {
+          if (attempt < retries) {
+            await new Promise(r => setTimeout(r, 5000));
+            continue;
+          }
+          throw new Error('Model is loading. Try again in 30 seconds.');
+        }
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 2000));
+          continue;
+        }
+        throw new Error(`NVIDIA API error: ${errData?.error || nimError.message}`);
       }
-      if (status === 404) {
-        throw new Error(`Model not found: ${modelId}. Available: ${NVIDIA_MODELS.map(m => m.id).join(', ')}`);
-      }
-      if (status === 422) {
-        const detail = errData?.detail || errData?.message || JSON.stringify(errData);
-        throw new Error(`Invalid request parameters: ${detail}`);
-      }
-      if (status === 429) {
-        throw new Error('NVIDIA API rate limit exceeded. Try again in a few seconds.');
-      }
-      if (status === 503) {
-        throw new Error('NVIDIA API is loading the model. Please try again in 30 seconds.');
-      }
-      if (errData?.error) {
-        throw new Error(`NVIDIA: ${errData.error}`);
-      }
-      throw error;
     }
   }
 
   private normalizeResponse(raw: any, model: string, defaultWidth: number, defaultHeight: number): GeneratedImageResult {
     const images: GeneratedImageResult['images'] = [];
 
-    // NVIDIA NIM /v1/infer format: { artifacts: [{ base64: "...", seed: ... }] }
+    // NIM format: { artifacts: [{ base64: "..." }] }
     if (raw.artifacts && Array.isArray(raw.artifacts)) {
       for (const artifact of raw.artifacts) {
         if (artifact.base64) {
-          const base64Data = artifact.base64.startsWith('data:') ? artifact.base64 : `data:image/png;base64,${artifact.base64}`;
-          images.push({ imageUrl: base64Data, mimeType: 'image/png', width: defaultWidth, height: defaultHeight });
+          const b64 = artifact.base64.startsWith('data:') ? artifact.base64 : `data:image/png;base64,${artifact.base64}`;
+          images.push({ imageUrl: b64, mimeType: 'image/png', width: defaultWidth, height: defaultHeight });
         }
       }
     }
 
-    // OpenAI-compatible format: { data: [{ b64_json: "..." }] }
+    // OpenAI format: { data: [{ b64_json: "..." }] }
     if (images.length === 0 && raw.data && Array.isArray(raw.data)) {
       for (const item of raw.data) {
         if (item.b64_json) {
@@ -156,8 +170,8 @@ Do not generate unrelated products or objects.`;
     }
 
     if (images.length === 0) {
-      this.logger.error('NVIDIA response had no images:', JSON.stringify(raw).substring(0, 500));
-      throw new Error('No images in NVIDIA response: ' + JSON.stringify(raw).substring(0, 200));
+      this.logger.error('No images in response:', JSON.stringify(raw).substring(0, 500));
+      throw new Error('No images returned. Response: ' + JSON.stringify(raw).substring(0, 200));
     }
 
     return { success: true, model, provider: 'nvidia', images };
@@ -172,7 +186,6 @@ Do not generate unrelated products or objects.`;
   }): Promise<GeneratedImageResult> {
     const model = this.resolveModel();
     const config = this.getModelConfig(model);
-    // Clamp to model's max size
     const width = Math.min(params.width || 1024, config.maxSize);
     const height = Math.min(params.height || 1024, config.maxSize);
 
@@ -188,7 +201,7 @@ Do not generate unrelated products or objects.`;
       image: null,
     };
 
-    const raw = await this.callNvidiaApi(model, data);
+    const raw = await this.callNvidiaWithRetry(model, data);
     return this.normalizeResponse(raw, model, width, height);
   }
 
@@ -218,18 +231,13 @@ Do not generate unrelated products or objects.`;
       image: null,
     };
 
-    // Add product image reference if supported
     if (params.productImage && config.capabilities.includes('image-to-image')) {
-      if (params.productImage.startsWith('http')) {
-        data.image = params.productImage;
-      } else if (params.productImage.startsWith('data:')) {
-        data.image = params.productImage;
-      } else {
-        data.image = `data:image/png;base64,${params.productImage}`;
-      }
+      data.image = params.productImage.startsWith('http') || params.productImage.startsWith('data:')
+        ? params.productImage
+        : `data:image/png;base64,${params.productImage}`;
     }
 
-    const raw = await this.callNvidiaApi(model, data);
+    const raw = await this.callNvidiaWithRetry(model, data);
     return this.normalizeResponse(raw, model, width, height);
   }
 
@@ -262,7 +270,7 @@ Create only the background scene, environment, lighting, atmosphere, and visual 
       image: null,
     };
 
-    const raw = await this.callNvidiaApi(model, data);
+    const raw = await this.callNvidiaWithRetry(model, data);
     return this.normalizeResponse(raw, model, width, height);
   }
 

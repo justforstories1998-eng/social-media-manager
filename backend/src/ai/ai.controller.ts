@@ -101,7 +101,11 @@ export class AIController {
       });
 
       await this.aiGenerationService.update(generation.id, req.user.id, { status: 'processing' });
-      const result = await this.aiService.generateImage(body.prompt, body.model, body.width, body.height, body.seed, productData);
+
+      const result = await Promise.race([
+        this.aiService.generateImage(body.prompt, body.model, body.width, body.height, body.seed, productData),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Image generation timed out after 120s')), 120000)),
+      ]) as any;
 
       await this.aiGenerationService.update(generation.id, req.user.id, {
         status: 'completed',
