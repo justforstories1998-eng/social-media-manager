@@ -71,26 +71,31 @@ export class AIController {
     @Request() req: any,
     @Body() body: { prompt: string; model?: string; width?: number; height?: number; seed?: number; productId?: string },
   ) {
-    let generation: any;
     try {
       let productData: any = undefined;
       if (body.productId) {
-        const product = await this.prisma.product.findFirst({
-          where: { id: body.productId, userId: req.user.id },
-        });
-        if (product) {
-          productData = {
-            name: product.name,
-            description: product.description || undefined,
-            category: product.category || undefined,
-            imageUrl: product.images?.[0] || undefined,
-            features: product.features || [],
-          };
+        try {
+          const product = await this.prisma.product.findFirst({
+            where: { id: body.productId, userId: req.user.id },
+          });
+          if (product) {
+            productData = {
+              name: product.name,
+              description: product.description || undefined,
+              category: product.category || undefined,
+              imageUrl: product.images?.[0] || undefined,
+              features: product.features || [],
+            };
+          }
+        } catch (e: any) {
+          console.error('Product lookup failed:', e.message);
         }
       }
 
+      const result = await this.aiService.generateImage(body.prompt, body.model, body.width, body.height, body.seed, productData);
+
       try {
-        generation = await this.aiGenerationService.create(req.user.id, {
+        const generation = await this.aiGenerationService.create(req.user.id, {
           productId: body.productId,
           type: 'image',
           prompt: body.prompt,
@@ -100,34 +105,19 @@ export class AIController {
           height: body.height,
           seed: body.seed,
         });
-        await this.aiGenerationService.update(generation.id, req.user.id, { status: 'processing' });
-      } catch (genError: any) {
-        console.error('Failed to create AI generation record:', genError.message);
-      }
-
-      const result = await Promise.race([
-        this.aiService.generateImage(body.prompt, body.model, body.width, body.height, body.seed, productData),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Image generation timed out after 180s')), 180000)),
-      ]) as any;
-
-      if (generation) {
         await this.aiGenerationService.update(generation.id, req.user.id, {
           status: 'completed',
           outputUrl: result.imageUrl,
           outputData: result,
         }).catch(() => {});
+      } catch (e: any) {
+        console.error('Generation record failed:', e.message);
       }
 
-      return { generation, result };
+      return { result };
     } catch (error: any) {
-      if (generation) {
-        await this.aiGenerationService.update(generation.id, req.user.id, {
-          status: 'failed',
-          error: error.message,
-        }).catch(() => {});
-      }
       console.error('generate-image error:', error.message, error.stack);
-      return { error: error.message, stack: error.stack?.substring(0, 200) };
+      throw error;
     }
   }
 
