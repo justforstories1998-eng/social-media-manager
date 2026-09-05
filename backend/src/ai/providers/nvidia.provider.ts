@@ -4,7 +4,7 @@ import { ImageProvider, GeneratedImageResult } from './image-provider.interface'
 import axios from 'axios';
 
 const NVIDIA_MODELS = [
-  { id: 'black-forest-labs/flux.2-klein-4b', name: 'FLUX.2 Klein 4B', description: 'Efficient (8 steps)', capabilities: ['text-to-image'], steps: 8, maxSize: 1024 },
+  { id: 'black-forest-labs/flux.2-klein-4b', name: 'FLUX.2 Klein 4B', description: 'Efficient (4 steps)', capabilities: ['text-to-image'], steps: 4, maxSize: 1024 },
   { id: 'black-forest-labs/flux.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast (4 steps)', capabilities: ['text-to-image'], steps: 4, maxSize: 1024 },
   { id: 'black-forest-labs/flux.1-dev', name: 'FLUX.1 Dev', description: 'Highest quality (20 steps)', capabilities: ['text-to-image', 'image-to-image'], steps: 20, maxSize: 1440 },
 ];
@@ -55,22 +55,12 @@ export class NvidiaProvider implements ImageProvider {
 
     const payload: any = {
       prompt,
-      height: options?.height || 1024,
+      image: [''],
       width: options?.width || 1024,
-      cfg_scale: 0,
-      samples: 1,
+      height: options?.height || 1024,
       seed: options?.seed || 0,
       steps: config.steps,
-      image: null,
     };
-
-    if (modelId.includes('flux.2-klein')) {
-      payload.mode = 'Image Generation';
-    } else if (modelId.includes('flux.1-schnell')) {
-      payload.mode = 'base';
-    } else if (modelId.includes('flux.1-dev')) {
-      payload.mode = 'base';
-    }
 
     this.logger.log(`POST ${url}`);
     this.logger.log(`Payload: ${JSON.stringify({ ...payload, prompt: prompt.substring(0, 80) + '...' })}`);
