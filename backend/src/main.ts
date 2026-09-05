@@ -49,9 +49,9 @@ async function bootstrap() {
   }));
 
   // CORS
-  const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/+$/, '');
+  const frontendUrl = (process.env.FRONTEND_URL || 'https://wondermedia.vercel.app').replace(/\/+$/, '');
   app.enableCors({
-    origin: frontendUrl,
+    origin: [frontendUrl, 'https://wondermedia.vercel.app', 'http://localhost:3000', 'http://localhost:3002'],
     credentials: true,
   });
 
