@@ -53,17 +53,23 @@ export class NvidiaProvider implements ImageProvider {
     const url = `https://ai.api.nvidia.com/v1/genai/${modelId}`;
     const config = this.getModelConfig(modelId);
 
-    // Minimal payload — NVIDIA returns 422 for extra fields
     const payload: any = {
       prompt,
-      seed: options?.seed || 0,
-      width: options?.width || 1024,
       height: options?.height || 1024,
+      width: options?.width || 1024,
+      cfg_scale: 0,
+      samples: 1,
+      seed: options?.seed || 0,
+      steps: config.steps,
+      image: null,
     };
 
-    // Only add steps for models that support it
-    if (modelId.includes('flux.2-klein') || modelId.includes('flux.1-dev')) {
-      payload.steps = config.steps;
+    if (modelId.includes('flux.2-klein')) {
+      payload.mode = 'Image Generation';
+    } else if (modelId.includes('flux.1-schnell')) {
+      payload.mode = 'base';
+    } else if (modelId.includes('flux.1-dev')) {
+      payload.mode = 'base';
     }
 
     this.logger.log(`POST ${url}`);
