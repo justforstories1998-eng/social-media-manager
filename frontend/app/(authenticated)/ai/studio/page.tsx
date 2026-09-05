@@ -341,7 +341,7 @@ function ImageTab(props: MediaTabProps) {
   const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [prompt, setPrompt] = useState(urlPrompt);
-  const [model, setModel] = useState('black-forest-labs/flux.1-schnell');
+  const [model, setModel] = useState('black-forest-labs/flux.2-klein-4b');
   const [size, setSize] = useState(0);
   const [seed, setSeed] = useState<number | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);
