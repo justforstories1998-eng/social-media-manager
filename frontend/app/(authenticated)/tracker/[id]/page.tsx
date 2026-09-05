@@ -3,9 +3,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Package, TrendingUp, DollarSign, ShoppingCart, Layers, AlertTriangle, Edit, Plus, Loader2, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, Package, TrendingUp, DollarSign, ShoppingCart, Layers, AlertTriangle, Edit, Plus, Loader2, X, Trash2, ArrowLeftRight } from 'lucide-react';
 import { api, getUploadUrl, formatCurrency, type TrackerProduct, type Sale, type StockMovement } from '@/lib/api';
 import { toast } from 'sonner';
+import DateRangeFilter from '@/components/DateRangeFilter';
+import StockAdjustmentModal from '@/components/StockAdjustmentModal';
 
 export default function TrackerProductDetail() {
   const params = useParams();
@@ -24,15 +26,22 @@ export default function TrackerProductDetail() {
   const [stockForm, setStockForm] = useState({ quantity: 0, notes: '', purchasePrice: 0 });
   const [editForm, setEditForm] = useState({ sellingPrice: 0, purchasePrice: 0, currency: 'USD', lowStockThreshold: 10, supplierName: '', supplierContact: '', notes: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
+      const params: Record<string, string> = {};
+      if (dateFrom) params.dateFrom = dateFrom;
+      if (dateTo) params.dateTo = dateTo;
+      const query = Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : '';
       const [prodRes, salesRes, stockRes] = await Promise.all([
         api.get<TrackerProduct>(`/tracker/${id}`),
-        api.get<Sale[]>(`/tracker/${id}/sales`),
-        api.get<StockMovement[]>(`/tracker/${id}/stock`),
+        api.get<Sale[]>(`/tracker/${id}/sales${query}`),
+        api.get<StockMovement[]>(`/tracker/${id}/stock${query}`),
       ]);
       setProduct(prodRes.data);
       setSales(salesRes.data);
@@ -51,7 +60,7 @@ export default function TrackerProductDetail() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, dateFrom, dateTo]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -233,6 +242,13 @@ export default function TrackerProductDetail() {
               >
                 <Trash2 className="w-3.5 h-3.5" /> Archive
               </button>
+              <button
+                onClick={() => setShowAdjustModal(true)}
+                className="px-4 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors"
+                style={{ background: 'rgba(245,158,11,.1)', color: '#f59e0b' }}
+              >
+                <ArrowLeftRight className="w-3.5 h-3.5" /> Adjust Stock
+              </button>
             </div>
           </div>
         </div>
@@ -247,6 +263,8 @@ export default function TrackerProductDetail() {
           </div>
         ))}
       </div>
+
+      <DateRangeFilter dateFrom={dateFrom} dateTo={dateTo} onChange={(f, t) => { setDateFrom(f); setDateTo(t); }} className="mb-4" />
 
       <div className="flex gap-1 mb-4 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,.04)' }}>
         {(['sales', 'stock'] as const).map((tab) => (
@@ -502,6 +520,15 @@ export default function TrackerProductDetail() {
           </div>
         </div>
       )}
+      {/* Stock Adjustment Modal */}
+      <StockAdjustmentModal
+        isOpen={showAdjustModal}
+        onClose={() => setShowAdjustModal(false)}
+        product={product}
+        products={product ? [product] : []}
+        onAdjusted={loadData}
+        preselectedProductId={product?.id}
+      />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, X, LayoutDashboard, FileText, Package, Calendar, BarChart3, Sparkles, Settings, Bell, Shield, Activity } from 'lucide-react';
+import { Menu, X, LayoutDashboard, FileText, Package, Calendar, BarChart3, Sparkles, Settings, Bell, Shield, Activity, History } from 'lucide-react';
 
 export default function MobileNav() {
   const [isOpen, setIsOpen] = useState(false);
@@ -21,9 +21,10 @@ export default function MobileNav() {
     { href: '/posts', label: 'Posts', icon: FileText },
     { href: '/products', label: 'Products', icon: Package },
     { href: '/tracker', label: 'Tracker', icon: Activity },
+    { href: '/tracker/transactions', label: 'Transactions', icon: History },
     { href: '/calendar', label: 'Calendar', icon: Calendar },
     { href: '/analytics', label: 'Analytics', icon: BarChart3 },
-    { href: '/ai/generate', label: 'AI Studio', icon: Sparkles },
+    { href: '/ai/studio', label: 'AI Studio', icon: Sparkles },
     { href: '/notifications', label: 'Notifications', icon: Bell },
   ];
 

@@ -17,6 +17,7 @@ import {
   Shield,
   MessageCircle,
   Activity,
+  History,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -25,6 +26,7 @@ const navItems = [
   { href: '/posts', label: 'Posts', icon: FileText, tour: 'nav-posts' },
   { href: '/products', label: 'Products', icon: Package, tour: 'nav-products' },
   { href: '/tracker', label: 'Tracker', icon: Activity, tour: 'nav-tracker' },
+  { href: '/tracker/transactions', label: 'Transactions', icon: History, tour: 'nav-transactions' },
   { href: '/calendar', label: 'Calendar', icon: Calendar, tour: 'nav-calendar' },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, tour: 'nav-analytics' },
   { href: '/ai/studio', label: 'AI Studio', icon: Sparkles, tour: 'nav-ai' },

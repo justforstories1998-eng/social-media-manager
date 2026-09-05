@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TrackerService } from './tracker.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { CreateStockMovementDto } from './dto/create-stock-movement.dto';
+import { CreateAdjustmentDto } from './dto/create-adjustment.dto';
 import { UpdateTrackerProductDto } from './dto/update-tracker-product.dto';
 
 @Controller('tracker')
@@ -39,8 +40,12 @@ export class TrackerController {
   }
 
   @Get('dashboard')
-  async getDashboard(@Request() req: any) {
-    return this.trackerService.getDashboard(req.user.id);
+  async getDashboard(
+    @Request() req: any,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.trackerService.getDashboard(req.user.id, dateFrom, dateTo);
   }
 
   @Get('export/csv')
@@ -49,8 +54,12 @@ export class TrackerController {
     @Res() res: Response,
     @Query('search') search?: string,
     @Query('category') category?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('trackerProductIds') trackerProductIds?: string,
   ) {
-    const csv = await this.trackerService.exportCSV(req.user.id, { search, category });
+    const ids = trackerProductIds ? trackerProductIds.split(',') : undefined;
+    const csv = await this.trackerService.exportCSV(req.user.id, { search, category, dateFrom, dateTo, trackerProductIds: ids });
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=tracker-export.csv');
     res.send(csv);
@@ -60,8 +69,18 @@ export class TrackerController {
   async getTransactions(
     @Request() req: any,
     @Query('trackerProductId') trackerProductId?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
   ) {
-    return this.trackerService.getTransactions(req.user.id, trackerProductId);
+    return this.trackerService.getTransactions(req.user.id, trackerProductId, dateFrom, dateTo);
+  }
+
+  @Get('customers')
+  async getCustomerAnalytics(
+    @Request() req: any,
+    @Query('trackerProductId') trackerProductId?: string,
+  ) {
+    return this.trackerService.getCustomerAnalytics(req.user.id, trackerProductId);
   }
 
   @Get(':id')
@@ -88,6 +107,11 @@ export class TrackerController {
     return this.trackerService.addStock(req.user.id, dto);
   }
 
+  @Post('adjust')
+  async adjustStock(@Request() req: any, @Body() dto: CreateAdjustmentDto) {
+    return this.trackerService.adjustStock(req.user.id, dto);
+  }
+
   @Post('sync/single')
   async syncSingle(@Request() req: any, @Body() body: { productId: string }) {
     return this.trackerService.syncSingle(req.user.id, body.productId);
@@ -109,8 +133,13 @@ export class TrackerController {
   }
 
   @Get(':id/stock')
-  async getStockHistory(@Request() req: any, @Param('id') id: string) {
-    return this.trackerService.getStockHistory(req.user.id, id);
+  async getStockHistory(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.trackerService.getStockHistory(req.user.id, id, dateFrom, dateTo);
   }
 
   @Get(':id/stats')

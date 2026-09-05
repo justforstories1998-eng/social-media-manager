@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { CreateStockMovementDto } from './dto/create-stock-movement.dto';
+import { CreateAdjustmentDto } from './dto/create-adjustment.dto';
 import { UpdateTrackerProductDto } from './dto/update-tracker-product.dto';
 
 @Injectable()
@@ -194,12 +195,21 @@ export class TrackerService {
     };
   }
 
-  async getDashboard(userId: string) {
+  async getDashboard(userId: string, dateFrom?: string, dateTo?: string) {
     const trackerProducts = await this.prisma.trackerProduct.findMany({
       where: { userId, isArchived: false },
       include: {
         product: true,
-        sales: true,
+        sales: {
+          where: dateFrom || dateTo
+            ? {
+                saleDate: {
+                  ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+                  ...(dateTo ? { lte: new Date(dateTo) } : {}),
+                },
+              }
+            : undefined,
+        },
         stockMovements: true,
       },
     });
@@ -368,7 +378,7 @@ export class TrackerService {
     });
   }
 
-  async adjustStock(userId: string, dto: CreateStockMovementDto) {
+  async adjustStock(userId: string, dto: CreateAdjustmentDto) {
     const trackerProduct = await this.prisma.trackerProduct.findFirst({
       where: { id: dto.trackerProductId, userId },
       include: { stockMovements: true },
@@ -419,7 +429,7 @@ export class TrackerService {
     });
   }
 
-  async getStockHistory(userId: string, trackerProductId: string) {
+  async getStockHistory(userId: string, trackerProductId: string, dateFrom?: string, dateTo?: string) {
     const trackerProduct = await this.prisma.trackerProduct.findFirst({
       where: { id: trackerProductId, userId },
     });
@@ -428,8 +438,15 @@ export class TrackerService {
       throw new NotFoundException('Tracker product not found');
     }
 
+    const where: any = { trackerProductId };
+    if (dateFrom || dateTo) {
+      where.createdAt = {};
+      if (dateFrom) where.createdAt.gte = new Date(dateFrom);
+      if (dateTo) where.createdAt.lte = new Date(dateTo);
+    }
+
     return this.prisma.stockMovement.findMany({
-      where: { trackerProductId },
+      where,
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -501,18 +518,29 @@ export class TrackerService {
     });
   }
 
-  async getTransactions(userId: string, trackerProductId?: string) {
+  async getTransactions(userId: string, trackerProductId?: string, dateFrom?: string, dateTo?: string) {
     const where: any = { userId };
     if (trackerProductId) where.trackerProductId = trackerProductId;
 
+    const saleWhere: any = { ...where };
+    const smWhere: any = { ...where };
+
+    if (dateFrom || dateTo) {
+      const dateFilter: any = {};
+      if (dateFrom) dateFilter.gte = new Date(dateFrom);
+      if (dateTo) dateFilter.lte = new Date(dateTo);
+      saleWhere.saleDate = dateFilter;
+      smWhere.createdAt = dateFilter;
+    }
+
     const [sales, stockMovements] = await Promise.all([
       this.prisma.sale.findMany({
-        where,
+        where: saleWhere,
         include: { trackerProduct: { include: { product: true } } },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.stockMovement.findMany({
-        where,
+        where: smWhere,
         include: { trackerProduct: { include: { product: true } } },
         orderBy: { createdAt: 'desc' },
       }),
@@ -526,7 +554,85 @@ export class TrackerService {
     return transactions;
   }
 
-  async exportCSV(userId: string, filters?: { search?: string; category?: string }) {
+  async getCustomerAnalytics(userId: string, trackerProductId?: string) {
+    const saleWhere: any = { userId, isReturn: false };
+    if (trackerProductId) saleWhere.trackerProductId = trackerProductId;
+
+    const sales = await this.prisma.sale.findMany({
+      where: saleWhere,
+      include: { trackerProduct: { include: { product: true } } },
+      orderBy: { saleDate: 'desc' },
+    });
+
+    const customerMap = new Map<string, {
+      name: string;
+      totalSpent: number;
+      totalOrders: number;
+      totalUnits: number;
+      lastPurchase: Date;
+      products: Map<string, { name: string; units: number; revenue: number }>;
+    }>();
+
+    for (const sale of sales) {
+      const name = sale.customerName || 'Unknown';
+      if (!customerMap.has(name)) {
+        customerMap.set(name, {
+          name,
+          totalSpent: 0,
+          totalOrders: 0,
+          totalUnits: 0,
+          lastPurchase: sale.saleDate,
+          products: new Map(),
+        });
+      }
+      const customer = customerMap.get(name)!;
+      customer.totalSpent += Number(sale.totalPrice);
+      customer.totalOrders += 1;
+      customer.totalUnits += sale.quantity;
+      if (new Date(sale.saleDate) > customer.lastPurchase) {
+        customer.lastPurchase = sale.saleDate;
+      }
+
+      const productName = sale.trackerProduct?.product?.name || 'Unknown';
+      if (!customer.products.has(productName)) {
+        customer.products.set(productName, { name: productName, units: 0, revenue: 0 });
+      }
+      const product = customer.products.get(productName)!;
+      product.units += sale.quantity;
+      product.revenue += Number(sale.totalPrice);
+    }
+
+    const customers = Array.from(customerMap.values())
+      .map((c) => ({
+        name: c.name,
+        totalSpent: c.totalSpent,
+        totalOrders: c.totalOrders,
+        totalUnits: c.totalUnits,
+        lastPurchase: c.lastPurchase,
+        avgOrderValue: c.totalOrders > 0 ? c.totalSpent / c.totalOrders : 0,
+        topProducts: Array.from(c.products.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 3),
+      }))
+      .sort((a, b) => b.totalSpent - a.totalSpent);
+
+    const uniqueCustomers = customers.length;
+    const repeatCustomers = customers.filter((c) => c.totalOrders > 1).length;
+    const totalRevenue = customers.reduce((sum, c) => sum + c.totalSpent, 0);
+    const totalOrders = customers.reduce((sum, c) => sum + c.totalOrders, 0);
+
+    return {
+      customers,
+      summary: {
+        uniqueCustomers,
+        repeatCustomers,
+        repeatCustomerRate: uniqueCustomers > 0 ? (repeatCustomers / uniqueCustomers) * 100 : 0,
+        avgOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
+        totalRevenue,
+        totalOrders,
+      },
+    };
+  }
+
+  async exportCSV(userId: string, filters?: { search?: string; category?: string; dateFrom?: string; dateTo?: string; trackerProductIds?: string[] }) {
     const products = await this.findAll(userId, filters);
 
     const headers = [

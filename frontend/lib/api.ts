@@ -385,21 +385,32 @@ export interface TrackerDashboard {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
     return api.get<TrackerProduct[]>(`/tracker${query}`);
   },
-  dashboard: () => api.get<TrackerDashboard>('/tracker/dashboard'),
+  dashboard: (params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get<TrackerDashboard>(`/tracker/dashboard${query}`);
+  },
   getOne: (id: string) => api.get<TrackerProduct>(`/tracker/${id}`),
   update: (id: string, data: Partial<TrackerProduct>) => api.put(`/tracker/${id}`, data),
   archive: (id: string) => api.post(`/tracker/${id}/archive`),
   recordSale: (data: any) => api.post('/tracker/sale', data),
   addStock: (data: any) => api.post('/tracker/stock', data),
+  adjustStock: (data: { trackerProductId: string; quantity: number; notes?: string }) => api.post('/tracker/adjust', data),
   getSales: (id: string, params?: Record<string, string>) => {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
     return api.get<Sale[]>(`/tracker/${id}/sales${query}`);
   },
-  getStockHistory: (id: string) => api.get<StockMovement[]>(`/tracker/${id}/stock`),
+  getStockHistory: (id: string, params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get<StockMovement[]>(`/tracker/${id}/stock${query}`);
+  },
   getStats: (id: string) => api.get<any>(`/tracker/${id}/stats`),
   getTransactions: (params?: Record<string, string>) => {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
     return api.get<any[]>(`/tracker/transactions/all${query}`);
+  },
+  getCustomers: (params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get<any>(`/tracker/customers${query}`);
   },
   exportCsv: (params?: Record<string, string>) => {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
