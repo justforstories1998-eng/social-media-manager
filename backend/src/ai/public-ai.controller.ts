@@ -26,11 +26,10 @@ export class PublicAIController {
 
     const results: any = {};
 
-    // Test 1: Exact NVIDIA example payload
+    // Test 1: Without image field
     try {
       const res = await axios.post(`https://ai.api.nvidia.com/v1/genai/${model}`, {
         prompt: 'a macro wildlife photo of a green frog in a rainforest pond',
-        image: [''],
         width: 1024,
         height: 1024,
         seed: 0,
@@ -39,16 +38,33 @@ export class PublicAIController {
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         timeout: 120000,
       });
-      results.klein = { status: res.status, keys: Object.keys(res.data || {}), hasArtifacts: !!res.data?.artifacts, artifactCount: res.data?.artifacts?.length };
+      results.klein_no_image = { status: res.status, keys: Object.keys(res.data || {}), hasArtifacts: !!res.data?.artifacts, artifactCount: res.data?.artifacts?.length };
     } catch (e: any) {
-      results.klein = { status: e.response?.status, data: JSON.stringify(e.response?.data || e.message).substring(0, 500) };
+      results.klein_no_image = { status: e.response?.status, data: JSON.stringify(e.response?.data || e.message).substring(0, 500) };
     }
 
-    // Test 2: Schnell
+    // Test 2: With image as empty string
+    try {
+      const res = await axios.post(`https://ai.api.nvidia.com/v1/genai/${model}`, {
+        prompt: 'a macro wildlife photo of a green frog in a rainforest pond',
+        image: '',
+        width: 1024,
+        height: 1024,
+        seed: 0,
+        steps: 4,
+      }, {
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        timeout: 120000,
+      });
+      results.klein_empty_string = { status: res.status, keys: Object.keys(res.data || {}), hasArtifacts: !!res.data?.artifacts, artifactCount: res.data?.artifacts?.length };
+    } catch (e: any) {
+      results.klein_empty_string = { status: e.response?.status, data: JSON.stringify(e.response?.data || e.message).substring(0, 500) };
+    }
+
+    // Test 3: Schnell without image
     try {
       const res = await axios.post(`https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-schnell`, {
         prompt: 'a macro wildlife photo of a green frog in a rainforest pond',
-        image: [''],
         width: 1024,
         height: 1024,
         seed: 42,
@@ -57,9 +73,9 @@ export class PublicAIController {
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         timeout: 120000,
       });
-      results.schnell = { status: res.status, keys: Object.keys(res.data || {}), hasArtifacts: !!res.data?.artifacts };
+      results.schnell_no_image = { status: res.status, keys: Object.keys(res.data || {}), hasArtifacts: !!res.data?.artifacts };
     } catch (e: any) {
-      results.schnell = { status: e.response?.status, data: JSON.stringify(e.response?.data || e.message).substring(0, 500) };
+      results.schnell_no_image = { status: e.response?.status, data: JSON.stringify(e.response?.data || e.message).substring(0, 500) };
     }
 
     return results;

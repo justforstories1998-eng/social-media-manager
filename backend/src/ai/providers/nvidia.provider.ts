@@ -55,7 +55,6 @@ export class NvidiaProvider implements ImageProvider {
 
     const payload: any = {
       prompt,
-      image: [''],
       width: options?.width || 1024,
       height: options?.height || 1024,
       seed: options?.seed || 0,
