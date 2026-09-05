@@ -7,6 +7,7 @@ import { NvidiaProvider } from './providers/nvidia.provider';
 
 const FREE_OPENROUTER_MODELS = [
   { id: 'minimax/minimax-m3:free', name: 'MiniMax M3', context: '1M tokens', description: 'Best free model — high quality reasoning and generation' },
+  { id: 'moonshotai/kimi-k3', name: 'Kimi K3', context: '128K tokens', description: 'Moonshot multimodal model — text, image, and vision' },
   { id: 'poolside/laguna-s-2.1:free', name: 'Laguna S 2.1', context: '128K tokens', description: 'Poolside coding and reasoning model' },
   { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra', context: '1M tokens', description: 'Long-context reasoning powerhouse' },
   { id: 'minimax/minimax-m2.7:free', name: 'MiniMax M2.7', context: '262K tokens', description: 'Fast general purpose model' },

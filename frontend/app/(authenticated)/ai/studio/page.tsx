@@ -35,17 +35,13 @@ const typeOptions = [
 ];
 
 const imageModels = [
-  { id: 'black-forest-labs/flux.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast generation, good quality' },
-  { id: 'black-forest-labs/flux.1-dev', name: 'FLUX.1 Dev', description: 'Highest quality, slower' },
-  { id: 'black-forest-labs/flux.2-klein-4b', name: 'FLUX.2 Klein 4B', description: 'Efficient, newer model' },
+  { id: 'black-forest-labs/flux.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast (4 steps), 1024x1024 only' },
+  { id: 'black-forest-labs/flux.1-dev', name: 'FLUX.1 Dev', description: 'Highest quality (20 steps), up to 1440px' },
+  { id: 'black-forest-labs/flux.2-klein-4b', name: 'FLUX.2 Klein 4B', description: 'Efficient (8 steps), up to 1440px' },
 ];
 
 const sizePresets = [
-  { label: 'Square (1:1)', width: 1024, height: 1024 },
-  { label: 'Portrait (4:5)', width: 1024, height: 1280 },
-  { label: 'Story (9:16)', width: 768, height: 1344 },
-  { label: 'Landscape (16:9)', width: 1344, height: 768 },
-  { label: 'Social (4:3)', width: 1152, height: 896 },
+  { label: 'Square (1024x1024)', width: 1024, height: 1024 },
 ];
 
 type TabId = 'content' | 'image';
