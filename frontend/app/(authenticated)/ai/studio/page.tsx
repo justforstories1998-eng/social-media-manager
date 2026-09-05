@@ -35,15 +35,17 @@ const typeOptions = [
 ];
 
 const imageModels = [
-  { id: 'nvidia', name: 'NVIDIA AI', description: 'Professional product advertisement generation' },
+  { id: 'black-forest-labs/flux.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast generation, good quality' },
+  { id: 'black-forest-labs/flux.1-dev', name: 'FLUX.1 Dev', description: 'Highest quality, slower' },
+  { id: 'black-forest-labs/flux.2-klein-4b', name: 'FLUX.2 Klein 4B', description: 'Efficient, newer model' },
 ];
 
 const sizePresets = [
-  { label: 'Square', width: 1024, height: 1024 },
-  { label: 'Landscape', width: 1280, height: 720 },
-  { label: 'Portrait', width: 720, height: 1280 },
-  { label: 'Wide', width: 1536, height: 640 },
-  { label: 'Social', width: 1080, height: 1350 },
+  { label: 'Square (1:1)', width: 1024, height: 1024 },
+  { label: 'Portrait (4:5)', width: 1024, height: 1280 },
+  { label: 'Story (9:16)', width: 768, height: 1344 },
+  { label: 'Landscape (16:9)', width: 1344, height: 768 },
+  { label: 'Social (4:3)', width: 1152, height: 896 },
 ];
 
 type TabId = 'content' | 'image';
@@ -343,7 +345,7 @@ function ImageTab(props: MediaTabProps) {
   const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [prompt, setPrompt] = useState(urlPrompt);
-  const [model, setModel] = useState('nvidia');
+  const [model, setModel] = useState('black-forest-labs/flux.1-schnell');
   const [size, setSize] = useState(0);
   const [seed, setSeed] = useState<number | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);
