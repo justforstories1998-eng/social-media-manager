@@ -4,9 +4,9 @@ import { ImageProvider, GeneratedImageResult } from './image-provider.interface'
 import axios from 'axios';
 
 const NVIDIA_MODELS = [
-  { id: 'black-forest-labs/flux.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast generation, good quality', capabilities: ['text-to-image', 'image-to-image'] },
-  { id: 'black-forest-labs/flux.1-dev', name: 'FLUX.1 Dev', description: 'Highest quality, slower', capabilities: ['text-to-image', 'image-to-image'] },
-  { id: 'black-forest-labs/flux.2-klein-4b', name: 'FLUX.2 Klein 4B', description: 'Efficient, newer model', capabilities: ['text-to-image', 'image-to-image'] },
+  { id: 'black-forest-labs/flux.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast generation, good quality', capabilities: ['text-to-image', 'image-to-image'], steps: 4 },
+  { id: 'black-forest-labs/flux.1-dev', name: 'FLUX.1 Dev', description: 'Highest quality, slower', capabilities: ['text-to-image', 'image-to-image'], steps: 20 },
+  { id: 'black-forest-labs/flux.2-klein-4b', name: 'FLUX.2 Klein 4B', description: 'Efficient, newer model', capabilities: ['text-to-image', 'image-to-image'], steps: 8 },
 ];
 
 const ASPECT_RATIOS = {
@@ -29,11 +29,15 @@ export class NvidiaProvider implements ImageProvider {
   constructor(private configService: ConfigService) {
     this.apiKey = this.configService.get('NVIDIA_API_KEY') || '';
     this.defaultModel = this.configService.get('NVIDIA_MODEL') || 'black-forest-labs/flux.1-schnell';
-    this.baseUrl = this.configService.get('NVIDIA_API_BASE_URL') || 'https://integrate.api.nvidia.com/v1';
+    this.baseUrl = this.configService.get('NVIDIA_API_BASE_URL') || 'https://ai.api.nvidia.com/v1';
   }
 
   async isAvailable(): Promise<boolean> {
-    return !!this.apiKey;
+    if (!this.apiKey) {
+      this.logger.warn('NVIDIA_API_KEY not configured');
+      return false;
+    }
+    return true;
   }
 
   private getHeaders() {
@@ -51,6 +55,11 @@ export class NvidiaProvider implements ImageProvider {
       if (match) return match.id;
     }
     return this.defaultModel;
+  }
+
+  private getModelSteps(modelId: string): number {
+    const found = NVIDIA_MODELS.find(m => m.id === modelId);
+    return found?.steps || 4;
   }
 
   private buildProductPreservationPrompt(userPrompt: string): string {
@@ -84,106 +93,95 @@ Do not generate fake branding.
 Do not generate unrelated products or objects.`;
   }
 
-  private async callNvidiaApi(endpoint: string, data: any): Promise<any> {
-    const url = `${this.baseUrl}${endpoint}`;
+  private async callNvidiaApi(modelId: string, data: any): Promise<any> {
+    const url = `${this.baseUrl}/genai/${modelId}`;
     this.logger.log(`Calling NVIDIA API: ${url}`);
+    this.logger.log(`Request body keys: ${Object.keys(data).join(', ')}`);
 
-    const response = await axios.post(url, data, {
-      headers: this.getHeaders(),
-      timeout: 120000,
-    });
+    try {
+      const response = await axios.post(url, data, {
+        headers: this.getHeaders(),
+        timeout: 120000,
+      });
+      this.logger.log(`NVIDIA API response status: ${response.status}`);
+      return response.data;
+    } catch (error: any) {
+      const status = error.response?.status;
+      const errData = error.response?.data;
+      this.logger.error(`NVIDIA API error: ${status} - ${JSON.stringify(errData || error.message).substring(0, 500)}`);
 
-    return response.data;
+      if (status === 401 || status === 403) {
+        throw new Error('Invalid NVIDIA API key. Check your NVIDIA_API_KEY on Render.');
+      }
+      if (status === 404) {
+        throw new Error(`NVIDIA model not found: ${modelId}. Check your NVIDIA_MODEL setting.`);
+      }
+      if (status === 429) {
+        throw new Error('NVIDIA API rate limit exceeded. Please try again later.');
+      }
+      if (errData?.error) {
+        throw new Error(`NVIDIA API error: ${errData.error}`);
+      }
+      throw error;
+    }
   }
 
   private normalizeResponse(raw: any, model: string, defaultWidth: number, defaultHeight: number): GeneratedImageResult {
     const images: GeneratedImageResult['images'] = [];
 
-    if (raw.images && Array.isArray(raw.images)) {
+    // Handle NVIDIA NIM response format: { artifacts: [{ base64: "...", seed: ... }] }
+    if (raw.artifacts && Array.isArray(raw.artifacts)) {
+      for (const artifact of raw.artifacts) {
+        if (artifact.base64) {
+          const base64Data = artifact.base64.startsWith('data:') ? artifact.base64 : `data:image/png;base64,${artifact.base64}`;
+          images.push({
+            imageUrl: base64Data,
+            mimeType: 'image/png',
+            width: defaultWidth,
+            height: defaultHeight,
+          });
+        }
+      }
+    }
+
+    // Handle alternative response formats
+    if (images.length === 0 && raw.images && Array.isArray(raw.images)) {
       for (const img of raw.images) {
         if (img.b64_json) {
-          images.push({
-            imageUrl: `data:image/png;base64,${img.b64_json}`,
-            mimeType: 'image/png',
-            width: img.width || defaultWidth,
-            height: img.height || defaultHeight,
-          });
+          images.push({ imageUrl: `data:image/png;base64,${img.b64_json}`, mimeType: 'image/png', width: defaultWidth, height: defaultHeight });
         } else if (img.url) {
-          images.push({
-            imageUrl: img.url,
-            mimeType: 'image/png',
-            width: img.width || defaultWidth,
-            height: img.height || defaultHeight,
-          });
+          images.push({ imageUrl: img.url, mimeType: 'image/png', width: defaultWidth, height: defaultHeight });
         }
       }
-    } else if (raw.output && Array.isArray(raw.output)) {
+    }
+
+    if (images.length === 0 && raw.data) {
+      const items = Array.isArray(raw.data) ? raw.data : [raw.data];
+      for (const item of items) {
+        if (item.b64_json) {
+          images.push({ imageUrl: `data:image/png;base64,${item.b64_json}`, mimeType: 'image/png', width: defaultWidth, height: defaultHeight });
+        } else if (item.url) {
+          images.push({ imageUrl: item.url, mimeType: 'image/png', width: defaultWidth, height: defaultHeight });
+        }
+      }
+    }
+
+    if (images.length === 0 && raw.output && Array.isArray(raw.output)) {
       for (const item of raw.output) {
         if (item.b64_json) {
-          images.push({
-            imageUrl: `data:image/png;base64,${item.b64_json}`,
-            mimeType: 'image/png',
-            width: item.width || defaultWidth,
-            height: item.height || defaultHeight,
-          });
+          images.push({ imageUrl: `data:image/png;base64,${item.b64_json}`, mimeType: 'image/png', width: defaultWidth, height: defaultHeight });
         } else if (item.url) {
-          images.push({
-            imageUrl: item.url,
-            mimeType: 'image/png',
-            width: item.width || defaultWidth,
-            height: item.height || defaultHeight,
-          });
+          images.push({ imageUrl: item.url, mimeType: 'image/png', width: defaultWidth, height: defaultHeight });
         }
-      }
-    } else if (raw.data) {
-      if (Array.isArray(raw.data)) {
-        for (const item of raw.data) {
-          if (item.b64_json) {
-            images.push({
-              imageUrl: `data:image/png;base64,${item.b64_json}`,
-              mimeType: 'image/png',
-              width: defaultWidth,
-              height: defaultHeight,
-            });
-          } else if (item.url) {
-            images.push({
-              imageUrl: item.url,
-              mimeType: 'image/png',
-              width: defaultWidth,
-              height: defaultHeight,
-            });
-          }
-        }
-      } else if (raw.data.b64_json) {
-        images.push({
-          imageUrl: `data:image/png;base64,${raw.data.b64_json}`,
-          mimeType: 'image/png',
-          width: defaultWidth,
-          height: defaultHeight,
-        });
-      }
-    } else if (raw.image) {
-      if (typeof raw.image === 'string') {
-        images.push({
-          imageUrl: raw.image.startsWith('data:') ? raw.image : `data:image/png;base64,${raw.image}`,
-          mimeType: 'image/png',
-          width: defaultWidth,
-          height: defaultHeight,
-        });
       }
     }
 
     if (images.length === 0) {
       this.logger.error('NVIDIA response contained no images:', JSON.stringify(raw).substring(0, 500));
-      throw new Error('No images returned from NVIDIA API');
+      throw new Error('No images returned from NVIDIA API. Response: ' + JSON.stringify(raw).substring(0, 200));
     }
 
-    return {
-      success: true,
-      model,
-      provider: 'nvidia',
-      images,
-    };
+    return { success: true, model, provider: 'nvidia', images };
   }
 
   async generateTextToImage(params: {
@@ -199,14 +197,15 @@ Do not generate unrelated products or objects.`;
 
     const data: any = {
       prompt: params.prompt,
-      width,
+      negative_prompt: 'watermark, text, logo, branding, low quality, blurry, distorted, deformed',
+      seed: params.seed || Math.floor(Math.random() * 4294967295),
+      steps: this.getModelSteps(model),
+      cfg_scale: 3.5,
       height,
+      width,
     };
 
-    if (params.seed !== undefined) data.seed = params.seed;
-    if (params.numberOfImages) data.num_images = params.numberOfImages;
-
-    const raw = await this.callNvidiaApi('/genai/' + encodeURIComponent(model), data);
+    const raw = await this.callNvidiaApi(model, data);
     return this.normalizeResponse(raw, model, width, height);
   }
 
@@ -221,30 +220,30 @@ Do not generate unrelated products or objects.`;
     const model = this.resolveModel();
     const width = params.width || 1024;
     const height = params.height || 1024;
-
     const enhancedPrompt = this.buildProductPreservationPrompt(params.prompt);
 
     const data: any = {
       prompt: enhancedPrompt,
-      width,
+      negative_prompt: 'watermark, text, logo, branding, low quality, blurry, distorted, deformed',
+      seed: params.seed || Math.floor(Math.random() * 4294967295),
+      steps: this.getModelSteps(model),
+      cfg_scale: 3.5,
       height,
+      width,
     };
 
+    // Add product image reference
     if (params.productImage) {
       if (params.productImage.startsWith('http')) {
-        data.image_url = params.productImage;
-      } else if (params.productImage.startsWith('data:')) {
-        const base64 = params.productImage.split(',')[1];
-        data.image = base64;
-      } else {
         data.image = params.productImage;
+      } else if (params.productImage.startsWith('data:')) {
+        data.image = params.productImage;
+      } else {
+        data.image = `data:image/png;base64,${params.productImage}`;
       }
     }
 
-    if (params.seed !== undefined) data.seed = params.seed;
-    if (params.numberOfImages) data.num_images = params.numberOfImages;
-
-    const raw = await this.callNvidiaApi('/genai/' + encodeURIComponent(model), data);
+    const raw = await this.callNvidiaApi(model, data);
     return this.normalizeResponse(raw, model, width, height);
   }
 
@@ -260,23 +259,21 @@ Do not generate unrelated products or objects.`;
     const width = params.width || 1024;
     const height = params.height || 1024;
 
-    this.logger.log('Background removal workflow: generating background with NVIDIA');
+    const bgPrompt = `Create a professional advertising background for a product. ${params.prompt}
 
-    const bgPrompt = `Create a professional advertising background and environment for a product. ${params.prompt}
-
-Create only the background scene, environment, lighting, atmosphere, and visual effects. Do not include any product. The background should be suitable for compositing a product onto later.
-
-Use professional advertising photography style, realistic lighting, cinematic colour grading.`;
+Create only the background scene, environment, lighting, atmosphere, and visual effects. Do not include any product.`;
 
     const data: any = {
       prompt: bgPrompt,
-      width,
+      negative_prompt: 'watermark, text, logo, product, branding, low quality, blurry',
+      seed: params.seed || Math.floor(Math.random() * 4294967295),
+      steps: this.getModelSteps(model),
+      cfg_scale: 3.5,
       height,
+      width,
     };
 
-    if (params.seed !== undefined) data.seed = params.seed;
-
-    const raw = await this.callNvidiaApi('/genai/' + encodeURIComponent(model), data);
+    const raw = await this.callNvidiaApi(model, data);
     return this.normalizeResponse(raw, model, width, height);
   }
 
