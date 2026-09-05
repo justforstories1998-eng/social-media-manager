@@ -23,11 +23,28 @@ export class PublicAIController {
   async testNvidia(@Body() body: { endpoint?: string }) {
     const apiKey = this.configService.get('NVIDIA_API_KEY') || '';
     const baseUrl = body.endpoint || this.configService.get('NVIDIA_API_BASE_URL') || 'https://integrate.api.nvidia.com/v1';
-    const model = 'black-forest-labs/flux.2-klein-4b';
+    const model = 'flux.2-klein-4b';
 
     const results: any = {};
 
-    // Test 1: NIM endpoint
+    // Test 1: OpenAI-compatible endpoint (correct format)
+    try {
+      const openaiUrl = `${baseUrl}/images/generations`;
+      const res = await axios.post(openaiUrl, {
+        model,
+        prompt: 'a simple red circle on white background',
+        n: 1,
+        response_format: 'b64_json',
+      }, {
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        timeout: 60000,
+      });
+      results.openai = { status: res.status, keys: Object.keys(res.data || {}), hasData: !!res.data?.data };
+    } catch (e: any) {
+      results.openai = { status: e.response?.status, data: e.response?.data || e.message };
+    }
+
+    // Test 2: NIM endpoint (with short name)
     try {
       const nimUrl = `${baseUrl}/genai/${model}`;
       const res = await axios.post(nimUrl, {
@@ -47,23 +64,6 @@ export class PublicAIController {
       results.nim = { status: res.status, keys: Object.keys(res.data || {}), hasArtifacts: !!res.data?.artifacts };
     } catch (e: any) {
       results.nim = { status: e.response?.status, data: e.response?.data || e.message };
-    }
-
-    // Test 2: OpenAI-compatible endpoint
-    try {
-      const openaiUrl = `${baseUrl}/images/generations`;
-      const res = await axios.post(openaiUrl, {
-        model,
-        prompt: 'a simple red circle on white background',
-        n: 1,
-        response_format: 'b64_json',
-      }, {
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        timeout: 60000,
-      });
-      results.openai = { status: res.status, keys: Object.keys(res.data || {}), hasData: !!res.data?.data };
-    } catch (e: any) {
-      results.openai = { status: e.response?.status, data: e.response?.data || e.message };
     }
 
     // Test 3: Check key validity

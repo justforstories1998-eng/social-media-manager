@@ -4,9 +4,9 @@ import { ImageProvider, GeneratedImageResult } from './image-provider.interface'
 import axios from 'axios';
 
 const NVIDIA_MODELS = [
-  { id: 'black-forest-labs/flux.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast (4 steps), 1024x1024 only', capabilities: ['text-to-image'], steps: 4, cfgScale: 0, maxSize: 1024 },
-  { id: 'black-forest-labs/flux.1-dev', name: 'FLUX.1 Dev', description: 'Highest quality (20 steps)', capabilities: ['text-to-image', 'image-to-image'], steps: 20, cfgScale: 3.5, maxSize: 1440 },
-  { id: 'black-forest-labs/flux.2-klein-4b', name: 'FLUX.2 Klein 4B', description: 'Efficient (8 steps)', capabilities: ['text-to-image'], steps: 8, cfgScale: 3.5, maxSize: 1440 },
+  { id: 'flux.2-klein-4b', name: 'FLUX.2 Klein 4B', description: 'Efficient (8 steps)', capabilities: ['text-to-image'], steps: 8, cfgScale: 0, maxSize: 1024 },
+  { id: 'flux.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast (4 steps)', capabilities: ['text-to-image'], steps: 4, cfgScale: 0, maxSize: 1024 },
+  { id: 'flux.1-dev', name: 'FLUX.1 Dev', description: 'Highest quality (20 steps)', capabilities: ['text-to-image', 'image-to-image'], steps: 20, cfgScale: 3.5, maxSize: 1440 },
 ];
 
 @Injectable()
@@ -19,7 +19,7 @@ export class NvidiaProvider implements ImageProvider {
 
   constructor(private configService: ConfigService) {
     this.apiKey = this.configService.get('NVIDIA_API_KEY') || '';
-    this.defaultModel = this.configService.get('NVIDIA_MODEL') || 'black-forest-labs/flux.2-klein-4b';
+    this.defaultModel = this.configService.get('NVIDIA_MODEL') || 'flux.2-klein-4b';
     this.baseUrl = this.configService.get('NVIDIA_API_BASE_URL') || 'https://integrate.api.nvidia.com/v1';
   }
 
@@ -32,7 +32,12 @@ export class NvidiaProvider implements ImageProvider {
   }
 
   private resolveModel(model?: string): string {
-    if (model && NVIDIA_MODELS.some(m => m.id === model)) return model;
+    if (model) {
+      // Accept both short and long names
+      const short = model.replace('black-forest-labs/', '');
+      const found = NVIDIA_MODELS.find(m => m.id === short || m.id === model);
+      if (found) return found.id;
+    }
     return this.defaultModel;
   }
 
@@ -58,101 +63,61 @@ Create a premium commercial advertising composition with professional lighting, 
 Do not generate watermarks, random text, fake branding, or unrelated objects.`;
   }
 
-  private async callNvidiaWithRetry(modelId: string, data: any, retries = 2): Promise<any> {
-    // Try OpenAI-compatible endpoint first (more reliable on hosted API)
-    const openaiUrl = `${this.baseUrl}/images/generations`;
-    const nimUrl = `${this.baseUrl}/genai/${modelId}`;
+  private async callNvidiaApi(modelId: string, data: any): Promise<any> {
+    const url = `${this.baseUrl}/images/generations`;
+    this.logger.log(`Calling NVIDIA: ${url} model=${modelId}`);
 
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      // Try OpenAI-compatible endpoint
-      try {
-        this.logger.log(`Attempt ${attempt + 1}: POST ${openaiUrl}`);
-        const openaiData = {
-          model: modelId,
-          prompt: data.prompt,
-          n: 1,
-          response_format: 'b64_json',
-          size: '1024x1024',
-          seed: data.seed || 0,
-          steps: data.steps,
-        };
-        const response = await axios.post(openaiUrl, openaiData, {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          timeout: 180000,
-        });
-        this.logger.log(`OpenAI endpoint success: ${response.status}`);
-        return response.data;
-      } catch (openaiError: any) {
-        this.logger.warn(`OpenAI endpoint failed (${openaiError.response?.status}): ${JSON.stringify(openaiError.response?.data || openaiError.message).substring(0, 300)}`);
+    const payload = {
+      model: modelId,
+      prompt: data.prompt,
+      n: 1,
+      response_format: 'b64_json',
+      seed: data.seed || 0,
+      steps: data.steps,
+    };
+
+    this.logger.log(`Payload: ${JSON.stringify({ ...payload, prompt: payload.prompt.substring(0, 80) + '...' })}`);
+
+    try {
+      const response = await axios.post(url, payload, {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        timeout: 180000,
+      });
+      this.logger.log(`NVIDIA success: ${response.status}`);
+      return response.data;
+    } catch (error: any) {
+      const status = error.response?.status;
+      const errData = error.response?.data;
+      this.logger.error(`NVIDIA ${status}: ${JSON.stringify(errData || error.message).substring(0, 800)}`);
+
+      if (status === 401 || status === 403) {
+        throw new Error(`NVIDIA auth failed: ${errData?.detail || errData?.message || 'Check API key and model license at https://build.nvidia.com'}`);
       }
-
-      // Fallback to NIM endpoint
-      try {
-        this.logger.log(`Attempt ${attempt + 1}: POST ${nimUrl}`);
-        const response = await axios.post(nimUrl, data, {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          timeout: 180000,
-        });
-        this.logger.log(`NIM endpoint success: ${response.status}`);
-        return response.data;
-      } catch (nimError: any) {
-        const status = nimError.response?.status;
-        const errData = nimError.response?.data;
-        this.logger.error(`NIM endpoint ${status}: ${JSON.stringify(errData || nimError.message).substring(0, 500)}`);
-
-        if (status === 401 || status === 403) {
-          const detail = errData?.detail || errData?.message || errData?.error || JSON.stringify(errData);
-          throw new Error(`NVIDIA auth failed (${status}): ${detail}. Your key may need to accept model terms at https://build.nvidia.com`);
-        }
-        if (status === 422) {
-          throw new Error(`Invalid parameters: ${errData?.detail || errData?.message || 'Check request body'}`);
-        }
-        if (status === 429) {
-          if (attempt < retries) {
-            await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
-            continue;
-          }
-          throw new Error('Rate limited. Try again in a few seconds.');
-        }
-        if (status === 503) {
-          if (attempt < retries) {
-            await new Promise(r => setTimeout(r, 5000));
-            continue;
-          }
-          throw new Error('Model is loading. Try again in 30 seconds.');
-        }
-        if (attempt < retries) {
-          await new Promise(r => setTimeout(r, 2000));
-          continue;
-        }
-        throw new Error(`NVIDIA API error: ${errData?.error || nimError.message}`);
+      if (status === 404) {
+        throw new Error(`Model not found: ${modelId}. Available: ${NVIDIA_MODELS.map(m => m.id).join(', ')}`);
       }
+      if (status === 422) {
+        throw new Error(`Invalid parameters: ${errData?.detail || errData?.message || JSON.stringify(errData)}`);
+      }
+      if (status === 429) {
+        throw new Error('Rate limited. Try again in a few seconds.');
+      }
+      if (status === 503) {
+        throw new Error('Model is loading. Try again in 30 seconds.');
+      }
+      throw new Error(`NVIDIA API error: ${errData?.error || errData?.detail || error.message}`);
     }
   }
 
   private normalizeResponse(raw: any, model: string, defaultWidth: number, defaultHeight: number): GeneratedImageResult {
     const images: GeneratedImageResult['images'] = [];
 
-    // NIM format: { artifacts: [{ base64: "..." }] }
-    if (raw.artifacts && Array.isArray(raw.artifacts)) {
-      for (const artifact of raw.artifacts) {
-        if (artifact.base64) {
-          const b64 = artifact.base64.startsWith('data:') ? artifact.base64 : `data:image/png;base64,${artifact.base64}`;
-          images.push({ imageUrl: b64, mimeType: 'image/png', width: defaultWidth, height: defaultHeight });
-        }
-      }
-    }
-
     // OpenAI format: { data: [{ b64_json: "..." }] }
-    if (images.length === 0 && raw.data && Array.isArray(raw.data)) {
+    if (raw.data && Array.isArray(raw.data)) {
       for (const item of raw.data) {
         if (item.b64_json) {
           images.push({ imageUrl: `data:image/png;base64,${item.b64_json}`, mimeType: 'image/png', width: defaultWidth, height: defaultHeight });
@@ -162,17 +127,19 @@ Do not generate watermarks, random text, fake branding, or unrelated objects.`;
       }
     }
 
-    // Alternative: { images: [{ b64_json: "..." }] }
-    if (images.length === 0 && raw.images && Array.isArray(raw.images)) {
-      for (const img of raw.images) {
-        if (img.b64_json) images.push({ imageUrl: `data:image/png;base64,${img.b64_json}`, mimeType: 'image/png', width: defaultWidth, height: defaultHeight });
-        else if (img.url) images.push({ imageUrl: img.url, mimeType: 'image/png', width: defaultWidth, height: defaultHeight });
+    // NIM format: { artifacts: [{ base64: "..." }] }
+    if (images.length === 0 && raw.artifacts && Array.isArray(raw.artifacts)) {
+      for (const artifact of raw.artifacts) {
+        if (artifact.base64) {
+          const b64 = artifact.base64.startsWith('data:') ? artifact.base64 : `data:image/png;base64,${artifact.base64}`;
+          images.push({ imageUrl: b64, mimeType: 'image/png', width: defaultWidth, height: defaultHeight });
+        }
       }
     }
 
     if (images.length === 0) {
       this.logger.error('No images in response:', JSON.stringify(raw).substring(0, 500));
-      throw new Error('No images returned. Response: ' + JSON.stringify(raw).substring(0, 200));
+      throw new Error('No images returned: ' + JSON.stringify(raw).substring(0, 200));
     }
 
     return { success: true, model, provider: 'nvidia', images };
@@ -190,19 +157,11 @@ Do not generate watermarks, random text, fake branding, or unrelated objects.`;
     const width = Math.min(params.width || 1024, config.maxSize);
     const height = Math.min(params.height || 1024, config.maxSize);
 
-    const data: any = {
+    const raw = await this.callNvidiaApi(model, {
       prompt: params.prompt,
-      height,
-      width,
-      cfg_scale: config.cfgScale,
-      mode: 'base',
-      samples: 1,
       seed: params.seed || 0,
       steps: config.steps,
-      image: null,
-    };
-
-    const raw = await this.callNvidiaWithRetry(model, data);
+    });
     return this.normalizeResponse(raw, model, width, height);
   }
 
@@ -220,25 +179,11 @@ Do not generate watermarks, random text, fake branding, or unrelated objects.`;
     const height = Math.min(params.height || 1024, config.maxSize);
     const enhancedPrompt = this.buildProductPreservationPrompt(params.prompt);
 
-    const data: any = {
+    const raw = await this.callNvidiaApi(model, {
       prompt: enhancedPrompt,
-      height,
-      width,
-      cfg_scale: config.cfgScale,
-      mode: 'base',
-      samples: 1,
       seed: params.seed || 0,
       steps: config.steps,
-      image: null,
-    };
-
-    if (params.productImage && config.capabilities.includes('image-to-image')) {
-      data.image = params.productImage.startsWith('http') || params.productImage.startsWith('data:')
-        ? params.productImage
-        : `data:image/png;base64,${params.productImage}`;
-    }
-
-    const raw = await this.callNvidiaWithRetry(model, data);
+    });
     return this.normalizeResponse(raw, model, width, height);
   }
 
@@ -259,19 +204,11 @@ Do not generate watermarks, random text, fake branding, or unrelated objects.`;
 
 Create only the background scene, environment, lighting, atmosphere, and visual effects. Do not include any product.`;
 
-    const data: any = {
+    const raw = await this.callNvidiaApi(model, {
       prompt: bgPrompt,
-      height,
-      width,
-      cfg_scale: config.cfgScale,
-      mode: 'base',
-      samples: 1,
       seed: params.seed || 0,
       steps: config.steps,
-      image: null,
-    };
-
-    const raw = await this.callNvidiaWithRetry(model, data);
+    });
     return this.normalizeResponse(raw, model, width, height);
   }
 
