@@ -116,8 +116,8 @@ export class AIController {
 
       return { result };
     } catch (error: any) {
-      console.error('generate-image error:', error.message, error.stack);
-      throw error;
+      console.error('generate-image error:', error.message);
+      return { error: error.message || 'Image generation failed' };
     }
   }
 
