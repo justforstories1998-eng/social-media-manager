@@ -650,7 +650,7 @@ export default function TrackerPage() {
             {!selectedProduct && (
               <div className="mb-4">
                 <label className="block text-xs font-medium text-white/50 mb-1.5">Product</label>
-                <select value={selectedProduct?.id || ''} onChange={e => {
+                <select value="" onChange={e => {
                   const p = products.find(pr => pr.id === e.target.value);
                   if (p) { setSelectedProduct(p); setSaleForm(f => ({ ...f, unitPrice: p.sellingPrice?.toString() || '' })); }
                 }} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
@@ -708,7 +708,7 @@ export default function TrackerPage() {
             {!selectedProduct && (
               <div className="mb-4">
                 <label className="block text-xs font-medium text-white/50 mb-1.5">Product</label>
-                <select value={selectedProduct?.id || ''} onChange={e => {
+                <select value="" onChange={e => {
                   const p = products.find(pr => pr.id === e.target.value);
                   if (p) setSelectedProduct(p);
                 }} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
