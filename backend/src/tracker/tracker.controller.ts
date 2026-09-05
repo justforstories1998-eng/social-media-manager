@@ -6,6 +6,7 @@ import { CreateSaleDto } from './dto/create-sale.dto';
 import { CreateStockMovementDto } from './dto/create-stock-movement.dto';
 import { CreateAdjustmentDto } from './dto/create-adjustment.dto';
 import { UpdateTrackerProductDto } from './dto/update-tracker-product.dto';
+import { UpdateFxRatesDto } from './dto/fx-rates.dto';
 
 @Controller('tracker')
 @UseGuards(JwtAuthGuard)
@@ -81,6 +82,16 @@ export class TrackerController {
     @Query('trackerProductId') trackerProductId?: string,
   ) {
     return this.trackerService.getCustomerAnalytics(req.user.id, trackerProductId);
+  }
+
+  @Get('fx-rates')
+  async getFxRates(@Request() req: any) {
+    return this.trackerService.getFxRates(req.user.id);
+  }
+
+  @Put('fx-rates')
+  async updateFxRates(@Request() req: any, @Body() dto: UpdateFxRatesDto) {
+    return this.trackerService.updateFxRates(req.user.id, dto.rates);
   }
 
   @Get(':id')

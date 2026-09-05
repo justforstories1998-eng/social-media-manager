@@ -363,6 +363,7 @@ export class TrackerService {
         productId: product.id,
         sku: product.sku || null,
         sellingPrice: product.price || null,
+        currency: product.currency || 'USD',
         purchasePrice: null,
       },
     });
