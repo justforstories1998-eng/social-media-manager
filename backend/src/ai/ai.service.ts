@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import { v2 as cloudinary } from 'cloudinary';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProviderRegistry } from './providers/provider-registry';
 import { NvidiaProvider } from './providers/nvidia.provider';
@@ -26,6 +27,12 @@ export class AIService {
     private prisma: PrismaService,
   ) {
     this.openrouterKey = this.configService.get('OPENROUTER_API_KEY') || '';
+
+    cloudinary.config({
+      cloud_name: this.configService.get('CLOUDINARY_CLOUD_NAME'),
+      api_key: this.configService.get('CLOUDINARY_API_KEY'),
+      api_secret: this.configService.get('CLOUDINARY_API_SECRET'),
+    });
 
     this.providerRegistry = new ProviderRegistry();
 
@@ -475,7 +482,42 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
         });
       }
       this.logger.log(`Image generated successfully with NVIDIA`);
-      return { imageUrl: result.images[0]?.imageUrl || '', model: result.model, provider: result.provider, prompt: enrichedPrompt, width, height, seed: seed || Math.floor(Math.random() * 1000000) };
+
+      const base64Data = result.images[0]?.imageUrl || '';
+      let imageUrl = base64Data;
+
+      if (base64Data.startsWith('data:')) {
+        try {
+          const uploaded = await new Promise<any>((resolve, reject) => {
+            const matches = base64Data.match(/^data:image\/(\w+);base64,(.+)$/);
+            if (!matches) return reject(new Error('Invalid base64 format'));
+
+            const format = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+            const buffer = Buffer.from(matches[2], 'base64');
+
+            const uploadStream = cloudinary.uploader.upload_stream(
+              {
+                folder: 'wondermedia/ai-generated',
+                resource_type: 'image',
+                format,
+                transformation: [{ width, height, crop: 'limit', quality: 'auto' }],
+              },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              },
+            );
+            uploadStream.end(buffer);
+          });
+
+          imageUrl = uploaded.secure_url;
+          this.logger.log(`Uploaded to Cloudinary: ${imageUrl}`);
+        } catch (uploadErr: any) {
+          this.logger.warn(`Cloudinary upload failed, using base64: ${uploadErr.message}`);
+        }
+      }
+
+      return { imageUrl, model: result.model, provider: result.provider, prompt: enrichedPrompt, width, height, seed: seed || Math.floor(Math.random() * 1000000) };
     } catch (error: any) {
       this.logger.error(`NVIDIA image generation failed: ${error.message}`);
       throw error;
