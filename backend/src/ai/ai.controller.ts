@@ -71,7 +71,7 @@ export class AIController {
     @Request() req: any,
     @Body() body: { prompt: string; model?: string; width?: number; height?: number; seed?: number; productId?: string },
   ) {
-    let generation;
+    let generation: any;
     try {
       let productData: any = undefined;
       if (body.productId) {
@@ -89,29 +89,34 @@ export class AIController {
         }
       }
 
-      generation = await this.aiGenerationService.create(req.user.id, {
-        productId: body.productId,
-        type: 'image',
-        prompt: body.prompt,
-        model: body.model,
-        provider: 'nvidia',
-        width: body.width,
-        height: body.height,
-        seed: body.seed,
-      });
-
-      await this.aiGenerationService.update(generation.id, req.user.id, { status: 'processing' });
+      try {
+        generation = await this.aiGenerationService.create(req.user.id, {
+          productId: body.productId,
+          type: 'image',
+          prompt: body.prompt,
+          model: body.model,
+          provider: 'nvidia',
+          width: body.width,
+          height: body.height,
+          seed: body.seed,
+        });
+        await this.aiGenerationService.update(generation.id, req.user.id, { status: 'processing' });
+      } catch (genError: any) {
+        console.error('Failed to create AI generation record:', genError.message);
+      }
 
       const result = await Promise.race([
         this.aiService.generateImage(body.prompt, body.model, body.width, body.height, body.seed, productData),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Image generation timed out after 120s')), 120000)),
       ]) as any;
 
-      await this.aiGenerationService.update(generation.id, req.user.id, {
-        status: 'completed',
-        outputUrl: result.imageUrl,
-        outputData: result,
-      });
+      if (generation) {
+        await this.aiGenerationService.update(generation.id, req.user.id, {
+          status: 'completed',
+          outputUrl: result.imageUrl,
+          outputData: result,
+        }).catch(() => {});
+      }
 
       return { generation, result };
     } catch (error: any) {
