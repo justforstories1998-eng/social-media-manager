@@ -1,15 +1,18 @@
-import { Controller, Post, Body, UseGuards, Request, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, Logger } from '@nestjs/common';
 import { AIService } from './ai.service';
 import { AIGenerationService } from '../ai-generation/ai-generation.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { GenerateImageDto } from './dto/generate-image.dto';
 
 @ApiTags('ai')
 @ApiBearerAuth()
 @Controller('ai')
 @UseGuards(JwtAuthGuard)
 export class AIController {
+  private readonly logger = new Logger(AIController.name);
+
   constructor(
     private aiService: AIService,
     private aiGenerationService: AIGenerationService,
@@ -69,9 +72,11 @@ export class AIController {
   @Post('generate-image')
   async generateImage(
     @Request() req: any,
-    @Body() body: { prompt: string; model?: string; width?: number; height?: number; seed?: number; productId?: string },
+    @Body() body: GenerateImageDto,
   ) {
     try {
+      this.logger.log(`generate-image called: prompt="${(body.prompt || '').substring(0, 50)}", model=${body.model}, productId=${body.productId}`);
+
       let productData: any = undefined;
       if (body.productId) {
         try {
@@ -88,14 +93,17 @@ export class AIController {
             };
           }
         } catch (e: any) {
-          console.error('Product lookup failed:', e.message);
+          this.logger.warn(`Product lookup failed: ${e.message}`);
         }
       }
 
+      this.logger.log('Calling aiService.generateImage...');
       const result = await this.aiService.generateImage(body.prompt, body.model, body.width, body.height, body.seed, productData);
+      this.logger.log('aiService.generateImage returned successfully');
 
+      let generation: any = null;
       try {
-        const generation = await this.aiGenerationService.create(req.user.id, {
+        generation = await this.aiGenerationService.create(req.user.id, {
           productId: body.productId,
           type: 'image',
           prompt: body.prompt,
@@ -109,15 +117,15 @@ export class AIController {
           status: 'completed',
           outputUrl: result.imageUrl,
           outputData: result,
-        }).catch(() => {});
+        }).catch((e: any) => this.logger.warn(`Generation update failed: ${e?.message}`));
       } catch (e: any) {
-        console.error('Generation record failed:', e.message);
+        this.logger.warn(`Generation record failed: ${e.message}`);
       }
 
-      return { result };
+      return { generation, result };
     } catch (error: any) {
-      console.error('generate-image error:', error.message);
-      return { error: error.message || 'Image generation failed' };
+      this.logger.error(`generate-image error: ${error.message}`, error.stack);
+      return { generation: null, result: null, error: error.message || 'Image generation failed' };
     }
   }
 
