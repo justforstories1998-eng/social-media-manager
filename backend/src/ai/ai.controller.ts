@@ -1,4 +1,5 @@
 import { Controller, Post, Body, UseGuards, Request, Get } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AIService } from './ai.service';
 import { AIGenerationService } from '../ai-generation/ai-generation.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -14,6 +15,7 @@ export class AIController {
     private aiService: AIService,
     private aiGenerationService: AIGenerationService,
     private prisma: PrismaService,
+    private configService: ConfigService,
   ) {}
 
   @Post('generate')
@@ -133,6 +135,20 @@ export class AIController {
   @Post('chat')
   async chat(@Request() req, @Body() body: { message: string; history?: Array<{ role: string; content: string }> }) {
     return this.aiService.chat(body.message, req.user.id, body.history);
+  }
+
+  @Get('diagnose')
+  async diagnose() {
+    const nvidiaKey = this.configService.get('NVIDIA_API_KEY') || '';
+    const nvidiaModel = this.configService.get('NVIDIA_MODEL') || 'black-forest-labs/flux.1-schnell';
+    const nvidiaUrl = this.configService.get('NVIDIA_API_BASE_URL') || 'https://ai.api.nvidia.com/v1';
+    return {
+      nvidia_key_set: !!nvidiaKey,
+      nvidia_key_prefix: nvidiaKey ? nvidiaKey.substring(0, 8) + '...' : 'NOT SET',
+      nvidia_model: nvidiaModel,
+      nvidia_url: nvidiaUrl,
+      openrouter_key_set: !!this.configService.get('OPENROUTER_API_KEY'),
+    };
   }
 
 }
