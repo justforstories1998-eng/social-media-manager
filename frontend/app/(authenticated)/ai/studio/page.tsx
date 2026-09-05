@@ -35,9 +35,9 @@ const typeOptions = [
 ];
 
 const imageModels = [
-  { id: 'flux.2-klein-4b', name: 'FLUX.2 Klein 4B', description: 'Efficient (8 steps)' },
-  { id: 'flux.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast (4 steps)' },
-  { id: 'flux.1-dev', name: 'FLUX.1 Dev', description: 'Highest quality (20 steps)' },
+  { id: 'black-forest-labs/flux.2-klein-4b', name: 'FLUX.2 Klein 4B', description: 'Efficient (8 steps)' },
+  { id: 'black-forest-labs/flux.1-schnell', name: 'FLUX.1 Schnell', description: 'Fast (4 steps)' },
+  { id: 'black-forest-labs/flux.1-dev', name: 'FLUX.1 Dev', description: 'Highest quality (20 steps)' },
 ];
 
 const sizePresets = [
@@ -341,7 +341,7 @@ function ImageTab(props: MediaTabProps) {
   const [selectedProductId, setSelectedProductId] = useState<string>(preselectedProductId || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [prompt, setPrompt] = useState(urlPrompt);
-  const [model, setModel] = useState('flux.2-klein-4b');
+  const [model, setModel] = useState('black-forest-labs/flux.2-klein-4b');
   const [size, setSize] = useState(0);
   const [seed, setSeed] = useState<number | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);

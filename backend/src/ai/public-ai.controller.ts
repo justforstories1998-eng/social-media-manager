@@ -23,40 +23,19 @@ export class PublicAIController {
   async testNvidia(@Body() body: { endpoint?: string }) {
     const apiKey = this.configService.get('NVIDIA_API_KEY') || '';
     const baseUrl = body.endpoint || this.configService.get('NVIDIA_API_BASE_URL') || 'https://integrate.api.nvidia.com/v1';
-    const model = 'flux.2-klein-4b';
+    const model = 'black-forest-labs/flux.2-klein-4b';
 
     const results: any = {};
 
-    // Test 1: OpenAI-compatible endpoint (correct format)
+    // Test 1: NIM endpoint (correct format with vendor prefix)
     try {
-      const openaiUrl = `${baseUrl}/images/generations`;
-      const res = await axios.post(openaiUrl, {
-        model,
-        prompt: 'a simple red circle on white background',
-        n: 1,
-        response_format: 'b64_json',
-      }, {
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        timeout: 60000,
-      });
-      results.openai = { status: res.status, keys: Object.keys(res.data || {}), hasData: !!res.data?.data };
-    } catch (e: any) {
-      results.openai = { status: e.response?.status, data: e.response?.data || e.message };
-    }
-
-    // Test 2: NIM endpoint (with short name)
-    try {
-      const nimUrl = `${baseUrl}/genai/${model}`;
+      const nimUrl = `https://ai.api.nvidia.com/v1/genai/${model}`;
       const res = await axios.post(nimUrl, {
         prompt: 'a simple red circle on white background',
-        height: 1024,
-        width: 1024,
-        cfg_scale: 0,
-        mode: 'base',
-        samples: 1,
         seed: 0,
-        steps: 4,
-        image: null,
+        width: 1024,
+        height: 1024,
+        steps: 8,
       }, {
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         timeout: 60000,
@@ -66,9 +45,9 @@ export class PublicAIController {
       results.nim = { status: e.response?.status, data: e.response?.data || e.message };
     }
 
-    // Test 3: Check key validity
+    // Test 2: Models endpoint (different base URL)
     try {
-      const res = await axios.get(`${baseUrl}/models`, {
+      const res = await axios.get('https://integrate.api.nvidia.com/v1/models', {
         headers: { 'Authorization': `Bearer ${apiKey}` },
         timeout: 10000,
       });
