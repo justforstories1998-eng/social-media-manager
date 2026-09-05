@@ -24,6 +24,7 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   lastLoginAt   DateTime?
+  displayCurrency String @default("USD")
 
   // Relations
   businessProfile BusinessProfile?
@@ -47,6 +48,7 @@ model User {
   trackerProducts TrackerProduct[]
   sales           Sale[]
   stockMovements  StockMovement[]
+  fxRates         FxRate[]
 
   @@index([email])
   @@index([createdAt])
@@ -584,6 +586,19 @@ model StockMovement {
   @@index([trackerProductId])
   @@index([createdAt])
   @@index([type])
+}
+
+model FxRate {
+  id        String   @id @default(cuid())
+  userId    String
+  currency  String
+  rateToUSD Decimal  @db.Decimal(18, 6)
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, currency])
+  @@index([userId])
 }
 
 enum PostStatus {
