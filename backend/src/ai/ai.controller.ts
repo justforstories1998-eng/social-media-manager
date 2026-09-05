@@ -107,7 +107,7 @@ export class AIController {
 
       const result = await Promise.race([
         this.aiService.generateImage(body.prompt, body.model, body.width, body.height, body.seed, productData),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Image generation timed out after 120s')), 120000)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Image generation timed out after 180s')), 180000)),
       ]) as any;
 
       if (generation) {
@@ -126,7 +126,8 @@ export class AIController {
           error: error.message,
         }).catch(() => {});
       }
-      throw error;
+      console.error('generate-image error:', error.message, error.stack);
+      return { error: error.message, stack: error.stack?.substring(0, 200) };
     }
   }
 

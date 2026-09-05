@@ -80,4 +80,67 @@ export class PublicAIController {
 
     return results;
   }
+
+  @Post('trace-generate')
+  async traceGenerate(@Body() body: { prompt?: string; model?: string }) {
+    const apiKey = this.configService.get('NVIDIA_API_KEY') || '';
+    const steps: any[] = [];
+    const prompt = body.prompt || 'a beautiful sunset over mountains';
+    const model = body.model || 'black-forest-labs/flux.2-klein-4b';
+    const width = 1024;
+    const height = 1024;
+
+    // Step 1: Check env
+    steps.push({ step: 1, name: 'env_check', nvidia_key: !!apiKey, model, width, height });
+
+    // Step 2: Check provider registry
+    try {
+      const providerRegistry = new (await import('./providers/provider-registry')).ProviderRegistry();
+      const nvidiaProvider = new (await import('./providers/nvidia.provider')).NvidiaProvider(this.configService);
+      const available = await nvidiaProvider.isAvailable();
+      providerRegistry.registerImageProvider(nvidiaProvider);
+      steps.push({ step: 2, name: 'provider_init', available });
+    } catch (e: any) {
+      steps.push({ step: 2, name: 'provider_init', error: e.message });
+    }
+
+    // Step 3: Call NVIDIA API directly (same as provider does)
+    const payload = {
+      prompt,
+      width,
+      height,
+      seed: 0,
+      steps: 4,
+    };
+    steps.push({ step: 3, name: 'nvidia_payload', payload: { ...payload, prompt: prompt.substring(0, 50) + '...' } });
+
+    try {
+      const res = await require('axios').default.post(
+        `https://ai.api.nvidia.com/v1/genai/${model}`,
+        payload,
+        {
+          headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          timeout: 120000,
+        }
+      );
+      const hasArtifacts = !!res.data?.artifacts;
+      const artifactCount = res.data?.artifacts?.length || 0;
+      steps.push({ step: 4, name: 'nvidia_call', status: res.status, hasArtifacts, artifactCount });
+    } catch (e: any) {
+      steps.push({ step: 4, name: 'nvidia_call', status: e.response?.status, data: JSON.stringify(e.response?.data || e.message).substring(0, 300) });
+    }
+
+    // Step 5: Check if Prisma AIGeneration table exists
+    try {
+      const { PrismaClient } = require('@prisma/client');
+      const prisma = new PrismaClient();
+      const count = await prisma.aIGeneration.count();
+      steps.push({ step: 5, name: 'aigeneration_table', exists: true, count });
+      await prisma.$disconnect();
+    } catch (e: any) {
+      steps.push({ step: 5, name: 'aigeneration_table', error: e.message?.substring(0, 200) });
+    }
+
+    return { steps };
+  }
 }
