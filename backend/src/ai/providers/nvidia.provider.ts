@@ -20,7 +20,7 @@ export class NvidiaProvider implements ImageProvider {
   constructor(private configService: ConfigService) {
     this.apiKey = this.configService.get('NVIDIA_API_KEY') || '';
     this.defaultModel = this.configService.get('NVIDIA_MODEL') || 'black-forest-labs/flux.2-klein-4b';
-    this.baseUrl = this.configService.get('NVIDIA_API_BASE_URL') || 'https://ai.api.nvidia.com/v1';
+    this.baseUrl = this.configService.get('NVIDIA_API_BASE_URL') || 'https://integrate.api.nvidia.com/v1';
   }
 
   async isAvailable(): Promise<boolean> {

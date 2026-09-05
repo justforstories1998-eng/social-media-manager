@@ -12,7 +12,7 @@ export class PublicAIController {
       nvidia_key_set: !!nvidiaKey,
       nvidia_key_prefix: nvidiaKey ? nvidiaKey.substring(0, 8) + '...' : 'NOT SET',
       nvidia_model: this.configService.get('NVIDIA_MODEL') || 'black-forest-labs/flux.2-klein-4b',
-      nvidia_url: this.configService.get('NVIDIA_API_BASE_URL') || 'https://ai.api.nvidia.com/v1',
+      nvidia_url: this.configService.get('NVIDIA_API_BASE_URL') || 'https://integrate.api.nvidia.com/v1',
       openrouter_key_set: !!this.configService.get('OPENROUTER_API_KEY'),
     };
   }
