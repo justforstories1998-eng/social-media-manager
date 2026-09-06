@@ -74,7 +74,6 @@ export class AIController {
     @Request() req: any,
     @Body() body: GenerateImageDto,
   ) {
-    try {
       this.logger.log(`generate-image called: prompt="${(body.prompt || '').substring(0, 50)}", model=${body.model}, productId=${body.productId}`);
 
       let productData: any = undefined;
@@ -123,10 +122,6 @@ export class AIController {
       }
 
       return { generation, result };
-    } catch (error: any) {
-      this.logger.error(`generate-image error: ${error.message}`, error.stack);
-      return { generation: null, result: null, error: error.message || 'Image generation failed' };
-    }
   }
 
   @Get('models')

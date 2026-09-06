@@ -405,13 +405,17 @@ function ImageTab(props: MediaTabProps) {
     }
     setIsGenerating(true);
     try {
-      const res = await api.post<{ generation: { id: string }; result: GenerateImageResponse }>('/ai/generate-image', {
+      const res = await api.post<{ generation: { id: string }; result: GenerateImageResponse | null }>('/ai/generate-image', {
         prompt, model, width: currentSize.width, height: currentSize.height, seed, productId: selectedProductId,
       });
+      if (!res.data.result) {
+        toast.error((res.data as any).error || 'Image generation failed');
+        return;
+      }
       const genId = res.data.generation?.id;
       if (genId) setGenerationId(genId);
       setResult(res.data.result);
-      setHistory(prev => [res.data.result, ...prev].slice(0, 20));
+      setHistory(prev => [res.data.result!, ...prev].slice(0, 20));
       toast.success('Image generated!');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
