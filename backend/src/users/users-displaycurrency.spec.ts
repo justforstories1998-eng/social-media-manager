@@ -5,9 +5,13 @@ describe('UsersService.displayCurrency', () => {
     const prismaMock = {
       user: {
         findUnique: jest.fn().mockResolvedValue({ id: 'u1' }),
-        update: jest.fn().mockImplementation(({ data }: any) =>
-          Promise.resolve({ id: 'u1', displayCurrency: data.displayCurrency }),
-        ),
+        update: jest.fn().mockImplementation((args: any) => {
+          const out: any = { id: 'u1' };
+          for (const [k, v] of Object.entries(args.select || {})) {
+            if (v === true) out[k] = (args.data as any)[k] ?? null;
+          }
+          return Promise.resolve(out);
+        }),
       },
     };
     const svc = new UsersService(prismaMock as any);
