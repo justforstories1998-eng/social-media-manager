@@ -5,6 +5,11 @@ import { CreateStockMovementDto } from './dto/create-stock-movement.dto';
 import { CreateAdjustmentDto } from './dto/create-adjustment.dto';
 import { UpdateTrackerProductDto } from './dto/update-tracker-product.dto';
 
+const FX_SEED_DEFAULTS: Record<string, number> = {
+  EUR: 0.92, GBP: 0.79, INR: 83.2, JPY: 149.5, AUD: 1.52, CAD: 1.36,
+};
+const SUPPORTED_CURRENCIES: string[] = ['USD', 'EUR', 'GBP', 'INR', 'JPY', 'AUD', 'CAD'];
+
 @Injectable()
 export class TrackerService {
   constructor(private prisma: PrismaService) {}
@@ -358,6 +363,7 @@ export class TrackerService {
         productId: product.id,
         sku: product.sku || null,
         sellingPrice: product.price || null,
+        currency: product.currency || 'USD',
         purchasePrice: null,
       },
     });
@@ -672,5 +678,42 @@ export class TrackerService {
     const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 
     return csv;
+  }
+
+  async getFxRates(userId: string) {
+    let rows = await this.prisma.fxRate.findMany({ where: { userId } });
+    if (rows.length === 0) {
+      await this.prisma.fxRate.createMany({
+        data: Object.entries(FX_SEED_DEFAULTS).map(([currency, rateToUSD]) => ({
+          userId, currency, rateToUSD,
+        })),
+        skipDuplicates: true,
+      });
+      rows = await this.prisma.fxRate.findMany({ where: { userId } });
+    }
+    return rows.map((r) => ({
+      currency: r.currency,
+      rateToUSD: Number(r.rateToUSD),
+      updatedAt: r.updatedAt,
+    }));
+  }
+
+  async updateFxRates(userId: string, rates: Array<{ currency: string; rateToUSD: number }>) {
+    for (const r of rates) {
+      if (!SUPPORTED_CURRENCIES.includes(r.currency) || r.currency === 'USD') {
+        throw new BadRequestException(`Unsupported currency: ${r.currency}`);
+      }
+      if (!Number.isFinite(r.rateToUSD) || r.rateToUSD <= 0) {
+        throw new BadRequestException(`Invalid rate for ${r.currency}`);
+      }
+    }
+    for (const r of rates) {
+      await this.prisma.fxRate.upsert({
+        where: { userId_currency: { userId, currency: r.currency } },
+        update: { rateToUSD: r.rateToUSD },
+        create: { userId, currency: r.currency, rateToUSD: r.rateToUSD },
+      });
+    }
+    return this.getFxRates(userId);
   }
 }

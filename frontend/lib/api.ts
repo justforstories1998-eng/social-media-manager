@@ -25,6 +25,26 @@ export function formatCurrency(amount: number, currency?: string | null): string
   return `${sym}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+export const CURRENCY_OPTIONS = [
+  { value: 'USD', label: '$ USD' },
+  { value: 'EUR', label: '€ EUR' },
+  { value: 'GBP', label: '£ GBP' },
+  { value: 'INR', label: '₹ INR' },
+  { value: 'JPY', label: '¥ JPY' },
+  { value: 'AUD', label: 'A$ AUD' },
+  { value: 'CAD', label: 'C$ CAD' },
+];
+
+export interface FxRate { currency: string; rateToUSD: number; updatedAt: string; }
+
+export function convertCurrency(amount: number, from: string, to: string, rates: FxRate[]): number {
+  if (!Number.isFinite(amount) || from === to) return amount;
+  const fromRate = from === 'USD' ? 1 : rates.find((r) => r.currency === from)?.rateToUSD;
+  const toRate = to === 'USD' ? 1 : rates.find((r) => r.currency === to)?.rateToUSD;
+  if (!fromRate || !toRate) return amount;
+  return (amount / fromRate) * toRate;
+}
+
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('access_token');
@@ -416,4 +436,10 @@ export interface TrackerDashboard {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
     return api.get(`/tracker/export/csv${query}`, { responseType: 'blob' as any });
   },
+  getFxRates: () => api.get<FxRate[]>('/tracker/fx-rates'),
+  updateFxRates: (rates: Array<{ currency: string; rateToUSD: number }>) =>
+    api.put<FxRate[]>('/tracker/fx-rates', { rates }),
 };
+
+export const updateDisplayCurrency = (displayCurrency: string) =>
+  api.put('/users/me', { displayCurrency });

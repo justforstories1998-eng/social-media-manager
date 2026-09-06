@@ -7,12 +7,15 @@ import {
   XCircle, Search, Download, Plus, Loader2, X, RefreshCw, BarChart3,
   ShoppingCart, ArrowUpDown, Grid3X3, List, Activity, ChevronDown, Users,
   UserCheck, Repeat, ArrowLeftRight, CheckSquare, Square, Trash2, FileDown,
+  Settings,
 } from 'lucide-react';
-import { trackerApi, type TrackerProduct, type TrackerDashboard, type Sale, formatCurrency } from '@/lib/api';
+import api, { trackerApi, type TrackerProduct, type TrackerDashboard, type Sale, formatCurrency, CURRENCY_OPTIONS, type FxRate, convertCurrency, updateDisplayCurrency } from '@/lib/api';
 import { toast } from 'sonner';
 import { getUploadUrl } from '@/lib/api';
+import { useProducts } from '@/hooks/useProducts';
 import DateRangeFilter from '@/components/DateRangeFilter';
 import StockAdjustmentModal from '@/components/StockAdjustmentModal';
+import FxRatesModal from '@/components/FxRatesModal';
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -48,6 +51,25 @@ export default function TrackerPage() {
   const [customers, setCustomers] = useState<any>(null);
   const [showCharts, setShowCharts] = useState(true);
   const [chartData, setChartData] = useState<any[]>([]);
+  const [fxRates, setFxRates] = useState<FxRate[]>([]);
+  const [displayCurrency, setDisplayCurrency] = useState('USD');
+  const [showFxModal, setShowFxModal] = useState(false);
+  const [stockTab, setStockTab] = useState<'tracked' | 'catalog'>('tracked');
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ lowStockThreshold: '', reorderQuantity: '', supplierName: '' });
+
+  const { data: catalogProducts } = useProducts();
+
+  const trackedIds = useMemo(() => new Set(products.map(p => p.productId)), [products]);
+  const untracked = useMemo(() => {
+    const list = (catalogProducts || []).filter(p => !trackedIds.has(p.id));
+    if (catalogSearch) {
+      const q = catalogSearch.toLowerCase();
+      return list.filter(p => p.name.toLowerCase().includes(q));
+    }
+    return list;
+  }, [catalogProducts, trackedIds, catalogSearch]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -71,6 +93,15 @@ export default function TrackerPage() {
   }, [dateFrom, dateTo]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    trackerApi.getFxRates().then(res => setFxRates(res.data)).catch(() => {});
+    api.get('/users/me').then((res: any) => {
+      const code = res.data?.displayCurrency || 'USD';
+      setDisplayCurrency(code);
+      localStorage.setItem('tracker-display-currency', code);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     let result = [...products];
@@ -119,15 +150,15 @@ export default function TrackerPage() {
   useEffect(() => {
     const data = filteredProducts.map(p => ({
       name: p.product.name.length > 12 ? p.product.name.substring(0, 12) + '...' : p.product.name,
-      revenue: p.totalRevenue,
-      profit: p.profit,
+      revenue: convertCurrency(p.totalRevenue, p.currency, displayCurrency, fxRates),
+      profit: convertCurrency(p.profit, p.currency, displayCurrency, fxRates),
       sold: p.totalSold,
       stock: p.currentStock,
       margin: p.totalRevenue > 0 ? ((p.profit / p.totalRevenue) * 100) : 0,
-      cost: p.totalCost,
+      cost: convertCurrency(p.totalCost, p.currency, displayCurrency, fxRates),
     }));
     setChartData(data);
-  }, [filteredProducts]);
+  }, [filteredProducts, displayCurrency, fxRates]);
 
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredProducts.length) {
@@ -220,6 +251,19 @@ export default function TrackerPage() {
     finally { setSubmitting(false); }
   };
 
+  const handleTrackProduct = async (productId: string) => {
+    setSubmitting(true);
+    try {
+      await trackerApi.syncSingle(productId);
+      toast.success('Product tracked');
+      await loadData();
+      setStockTab('tracked');
+      const newlyTracked = products.find(p => p.productId === productId);
+      if (newlyTracked) setSelectedProduct(newlyTracked);
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to track product'); }
+    finally { setSubmitting(false); }
+  };
+
   const lowStockProducts = products.filter(p => p.status === 'low_stock' || p.status === 'out_of_stock');
   const reorderProducts = products.filter(p => p.currentStock <= p.lowStockThreshold && p.currentStock > 0);
 
@@ -248,6 +292,17 @@ export default function TrackerPage() {
           <h1 className="text-3xl font-bold text-white">Tracker</h1>
         </div>
         <div className="flex items-center gap-2">
+          <select value={displayCurrency} onChange={e => {
+            const v = e.target.value;
+            setDisplayCurrency(v);
+            localStorage.setItem('tracker-display-currency', v);
+            updateDisplayCurrency(v).catch(() => {});
+          }} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/70 focus:outline-none">
+            {CURRENCY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+          <button onClick={() => setShowFxModal(true)} className="p-2 rounded-lg bg-white/5 text-white/50 hover:bg-white/10 border border-white/10 transition-all" title="Edit FX Rates">
+            <Settings className="w-4 h-4" />
+          </button>
           <button onClick={handleSync} disabled={syncing}
             className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 text-sm border border-white/10 transition-all disabled:opacity-50">
             {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
@@ -279,9 +334,9 @@ export default function TrackerPage() {
             { label: 'TOTAL PRODUCTS', value: dashboard.totalProducts, icon: Package, color: 'text-[#7c3aed]' },
             { label: 'TOTAL STOCK', value: dashboard.totalStock, icon: Layers, color: 'text-[#ec4899]' },
             { label: 'UNITS SOLD', value: dashboard.totalUnitsSold, icon: TrendingUp, color: 'text-green-400' },
-            { label: 'SALES REVENUE', value: formatCurrency(dashboard.totalSalesRevenue), icon: DollarSign, color: 'text-[#7c3aed]' },
-            { label: 'INVENTORY VALUE', value: formatCurrency(dashboard.totalInventoryValue), icon: Wallet, color: 'text-[#ec4899]' },
-            { label: 'EST. PROFIT', value: formatCurrency(dashboard.estimatedProfit), icon: PiggyBank, color: 'text-green-400' },
+            { label: 'SALES REVENUE', value: formatCurrency(convertCurrency(dashboard.totalSalesRevenue, 'USD', displayCurrency, fxRates)), icon: DollarSign, color: 'text-[#7c3aed]' },
+            { label: 'INVENTORY VALUE', value: formatCurrency(convertCurrency(dashboard.totalInventoryValue, 'USD', displayCurrency, fxRates)), icon: Wallet, color: 'text-[#ec4899]' },
+            { label: 'EST. PROFIT', value: formatCurrency(convertCurrency(dashboard.estimatedProfit, 'USD', displayCurrency, fxRates)), icon: PiggyBank, color: 'text-green-400' },
             { label: 'LOW STOCK', value: dashboard.lowStockItems, icon: AlertTriangle, color: 'text-amber-400' },
             { label: 'OUT OF STOCK', value: dashboard.outOfStockItems, icon: XCircle, color: 'text-red-400' },
           ].map((stat) => (
@@ -294,6 +349,9 @@ export default function TrackerPage() {
             </div>
           ))}
         </div>
+      )}
+      {displayCurrency !== 'USD' && fxRates.length > 0 && (
+        <p className="text-[10px] text-white/30 font-mono">shown in {displayCurrency}</p>
       )}
 
       {/* Date Range + Charts Toggle */}
@@ -422,11 +480,11 @@ export default function TrackerPage() {
             </div>
             <div className="bg-white/5 rounded-lg p-3">
               <p className="text-xs text-white/40">Avg Order Value</p>
-              <p className="text-lg font-bold text-white">{formatCurrency(customers.summary.avgOrderValue)}</p>
+              <p className="text-lg font-bold text-white">{formatCurrency(convertCurrency(customers.summary.avgOrderValue, 'USD', displayCurrency, fxRates))}</p>
             </div>
             <div className="bg-white/5 rounded-lg p-3">
               <p className="text-xs text-white/40">Total Revenue</p>
-              <p className="text-lg font-bold text-white">{formatCurrency(customers.summary.totalRevenue)}</p>
+              <p className="text-lg font-bold text-white">{formatCurrency(convertCurrency(customers.summary.totalRevenue, 'USD', displayCurrency, fxRates))}</p>
             </div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -442,7 +500,7 @@ export default function TrackerPage() {
                       <span className="text-white/70">{c.name}</span>
                     </div>
                     <div className="text-right">
-                      <span className="text-white/90 font-medium">{formatCurrency(c.totalSpent)}</span>
+                      <span className="text-white/90 font-medium">{formatCurrency(convertCurrency(c.totalSpent, 'USD', displayCurrency, fxRates))}</span>
                       <span className="text-white/30 text-xs ml-2">{c.totalOrders} orders</span>
                     </div>
                   </div>
@@ -529,51 +587,120 @@ export default function TrackerPage() {
               </thead>
               <tbody>
                 {filteredProducts.map(p => (
-                  <tr key={p.id} className="border-b border-white/5 hover:bg-white/[0.02] cursor-pointer" onClick={() => router.push(`/tracker/${p.id}`)}>
-                    <td className="p-3" onClick={e => e.stopPropagation()}>
-                      <button onClick={() => toggleSelect(p.id)}>
-                        {selectedIds.has(p.id) ? <CheckSquare className="w-4 h-4 text-[#7c3aed]" /> : <Square className="w-4 h-4" />}
-                      </button>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-3">
-                        {p.product.images?.[0] ? (
-                          <img src={getUploadUrl(p.product.images[0])} alt="" className="w-9 h-9 rounded-lg object-cover" />
-                        ) : (
-                          <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center text-lg">{p.product.emoji || '📦'}</div>
-                        )}
-                        <div>
-                          <p className="text-white font-medium text-sm">{p.product.name}</p>
-                          <p className="text-white/30 text-xs">{p.product.category || 'Uncategorized'}</p>
+                  <React.Fragment key={p.id}>
+                    <tr className="border-b border-white/5 hover:bg-white/[0.02] cursor-pointer" onClick={() => router.push(`/tracker/${p.id}`)}>
+                      <td className="p-3" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => toggleSelect(p.id)}>
+                          {selectedIds.has(p.id) ? <CheckSquare className="w-4 h-4 text-[#7c3aed]" /> : <Square className="w-4 h-4" />}
+                        </button>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-3">
+                          {p.product.images?.[0] ? (
+                            <img src={getUploadUrl(p.product.images[0])} alt="" className="w-9 h-9 rounded-lg object-cover" />
+                          ) : (
+                            <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center text-lg">{p.product.emoji || '📦'}</div>
+                          )}
+                          <div>
+                            <p className="text-white font-medium text-sm">{p.product.name}</p>
+                            <p className="text-white/30 text-xs">{p.product.category || 'Uncategorized'}</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-3 text-white/40 hidden md:table-cell">{p.sku || '-'}</td>
-                    <td className="p-3 text-white/40 hidden lg:table-cell">{p.product.category || '-'}</td>
-                    <td className="p-3 text-right text-white/70">{p.currentStock}</td>
-                    <td className="p-3 text-right text-white/70 hidden sm:table-cell">{p.totalSold}</td>
-                    <td className="p-3 text-right text-white/70 hidden lg:table-cell">{formatCurrency(p.totalRevenue, p.currency)}</td>
-                    <td className={`p-3 text-right hidden lg:table-cell ${p.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(p.profit, p.currency)}</td>
-                    <td className="p-3 text-center">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                        p.status === 'in_stock' ? 'bg-green-500/10 text-green-400' :
-                        p.status === 'low_stock' ? 'bg-amber-500/10 text-amber-400' :
-                        'bg-red-500/10 text-red-400'
-                      }`}>{p.status === 'in_stock' ? 'In Stock' : p.status === 'low_stock' ? 'Low Stock' : 'Out of Stock'}</span>
-                    </td>
-                    <td className="p-3 text-right" onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => { setSelectedProduct(p); setShowSaleModal(true); }}
-                          className="p-1.5 rounded-lg hover:bg-[#7c3aed]/10 text-[#7c3aed] transition-all" title="Record Sale">
-                          <ShoppingCart className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => { setSelectedProduct(p); setShowStockModal(true); }}
-                          className="p-1.5 rounded-lg hover:bg-green-500/10 text-green-400 transition-all" title="Add Stock">
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="p-3 text-white/40 hidden md:table-cell">{p.sku || '-'}</td>
+                      <td className="p-3 text-white/40 hidden lg:table-cell">{p.product.category || '-'}</td>
+                      <td className="p-3 text-right text-white/70">{p.currentStock}</td>
+                      <td className="p-3 text-right text-white/70 hidden sm:table-cell">{p.totalSold}</td>
+                      <td className="p-3 text-right hidden lg:table-cell" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <select value={p.currency} onChange={e => {
+                            e.stopPropagation();
+                            trackerApi.update(p.id, { currency: e.target.value }).then(() => { toast.success('Currency updated'); loadData(); }).catch(() => toast.error('Failed'));
+                          }} className="bg-transparent border-none text-white/70 text-sm text-right focus:outline-none cursor-pointer hover:text-white/90 w-16">
+                            {CURRENCY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.value}</option>)}
+                          </select>
+                        </div>
+                      </td>
+                      <td className={`p-3 text-right hidden lg:table-cell ${p.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(p.profit, p.currency)}</td>
+                      <td className="p-3 text-center">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                          p.status === 'in_stock' ? 'bg-green-500/10 text-green-400' :
+                          p.status === 'low_stock' ? 'bg-amber-500/10 text-amber-400' :
+                          'bg-red-500/10 text-red-400'
+                        }`}>{p.status === 'in_stock' ? 'In Stock' : p.status === 'low_stock' ? 'Low Stock' : 'Out of Stock'}</span>
+                      </td>
+                      <td className="p-3 text-right" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => { setSelectedProduct(p); setShowSaleModal(true); }}
+                            className="p-1.5 rounded-lg hover:bg-[#7c3aed]/10 text-[#7c3aed] transition-all" title="Record Sale">
+                            <ShoppingCart className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => { setSelectedProduct(p); setShowStockModal(true); }}
+                            className="p-1.5 rounded-lg hover:bg-green-500/10 text-green-400 transition-all" title="Add Stock">
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={(e) => {
+                            e.stopPropagation();
+                            if (editingProductId === p.id) {
+                              setEditingProductId(null);
+                            } else {
+                              setEditForm({
+                                lowStockThreshold: p.lowStockThreshold.toString(),
+                                reorderQuantity: (p.reorderQuantity ?? '').toString(),
+                                supplierName: p.supplierName ?? '',
+                              });
+                              setEditingProductId(p.id);
+                            }
+                          }} className={`p-1.5 rounded-lg transition-all ${editingProductId === p.id ? 'bg-[#7c3aed]/20 text-[#7c3aed]' : 'hover:bg-white/10 text-white/40'}`} title="Edit details">
+                            <Activity className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {editingProductId === p.id && (
+                      <tr key={`${p.id}-edit`} className="border-b border-white/5 bg-white/[0.02]">
+                        <td colSpan={10} className="p-3" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs text-white/40">Threshold:</label>
+                              <input type="number" min="0" value={editForm.lowStockThreshold}
+                                onChange={e => setEditForm(f => ({ ...f, lowStockThreshold: e.target.value }))}
+                                className="w-20 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white focus:border-[#7c3aed]/50 focus:outline-none" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs text-white/40">Reorder Qty:</label>
+                              <input type="number" min="0" value={editForm.reorderQuantity}
+                                onChange={e => setEditForm(f => ({ ...f, reorderQuantity: e.target.value }))}
+                                className="w-20 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white focus:border-[#7c3aed]/50 focus:outline-none" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs text-white/40">Supplier:</label>
+                              <input type="text" value={editForm.supplierName}
+                                onChange={e => setEditForm(f => ({ ...f, supplierName: e.target.value }))}
+                                className="w-36 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder-white/30 focus:border-[#7c3aed]/50 focus:outline-none" />
+                            </div>
+                            <button onClick={() => {
+                              const threshold = parseInt(editForm.lowStockThreshold);
+                              const reorder = parseInt(editForm.reorderQuantity);
+                              if (isNaN(threshold) || threshold < 0 || (editForm.reorderQuantity !== '' && (isNaN(reorder) || reorder < 0))) {
+                                toast.error('Invalid values'); return;
+                              }
+                              trackerApi.update(p.id, {
+                                lowStockThreshold: threshold,
+                                reorderQuantity: isNaN(reorder) ? undefined : reorder,
+                                supplierName: editForm.supplierName || undefined,
+                              }).then(() => { toast.success('Updated'); setEditingProductId(null); loadData(); }).catch(() => toast.error('Failed'));
+                            }} className="px-3 py-1 rounded-lg bg-[#7c3aed] text-white text-xs font-medium hover:bg-[#6d28d9] transition-all">
+                              Save
+                            </button>
+                            <button onClick={() => setEditingProductId(null)} className="px-3 py-1 rounded-lg bg-white/5 text-white/50 text-xs hover:bg-white/10 transition-all">
+                              Cancel
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
@@ -616,12 +743,21 @@ export default function TrackerPage() {
                 {[
                   { label: 'STOCK', value: p.currentStock },
                   { label: 'SOLD', value: p.totalSold },
-                  { label: 'REVENUE', value: formatCurrency(p.totalRevenue, p.currency) },
+                  { label: 'REVENUE', value: formatCurrency(p.totalRevenue, p.currency), isCurrency: true, currency: p.currency, productId: p.id },
                   { label: 'PROFIT', value: formatCurrency(p.profit, p.currency), color: p.profit >= 0 ? 'text-green-400' : 'text-red-400' },
                 ].map(s => (
                   <div key={s.label}>
                     <p className="text-[10px] text-white/30 font-mono">{s.label}</p>
-                    <p className={`text-sm font-medium ${s.color || 'text-white/70'}`}>{s.value}</p>
+                    {s.isCurrency ? (
+                      <select value={s.currency} onClick={e => e.stopPropagation()} onChange={e => {
+                        e.stopPropagation();
+                        trackerApi.update(s.productId!, { currency: e.target.value }).then(() => { toast.success('Currency updated'); loadData(); }).catch(() => toast.error('Failed'));
+                      }} className="text-sm font-medium text-white/70 bg-transparent border-none focus:outline-none cursor-pointer hover:text-white/90 w-16">
+                        {CURRENCY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.value}</option>)}
+                      </select>
+                    ) : (
+                      <p className={`text-sm font-medium ${s.color || 'text-white/70'}`}>{s.value}</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -665,8 +801,14 @@ export default function TrackerPage() {
                   <label className="block text-xs font-medium text-white/50 mb-1.5">Quantity</label>
                   <input type="number" min="1" value={saleForm.quantity} onChange={e => setSaleForm(f => ({ ...f, quantity: e.target.value }))}
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#7c3aed]/50 focus:outline-none" />
+              </div>
+              {selectedProduct && (
+                <div className="flex items-center gap-2 text-xs text-white/40">
+                  <span>Sale recorded in</span>
+                  <span className="text-white/70 font-medium">{selectedProduct.currency}</span>
                 </div>
-                <div>
+              )}
+              <div>
                   <label className="block text-xs font-medium text-white/50 mb-1.5">Unit Price</label>
                   <input type="number" step="0.01" value={saleForm.unitPrice} onChange={e => setSaleForm(f => ({ ...f, unitPrice: e.target.value }))}
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#7c3aed]/50 focus:outline-none" />
@@ -705,42 +847,100 @@ export default function TrackerPage() {
               </div>
               <button onClick={() => setShowStockModal(false)} className="p-2 rounded-lg hover:bg-white/10"><X className="w-5 h-5 text-white/50" /></button>
             </div>
-            {!selectedProduct && (
-              <div className="mb-4">
-                <label className="block text-xs font-medium text-white/50 mb-1.5">Product</label>
-                <select value="" onChange={e => {
-                  const p = products.find(pr => pr.id === e.target.value);
-                  if (p) setSelectedProduct(p);
-                }} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
-                  <option value="">Select product...</option>
-                  {products.map(p => <option key={p.id} value={p.id}>{p.product.name}</option>)}
-                </select>
-              </div>
-            )}
-            <div className="space-y-3 mb-6">
-              <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5">Quantity to Add</label>
-                <input type="number" min="1" value={stockForm.quantity} onChange={e => setStockForm(f => ({ ...f, quantity: e.target.value }))}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#7c3aed]/50 focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5">Purchase Price per Unit (optional)</label>
-                <input type="number" step="0.01" value={stockForm.purchasePrice} onChange={e => setStockForm(f => ({ ...f, purchasePrice: e.target.value }))}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#7c3aed]/50 focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5">Notes (optional)</label>
-                <textarea value={stockForm.notes} onChange={e => setStockForm(f => ({ ...f, notes: e.target.value }))} rows={2}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:border-[#7c3aed]/50 focus:outline-none resize-none" />
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setShowStockModal(false)} className="flex-1 px-4 py-2.5 rounded-lg bg-white/5 text-white/70 hover:bg-white/10 text-sm font-medium">Cancel</button>
-              <button onClick={handleAddStock} disabled={!selectedProduct || !stockForm.quantity || submitting}
-                className="flex-1 px-4 py-2.5 rounded-lg bg-green-500/80 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Adding...</> : 'Add Stock'}
+
+            {/* Tab Bar */}
+            <div className="flex gap-1 mb-4">
+              <button onClick={() => setStockTab('tracked')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${stockTab === 'tracked' ? 'bg-white/10 text-white' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}>
+                Tracked
+              </button>
+              <button onClick={() => setStockTab('catalog')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${stockTab === 'catalog' ? 'bg-white/10 text-white' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}>
+                Catalog
               </button>
             </div>
+
+            {stockTab === 'tracked' ? (
+              <>
+                {!selectedProduct && (
+                  <div className="mb-4">
+                    <label className="block text-xs font-medium text-white/50 mb-1.5">Product</label>
+                    <select value="" onChange={e => {
+                      const p = products.find(pr => pr.id === e.target.value);
+                      if (p) setSelectedProduct(p);
+                    }} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+                      <option value="">Select product...</option>
+                      {products.map(p => <option key={p.id} value={p.id}>{p.product.name}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div className="space-y-3 mb-6">
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5">Quantity to Add</label>
+                    <input type="number" min="1" value={stockForm.quantity} onChange={e => setStockForm(f => ({ ...f, quantity: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#7c3aed]/50 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5">Purchase Price per Unit (optional)</label>
+                    <input type="number" step="0.01" value={stockForm.purchasePrice} onChange={e => setStockForm(f => ({ ...f, purchasePrice: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#7c3aed]/50 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5">Notes (optional)</label>
+                    <textarea value={stockForm.notes} onChange={e => setStockForm(f => ({ ...f, notes: e.target.value }))} rows={2}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:border-[#7c3aed]/50 focus:outline-none resize-none" />
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setShowStockModal(false)} className="flex-1 px-4 py-2.5 rounded-lg bg-white/5 text-white/70 hover:bg-white/10 text-sm font-medium">Cancel</button>
+                  <button onClick={handleAddStock} disabled={!selectedProduct || !stockForm.quantity || submitting}
+                    className="flex-1 px-4 py-2.5 rounded-lg bg-green-500/80 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Adding...</> : 'Add Stock'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <input type="text" placeholder="Search catalog..." value={catalogSearch} onChange={e => setCatalogSearch(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-white/30 focus:border-[#7c3aed]/50 focus:outline-none" />
+                  </div>
+                </div>
+                <div className="max-h-64 overflow-y-auto space-y-2 mb-6">
+                  {untracked.length === 0 ? (
+                    <p className="text-center text-white/30 text-sm py-8">All products are being tracked</p>
+                  ) : (
+                    untracked.map(p => (
+                      <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
+                        <div className="flex items-center gap-3">
+                          {p.images?.[0] ? (
+                            <img src={getUploadUrl(p.images[0])} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm">{p.emoji || '📦'}</div>
+                          )}
+                          <div>
+                            <p className="text-white text-sm font-medium">{p.name}</p>
+                            <p className="text-white/30 text-xs">{p.category || 'Uncategorized'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-white/50 text-xs">{formatCurrency(p.price)}</span>
+                          <button onClick={() => handleTrackProduct(p.id)} disabled={submitting}
+                            className="px-3 py-1.5 rounded-lg bg-[#7c3aed] text-white text-xs font-medium hover:bg-[#6d28d9] transition-all disabled:opacity-50">
+                            {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Track'}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={() => setShowStockModal(false)} className="px-4 py-2.5 rounded-lg bg-white/5 text-white/70 hover:bg-white/10 text-sm font-medium">Close</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -754,6 +954,7 @@ export default function TrackerPage() {
         onAdjusted={loadData}
         preselectedProductId={selectedProduct?.id}
       />
+      <FxRatesModal isOpen={showFxModal} onClose={() => setShowFxModal(false)} onSaved={(rows) => { setFxRates(rows); setShowFxModal(false); }} />
     </div>
   );
 }
