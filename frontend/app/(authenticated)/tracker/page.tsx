@@ -219,8 +219,8 @@ export default function TrackerPage() {
     try {
       await trackerApi.recordSale({
         trackerProductId: selectedProduct.id,
-        quantity: parseInt(saleForm.quantity),
-        unitPrice: parseFloat(saleForm.unitPrice),
+        quantity: parseInt(saleForm.quantity) || 1,
+        unitPrice: parseFloat(saleForm.unitPrice) || selectedProduct?.sellingPrice || 0,
         customerName: saleForm.customerName || undefined,
         notes: saleForm.notes || undefined,
       });
@@ -239,7 +239,7 @@ export default function TrackerPage() {
       await trackerApi.addStock({
         trackerProductId: selectedProduct.id,
         type: 'restock',
-        quantity: parseInt(stockForm.quantity),
+        quantity: parseInt(stockForm.quantity) || 1,
         notes: stockForm.notes || undefined,
         purchasePrice: stockForm.purchasePrice ? parseFloat(stockForm.purchasePrice) : undefined,
       });
