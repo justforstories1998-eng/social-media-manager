@@ -12,6 +12,7 @@ import {
 import api, { trackerApi, type TrackerProduct, type TrackerDashboard, type Sale, formatCurrency, CURRENCY_OPTIONS, type FxRate, convertCurrency, updateDisplayCurrency } from '@/lib/api';
 import { toast } from 'sonner';
 import { getUploadUrl } from '@/lib/api';
+import { useProducts } from '@/hooks/useProducts';
 import DateRangeFilter from '@/components/DateRangeFilter';
 import StockAdjustmentModal from '@/components/StockAdjustmentModal';
 import FxRatesModal from '@/components/FxRatesModal';
@@ -53,6 +54,20 @@ export default function TrackerPage() {
   const [fxRates, setFxRates] = useState<FxRate[]>([]);
   const [displayCurrency, setDisplayCurrency] = useState('USD');
   const [showFxModal, setShowFxModal] = useState(false);
+  const [stockTab, setStockTab] = useState<'tracked' | 'catalog'>('tracked');
+  const [catalogSearch, setCatalogSearch] = useState('');
+
+  const { data: catalogProducts } = useProducts();
+
+  const trackedIds = useMemo(() => new Set(products.map(p => p.productId)), [products]);
+  const untracked = useMemo(() => {
+    const list = (catalogProducts || []).filter(p => !trackedIds.has(p.id));
+    if (catalogSearch) {
+      const q = catalogSearch.toLowerCase();
+      return list.filter(p => p.name.toLowerCase().includes(q));
+    }
+    return list;
+  }, [catalogProducts, trackedIds, catalogSearch]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -231,6 +246,19 @@ export default function TrackerPage() {
       setStockForm({ quantity: '', notes: '', purchasePrice: '' });
       loadData();
     } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to add stock'); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleTrackProduct = async (productId: string) => {
+    setSubmitting(true);
+    try {
+      await trackerApi.syncSingle(productId);
+      toast.success('Product tracked');
+      await loadData();
+      setStockTab('tracked');
+      const newlyTracked = products.find(p => p.productId === productId);
+      if (newlyTracked) setSelectedProduct(newlyTracked);
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to track product'); }
     finally { setSubmitting(false); }
   };
 
@@ -733,42 +761,100 @@ export default function TrackerPage() {
               </div>
               <button onClick={() => setShowStockModal(false)} className="p-2 rounded-lg hover:bg-white/10"><X className="w-5 h-5 text-white/50" /></button>
             </div>
-            {!selectedProduct && (
-              <div className="mb-4">
-                <label className="block text-xs font-medium text-white/50 mb-1.5">Product</label>
-                <select value="" onChange={e => {
-                  const p = products.find(pr => pr.id === e.target.value);
-                  if (p) setSelectedProduct(p);
-                }} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
-                  <option value="">Select product...</option>
-                  {products.map(p => <option key={p.id} value={p.id}>{p.product.name}</option>)}
-                </select>
-              </div>
-            )}
-            <div className="space-y-3 mb-6">
-              <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5">Quantity to Add</label>
-                <input type="number" min="1" value={stockForm.quantity} onChange={e => setStockForm(f => ({ ...f, quantity: e.target.value }))}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#7c3aed]/50 focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5">Purchase Price per Unit (optional)</label>
-                <input type="number" step="0.01" value={stockForm.purchasePrice} onChange={e => setStockForm(f => ({ ...f, purchasePrice: e.target.value }))}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#7c3aed]/50 focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5">Notes (optional)</label>
-                <textarea value={stockForm.notes} onChange={e => setStockForm(f => ({ ...f, notes: e.target.value }))} rows={2}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:border-[#7c3aed]/50 focus:outline-none resize-none" />
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setShowStockModal(false)} className="flex-1 px-4 py-2.5 rounded-lg bg-white/5 text-white/70 hover:bg-white/10 text-sm font-medium">Cancel</button>
-              <button onClick={handleAddStock} disabled={!selectedProduct || !stockForm.quantity || submitting}
-                className="flex-1 px-4 py-2.5 rounded-lg bg-green-500/80 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Adding...</> : 'Add Stock'}
+
+            {/* Tab Bar */}
+            <div className="flex gap-1 mb-4">
+              <button onClick={() => setStockTab('tracked')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${stockTab === 'tracked' ? 'bg-white/10 text-white' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}>
+                Tracked
+              </button>
+              <button onClick={() => setStockTab('catalog')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${stockTab === 'catalog' ? 'bg-white/10 text-white' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}>
+                Catalog
               </button>
             </div>
+
+            {stockTab === 'tracked' ? (
+              <>
+                {!selectedProduct && (
+                  <div className="mb-4">
+                    <label className="block text-xs font-medium text-white/50 mb-1.5">Product</label>
+                    <select value="" onChange={e => {
+                      const p = products.find(pr => pr.id === e.target.value);
+                      if (p) setSelectedProduct(p);
+                    }} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+                      <option value="">Select product...</option>
+                      {products.map(p => <option key={p.id} value={p.id}>{p.product.name}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div className="space-y-3 mb-6">
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5">Quantity to Add</label>
+                    <input type="number" min="1" value={stockForm.quantity} onChange={e => setStockForm(f => ({ ...f, quantity: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#7c3aed]/50 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5">Purchase Price per Unit (optional)</label>
+                    <input type="number" step="0.01" value={stockForm.purchasePrice} onChange={e => setStockForm(f => ({ ...f, purchasePrice: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#7c3aed]/50 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5">Notes (optional)</label>
+                    <textarea value={stockForm.notes} onChange={e => setStockForm(f => ({ ...f, notes: e.target.value }))} rows={2}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:border-[#7c3aed]/50 focus:outline-none resize-none" />
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setShowStockModal(false)} className="flex-1 px-4 py-2.5 rounded-lg bg-white/5 text-white/70 hover:bg-white/10 text-sm font-medium">Cancel</button>
+                  <button onClick={handleAddStock} disabled={!selectedProduct || !stockForm.quantity || submitting}
+                    className="flex-1 px-4 py-2.5 rounded-lg bg-green-500/80 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Adding...</> : 'Add Stock'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <input type="text" placeholder="Search catalog..." value={catalogSearch} onChange={e => setCatalogSearch(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-white/30 focus:border-[#7c3aed]/50 focus:outline-none" />
+                  </div>
+                </div>
+                <div className="max-h-64 overflow-y-auto space-y-2 mb-6">
+                  {untracked.length === 0 ? (
+                    <p className="text-center text-white/30 text-sm py-8">All products are being tracked</p>
+                  ) : (
+                    untracked.map(p => (
+                      <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
+                        <div className="flex items-center gap-3">
+                          {p.images?.[0] ? (
+                            <img src={getUploadUrl(p.images[0])} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm">{p.emoji || '📦'}</div>
+                          )}
+                          <div>
+                            <p className="text-white text-sm font-medium">{p.name}</p>
+                            <p className="text-white/30 text-xs">{p.category || 'Uncategorized'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-white/50 text-xs">{formatCurrency(p.price)}</span>
+                          <button onClick={() => handleTrackProduct(p.id)} disabled={submitting}
+                            className="px-3 py-1.5 rounded-lg bg-[#7c3aed] text-white text-xs font-medium hover:bg-[#6d28d9] transition-all disabled:opacity-50">
+                            {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Track'}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={() => setShowStockModal(false)} className="px-4 py-2.5 rounded-lg bg-white/5 text-white/70 hover:bg-white/10 text-sm font-medium">Close</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
