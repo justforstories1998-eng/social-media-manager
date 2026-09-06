@@ -17,6 +17,13 @@ async function bootstrap() {
   // Global API prefix
   app.setGlobalPrefix('api');
 
+  // CORS — must be before all other middleware
+  const frontendUrl = (process.env.FRONTEND_URL || 'https://wondermedia.vercel.app').replace(/\/+$/, '');
+  app.enableCors({
+    origin: [frontendUrl, 'https://wondermedia.vercel.app', 'http://localhost:3000', 'http://localhost:3002'],
+    credentials: true,
+  });
+
   // Security middleware (OWASP Top 10 compliant)
   app.use(helmet({
     contentSecurityPolicy: {
@@ -47,13 +54,6 @@ async function bootstrap() {
     transform: true,
     forbidNonWhitelisted: true,
   }));
-
-  // CORS
-  const frontendUrl = (process.env.FRONTEND_URL || 'https://wondermedia.vercel.app').replace(/\/+$/, '');
-  app.enableCors({
-    origin: [frontendUrl, 'https://wondermedia.vercel.app', 'http://localhost:3000', 'http://localhost:3002'],
-    credentials: true,
-  });
 
   // Swagger Documentation
   const config = new DocumentBuilder()
