@@ -515,7 +515,8 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
           imageUrl = uploaded.secure_url;
           this.logger.log(`Uploaded to Cloudinary: ${imageUrl}`);
         } catch (uploadErr: any) {
-          this.logger.warn(`Cloudinary upload failed, using base64: ${uploadErr.message}`);
+          this.logger.error(`Cloudinary upload failed: ${uploadErr.message}`);
+          throw new Error(`Image generated but upload failed: ${uploadErr.message}. Check Cloudinary configuration.`);
         }
       }
 
