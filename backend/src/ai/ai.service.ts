@@ -472,6 +472,7 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
           width,
           height,
           seed,
+          model,
         });
       } else {
         result = await provider.generateTextToImage({
@@ -479,6 +480,7 @@ Make the concepts diverse: include lifestyle, promotional, minimal, seasonal, so
           width,
           height,
           seed,
+          model,
         });
       }
       this.logger.log(`Image generated successfully with NVIDIA`);

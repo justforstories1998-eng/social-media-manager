@@ -137,8 +137,9 @@ export class NvidiaProvider implements ImageProvider {
     height?: number;
     numberOfImages?: number;
     seed?: number;
+    model?: string;
   }): Promise<GeneratedImageResult> {
-    const model = this.resolveModel();
+    const model = this.resolveModel(params.model);
     const config = this.getModelConfig(model);
     const width = Math.min(params.width || 1024, config.maxSize);
     const height = Math.min(params.height || 1024, config.maxSize);
@@ -154,8 +155,9 @@ export class NvidiaProvider implements ImageProvider {
     height?: number;
     numberOfImages?: number;
     seed?: number;
+    model?: string;
   }): Promise<GeneratedImageResult> {
-    const model = this.resolveModel();
+    const model = this.resolveModel(params.model);
     const config = this.getModelConfig(model);
     const width = Math.min(params.width || 1024, config.maxSize);
     const height = Math.min(params.height || 1024, config.maxSize);

@@ -8,6 +8,7 @@ export interface ImageProvider {
     height?: number;
     numberOfImages?: number;
     seed?: number;
+    model?: string;
   }): Promise<GeneratedImageResult>;
 
   generateWithProduct(params: {
@@ -17,6 +18,7 @@ export interface ImageProvider {
     height?: number;
     numberOfImages?: number;
     seed?: number;
+    model?: string;
   }): Promise<GeneratedImageResult>;
 
   generateWithBackgroundRemoval(params: {
