@@ -7,12 +7,14 @@ import {
   XCircle, Search, Download, Plus, Loader2, X, RefreshCw, BarChart3,
   ShoppingCart, ArrowUpDown, Grid3X3, List, Activity, ChevronDown, Users,
   UserCheck, Repeat, ArrowLeftRight, CheckSquare, Square, Trash2, FileDown,
+  Settings,
 } from 'lucide-react';
-import { trackerApi, type TrackerProduct, type TrackerDashboard, type Sale, formatCurrency } from '@/lib/api';
+import api, { trackerApi, type TrackerProduct, type TrackerDashboard, type Sale, formatCurrency, CURRENCY_OPTIONS, type FxRate, convertCurrency, updateDisplayCurrency } from '@/lib/api';
 import { toast } from 'sonner';
 import { getUploadUrl } from '@/lib/api';
 import DateRangeFilter from '@/components/DateRangeFilter';
 import StockAdjustmentModal from '@/components/StockAdjustmentModal';
+import FxRatesModal from '@/components/FxRatesModal';
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -48,6 +50,9 @@ export default function TrackerPage() {
   const [customers, setCustomers] = useState<any>(null);
   const [showCharts, setShowCharts] = useState(true);
   const [chartData, setChartData] = useState<any[]>([]);
+  const [fxRates, setFxRates] = useState<FxRate[]>([]);
+  const [displayCurrency, setDisplayCurrency] = useState('USD');
+  const [showFxModal, setShowFxModal] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -71,6 +76,15 @@ export default function TrackerPage() {
   }, [dateFrom, dateTo]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    trackerApi.getFxRates().then(res => setFxRates(res.data)).catch(() => {});
+    api.get('/users/me').then((res: any) => {
+      const code = res.data?.displayCurrency || 'USD';
+      setDisplayCurrency(code);
+      localStorage.setItem('tracker-display-currency', code);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     let result = [...products];
@@ -119,15 +133,15 @@ export default function TrackerPage() {
   useEffect(() => {
     const data = filteredProducts.map(p => ({
       name: p.product.name.length > 12 ? p.product.name.substring(0, 12) + '...' : p.product.name,
-      revenue: p.totalRevenue,
-      profit: p.profit,
+      revenue: convertCurrency(p.totalRevenue, p.currency, displayCurrency, fxRates),
+      profit: convertCurrency(p.profit, p.currency, displayCurrency, fxRates),
       sold: p.totalSold,
       stock: p.currentStock,
       margin: p.totalRevenue > 0 ? ((p.profit / p.totalRevenue) * 100) : 0,
-      cost: p.totalCost,
+      cost: convertCurrency(p.totalCost, p.currency, displayCurrency, fxRates),
     }));
     setChartData(data);
-  }, [filteredProducts]);
+  }, [filteredProducts, displayCurrency, fxRates]);
 
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredProducts.length) {
@@ -248,6 +262,17 @@ export default function TrackerPage() {
           <h1 className="text-3xl font-bold text-white">Tracker</h1>
         </div>
         <div className="flex items-center gap-2">
+          <select value={displayCurrency} onChange={e => {
+            const v = e.target.value;
+            setDisplayCurrency(v);
+            localStorage.setItem('tracker-display-currency', v);
+            updateDisplayCurrency(v).catch(() => {});
+          }} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/70 focus:outline-none">
+            {CURRENCY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+          <button onClick={() => setShowFxModal(true)} className="p-2 rounded-lg bg-white/5 text-white/50 hover:bg-white/10 border border-white/10 transition-all" title="Edit FX Rates">
+            <Settings className="w-4 h-4" />
+          </button>
           <button onClick={handleSync} disabled={syncing}
             className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 text-white/60 hover:bg-white/10 text-sm border border-white/10 transition-all disabled:opacity-50">
             {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
@@ -279,9 +304,9 @@ export default function TrackerPage() {
             { label: 'TOTAL PRODUCTS', value: dashboard.totalProducts, icon: Package, color: 'text-[#7c3aed]' },
             { label: 'TOTAL STOCK', value: dashboard.totalStock, icon: Layers, color: 'text-[#ec4899]' },
             { label: 'UNITS SOLD', value: dashboard.totalUnitsSold, icon: TrendingUp, color: 'text-green-400' },
-            { label: 'SALES REVENUE', value: formatCurrency(dashboard.totalSalesRevenue), icon: DollarSign, color: 'text-[#7c3aed]' },
-            { label: 'INVENTORY VALUE', value: formatCurrency(dashboard.totalInventoryValue), icon: Wallet, color: 'text-[#ec4899]' },
-            { label: 'EST. PROFIT', value: formatCurrency(dashboard.estimatedProfit), icon: PiggyBank, color: 'text-green-400' },
+            { label: 'SALES REVENUE', value: formatCurrency(convertCurrency(dashboard.totalSalesRevenue, 'USD', displayCurrency, fxRates)), icon: DollarSign, color: 'text-[#7c3aed]' },
+            { label: 'INVENTORY VALUE', value: formatCurrency(convertCurrency(dashboard.totalInventoryValue, 'USD', displayCurrency, fxRates)), icon: Wallet, color: 'text-[#ec4899]' },
+            { label: 'EST. PROFIT', value: formatCurrency(convertCurrency(dashboard.estimatedProfit, 'USD', displayCurrency, fxRates)), icon: PiggyBank, color: 'text-green-400' },
             { label: 'LOW STOCK', value: dashboard.lowStockItems, icon: AlertTriangle, color: 'text-amber-400' },
             { label: 'OUT OF STOCK', value: dashboard.outOfStockItems, icon: XCircle, color: 'text-red-400' },
           ].map((stat) => (
@@ -294,6 +319,9 @@ export default function TrackerPage() {
             </div>
           ))}
         </div>
+      )}
+      {displayCurrency !== 'USD' && fxRates.length > 0 && (
+        <p className="text-[10px] text-white/30 font-mono">shown in {displayCurrency}</p>
       )}
 
       {/* Date Range + Charts Toggle */}
@@ -422,11 +450,11 @@ export default function TrackerPage() {
             </div>
             <div className="bg-white/5 rounded-lg p-3">
               <p className="text-xs text-white/40">Avg Order Value</p>
-              <p className="text-lg font-bold text-white">{formatCurrency(customers.summary.avgOrderValue)}</p>
+              <p className="text-lg font-bold text-white">{formatCurrency(convertCurrency(customers.summary.avgOrderValue, 'USD', displayCurrency, fxRates))}</p>
             </div>
             <div className="bg-white/5 rounded-lg p-3">
               <p className="text-xs text-white/40">Total Revenue</p>
-              <p className="text-lg font-bold text-white">{formatCurrency(customers.summary.totalRevenue)}</p>
+              <p className="text-lg font-bold text-white">{formatCurrency(convertCurrency(customers.summary.totalRevenue, 'USD', displayCurrency, fxRates))}</p>
             </div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -442,7 +470,7 @@ export default function TrackerPage() {
                       <span className="text-white/70">{c.name}</span>
                     </div>
                     <div className="text-right">
-                      <span className="text-white/90 font-medium">{formatCurrency(c.totalSpent)}</span>
+                      <span className="text-white/90 font-medium">{formatCurrency(convertCurrency(c.totalSpent, 'USD', displayCurrency, fxRates))}</span>
                       <span className="text-white/30 text-xs ml-2">{c.totalOrders} orders</span>
                     </div>
                   </div>
@@ -754,6 +782,7 @@ export default function TrackerPage() {
         onAdjusted={loadData}
         preselectedProductId={selectedProduct?.id}
       />
+      <FxRatesModal isOpen={showFxModal} onClose={() => setShowFxModal(false)} onSaved={(rows) => { setFxRates(rows); setShowFxModal(false); }} />
     </div>
   );
 }
